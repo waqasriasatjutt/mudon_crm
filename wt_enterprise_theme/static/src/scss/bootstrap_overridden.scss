@@ -1,0 +1,76 @@
+// ── Enterprise-style Bootstrap variable overrides ────────────────────────────
+// Loaded in web._assets_backend_helpers BEFORE Bootstrap's _variables.scss
+// and BEFORE the community bootstrap_overridden.scss, so our values win.
+// Mirrors web_enterprise/static/src/scss/bootstrap_overridden.scss
+
+// Enable decorative shadows on components (cards, buttons, inputs, etc.)
+$enable-shadows: true !default;
+
+// Enterprise brand colours for Bootstrap semantic colours
+$warning: #e99d00 !default;
+$danger:  #d44c59 !default;
+
+// Active-item appearance — light teal tint matching enterprise action colour
+$component-active-color: unset !default;
+$component-active-bg: mix($o-enterprise-action-color, #fff, 10%) !default;
+
+// Flatten border-radii (enterprise uses 0 on most structural components)
+$nav-tabs-border-radius:         0 !default;
+$nav-pills-border-radius:        0 !default;
+$card-border-radius:             0 !default;
+$accordion-border-radius:        0 !default;
+$toast-border-radius:            0 !default;
+$progress-border-radius:         0 !default;
+$list-group-border-radius:       0 !default;
+$thumbnail-border-radius:        0 !default;
+$form-check-input-border-radius: 0 !default;
+
+// Typography — slightly larger headings than community defaults
+$h1-font-size: $o-font-size-base * 2.4 !default;
+$h2-font-size: $o-font-size-base * 1.5 !default;
+$h3-font-size: $o-font-size-base * 1.3 !default;
+$h4-font-size: $o-font-size-base * 1.2 !default;
+$h5-font-size: $o-font-size-base * 1.1 !default;
+
+// Buttons — remove Bootstrap's default box-shadows
+$btn-transition:         none !default;
+$btn-box-shadow:         0 !default;
+$btn-active-box-shadow:  0 !default;
+$btn-focus-box-shadow:   0 !default;
+
+// Dropdowns
+$dropdown-box-shadow: 0 .3rem 1rem rgba(#000, .1) !default;
+
+// Forms — remove input shadows, use teal focus highlight
+$input-border-color:              $o-gray-200 !default;
+$input-box-shadow:                0 !default;
+$input-focus-bg:                  #fff !default;
+$input-focus-box-shadow:          0 !default;
+$input-focus-border-color:        mix($o-enterprise-action-color, $o-gray-200) !default;
+$form-check-input-checked-color:  #fff !default;
+$form-check-input-checked-border-color: $o-enterprise-action-color !default;
+$form-check-input-checked-bg-color: $o-enterprise-action-color !default;
+$form-select-focus-box-shadow:    0 !default;
+$form-range-track-box-shadow:     0 !default;
+
+// Navigation
+$nav-link-color:             $o-gray-700 !default;
+$nav-tabs-link-active-color: $o-gray-900 !default;
+$nav-tabs-link-active-bg:    transparent !default;
+
+// Badges
+$badge-font-weight: normal !default;
+
+// Alerts
+$alert-border-width: 0 !default;
+
+// Progress bars
+$progress-box-shadow: 0 !default;
+
+// List group — use enterprise action colour for active items
+$list-group-active-color:        $o-enterprise-action-color !default;
+$list-group-active-bg:           $component-active-bg !default;
+$list-group-active-border-color: $o-enterprise-action-color !default;
+
+// Image thumbnails
+$thumbnail-box-shadow: 0 !default;

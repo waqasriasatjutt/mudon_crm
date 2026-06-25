@@ -1,0 +1,15 @@
+// Background shown when the home menu is open
+.o_home_menu_background,
+.o_web_client.o_home_menu_background {
+    background-color: #f0eff5;
+    background-image:
+        radial-gradient(ellipse at 15% 50%, rgba(113, 75, 103, 0.09) 0%, transparent 55%),
+        radial-gradient(ellipse at 85% 20%, rgba(1, 126, 132, 0.07) 0%, transparent 50%);
+    background-attachment: fixed;
+    background-size: cover;
+
+    .o_main_navbar {
+        background: transparent;
+        border-bottom-color: transparent;
+    }
+}

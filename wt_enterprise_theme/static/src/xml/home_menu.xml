@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<templates xml:space="preserve">
+
+<!-- ══ Full-page Enterprise-style Home Menu ══ -->
+<t t-name="wt_enterprise_theme.HomeMenu">
+    <div t-ref="root" class="o_home_menu h-100 overflow-auto">
+        <div class="container">
+            <!-- Hidden search input — keyboard focus trapping, opens command palette -->
+            <input
+                t-ref="input"
+                type="text"
+                class="o_search_hidden visually-hidden w-auto"
+                data-allow-hotkeys="true"
+                role="combobox"
+                aria-autocomplete="list"
+                aria-haspopup="listbox"
+            />
+
+            <!-- App grid -->
+            <div t-if="displayedApps.length" role="listbox" class="o_apps row user-select-none mt-5 mx-0">
+                <div
+                    t-foreach="displayedApps"
+                    t-as="app"
+                    t-key="app.id"
+                    class="col-3 col-md-2 o_draggable mb-3 px-0"
+                >
+                    <a
+                        t-att-id="'result_app_' + app_index"
+                        role="option"
+                        t-att-aria-selected="state.focusedIndex === app_index ? 'true' : 'false'"
+                        class="o_app o_menuitem d-flex flex-column rounded-3 justify-content-start align-items-center w-100 p-1 p-md-2"
+                        t-att-class="{ o_focused: state.focusedIndex === app_index }"
+                        t-att-data-menu-xmlid="app.xmlid"
+                        t-att-href="app.href"
+                        t-on-click.prevent="() => this._onAppClick(app)"
+                    >
+                        <img
+                            t-if="app.webIconData"
+                            class="o_app_icon rounded-3"
+                            t-attf-src="{{ app.webIconData }}"
+                            t-att-alt="app.label or app.name"
+                        />
+                        <div
+                            t-else=""
+                            class="o_app_icon position-relative d-flex justify-content-center align-items-center p-2 rounded-3 ratio ratio-1x1"
+                            t-attf-style="background-color: {{ app.webIcon.backgroundColor }};"
+                        >
+                            <i
+                                t-attf-class="{{ app.webIcon.iconClass }} position-relative w-auto h-auto"
+                                t-attf-style="color: {{ app.webIcon.color }};"
+                            />
+                        </div>
+                        <div class="o_caption w-100 text-center text-truncate mt-2" t-esc="app.label or app.name" />
+                    </a>
+                </div>
+            </div>
+
+            <div t-elif="!displayedApps.length" class="o_no_result text-center mt-5 text-muted">
+                No apps available
+            </div>
+        </div>
+    </div>
+</t>
+
+
+<!-- ══ NavBar patch ══
+     DESKTOP: replace the AppsMenu dropdown with the 9-dot home-menu toggle.
+     MOBILE:  keep the original AppsMenu as-is so the sidebar (with current
+              app sub-menus: Orders, Products, Configuration, etc.) still works.
+     The _openAppMenuSidebar override in enterprise_patch.js handles closing
+     the home-menu when the hamburger is tapped while the grid is showing. -->
+<t t-inherit="web.NavBar" t-inherit-mode="extension">
+    <xpath expr="//t[@t-call='web.NavBar.AppsMenu']" position="replace">
+
+        <!-- Mobile: restore the original sidebar behaviour (sub-menus accessible) -->
+        <t t-if="env.isSmall" t-call="web.NavBar.AppsMenu">
+            <t t-set="apps" t-value="menuService.getApps()" />
+        </t>
+
+        <!-- Desktop: 9-dot home-menu toggle -->
+        <button
+            t-if="!env.isSmall"
+            class="o_menu_toggle border-0 bg-transparent"
+            title="Home Menu"
+            accesskey="h"
+            t-on-click.prevent="() => hm.toggle()"
+        >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                <rect x="0"  y="0"  width="3" height="3" rx="0.5"/>
+                <rect x="5"  y="0"  width="3" height="3" rx="0.5"/>
+                <rect x="10" y="0"  width="3" height="3" rx="0.5"/>
+                <rect x="0"  y="5"  width="3" height="3" rx="0.5"/>
+                <rect x="5"  y="5"  width="3" height="3" rx="0.5"/>
+                <rect x="10" y="5"  width="3" height="3" rx="0.5"/>
+                <rect x="0"  y="10" width="3" height="3" rx="0.5"/>
+                <rect x="5"  y="10" width="3" height="3" rx="0.5"/>
+                <rect x="10" y="10" width="3" height="3" rx="0.5"/>
+            </svg>
+        </button>
+
+    </xpath>
+</t>
+
+</templates>

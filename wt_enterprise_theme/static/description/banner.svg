@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 180" width="760" height="180">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   style="stop-color:#3d2040"/>
+      <stop offset="55%"  style="stop-color:#714B67"/>
+      <stop offset="100%" style="stop-color:#017e84"/>
+    </linearGradient>
+    <linearGradient id="pill" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:rgba(255,255,255,0.18)"/>
+      <stop offset="100%" style="stop-color:rgba(255,255,255,0.06)"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="760" height="180" fill="url(#bg)"/>
+
+  <!-- Decorative circles -->
+  <circle cx="700" cy="20"  r="80" fill="rgba(255,255,255,0.03)"/>
+  <circle cx="720" cy="160" r="60" fill="rgba(1,126,132,0.15)"/>
+  <circle cx="30"  cy="160" r="100" fill="rgba(255,255,255,0.02)"/>
+
+  <!-- Subtle grid -->
+  <line x1="0" y1="60"  x2="760" y2="60"  stroke="rgba(255,255,255,0.035)" stroke-width="1"/>
+  <line x1="0" y1="120" x2="760" y2="120" stroke="rgba(255,255,255,0.035)" stroke-width="1"/>
+  <line x1="253" y1="0" x2="253" y2="180" stroke="rgba(255,255,255,0.035)" stroke-width="1"/>
+  <line x1="507" y1="0" x2="507" y2="180" stroke="rgba(255,255,255,0.035)" stroke-width="1"/>
+
+  <!-- Bottom accent line -->
+  <rect x="0" y="176" width="760" height="4" fill="rgba(1,126,132,0.9)" rx="0"/>
+
+  <!-- Left icon circle -->
+  <circle cx="62" cy="90" r="42" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
+  <!-- 3x3 dot grid in icon -->
+  <circle cx="50" cy="78" r="5" fill="#fff" opacity="0.90"/>
+  <circle cx="62" cy="78" r="5" fill="#fff" opacity="0.90"/>
+  <circle cx="74" cy="78" r="5" fill="#fff" opacity="0.90"/>
+  <circle cx="50" cy="90" r="5" fill="#fff" opacity="0.90"/>
+  <circle cx="62" cy="90" r="6" fill="#017e84"/>
+  <circle cx="74" cy="90" r="5" fill="#017e84"/>
+  <circle cx="50" cy="102" r="5" fill="#fff" opacity="0.90"/>
+  <circle cx="62" cy="102" r="5" fill="#fff" opacity="0.90"/>
+  <circle cx="74" cy="102" r="5" fill="#fff" opacity="0.90"/>
+
+  <!-- Publisher label -->
+  <text x="120" y="38" font-family="'Helvetica Neue',Arial,sans-serif" font-size="10" font-weight="600" fill="rgba(255,255,255,0.55)" letter-spacing="2">WAY4TECH</text>
+
+  <!-- Main title -->
+  <text x="120" y="72" font-family="'Helvetica Neue',Arial,sans-serif" font-size="28" font-weight="800" fill="#ffffff" letter-spacing="-0.5">Enterprise Theme</text>
+  <text x="120" y="72" font-family="'Helvetica Neue',Arial,sans-serif" font-size="28" font-weight="800" fill="#ffffff" letter-spacing="-0.5" opacity="0"> </text>
+  <text x="353" y="72" font-family="'Helvetica Neue',Arial,sans-serif" font-size="28" font-weight="300" fill="rgba(255,255,255,0.7)" letter-spacing="-0.5">  (Community)</text>
+
+  <!-- Accent underline -->
+  <rect x="120" y="78" width="380" height="2.5" rx="1.5" fill="rgba(1,126,132,0.9)"/>
+
+  <!-- Subtitle -->
+  <text x="120" y="100" font-family="'Helvetica Neue',Arial,sans-serif" font-size="13" fill="rgba(255,255,255,0.75)">Odoo 19 Enterprise look &amp; feel — no subscription required</text>
+
+  <!-- Feature pills row -->
+  <rect x="120" y="116" width="108" height="24" rx="12" fill="url(#pill)" stroke="rgba(255,255,255,0.25)" stroke-width="1"/>
+  <text x="174" y="132" font-family="'Helvetica Neue',Arial,sans-serif" font-size="11" font-weight="600" fill="#fff" text-anchor="middle">Home Menu</text>
+
+  <rect x="236" y="116" width="108" height="24" rx="12" fill="url(#pill)" stroke="rgba(255,255,255,0.25)" stroke-width="1"/>
+  <text x="290" y="132" font-family="'Helvetica Neue',Arial,sans-serif" font-size="11" font-weight="600" fill="#fff" text-anchor="middle">White Navbar</text>
+
+  <rect x="352" y="116" width="108" height="24" rx="12" fill="url(#pill)" stroke="rgba(255,255,255,0.25)" stroke-width="1"/>
+  <text x="406" y="132" font-family="'Helvetica Neue',Arial,sans-serif" font-size="11" font-weight="600" fill="#fff" text-anchor="middle">Purple Brand</text>
+
+  <rect x="468" y="116" width="108" height="24" rx="12" fill="url(#pill)" stroke="rgba(255,255,255,0.25)" stroke-width="1"/>
+  <text x="522" y="132" font-family="'Helvetica Neue',Arial,sans-serif" font-size="11" font-weight="600" fill="#fff" text-anchor="middle">LGPL-3 Free</text>
+
+  <!-- Version / compatibility badge -->
+  <rect x="120" y="150" width="68" height="18" rx="9" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+  <text x="154" y="163" font-family="'Helvetica Neue',Arial,sans-serif" font-size="10" fill="rgba(255,255,255,0.8)" text-anchor="middle">Odoo 19</text>
+
+  <text x="198" y="163" font-family="'Helvetica Neue',Arial,sans-serif" font-size="10" fill="rgba(255,255,255,0.4)">Community Edition</text>
+</svg>

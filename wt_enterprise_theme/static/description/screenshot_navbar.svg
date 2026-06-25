@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720">
+  <defs>
+    <filter id="shadow"><feDropShadow dx="0" dy="2" stdDeviation="6" flood-color="rgba(0,0,0,0.12)"/></filter>
+    <filter id="cardShadow"><feDropShadow dx="0" dy="4" stdDeviation="12" flood-color="rgba(0,0,0,0.1)"/></filter>
+  </defs>
+
+  <!-- Page background -->
+  <rect width="1280" height="720" fill="#f0f0f0"/>
+
+  <!-- Navbar — white Enterprise-style -->
+  <rect x="0" y="0" width="1280" height="46" fill="#fff" filter="url(#shadow)"/>
+
+  <!-- Grid/Home button -->
+  <rect x="14" y="16" width="4" height="4" rx="0.5" fill="#714B67"/>
+  <rect x="20" y="16" width="4" height="4" rx="0.5" fill="#714B67"/>
+  <rect x="26" y="16" width="4" height="4" rx="0.5" fill="#714B67"/>
+  <rect x="14" y="22" width="4" height="4" rx="0.5" fill="#714B67"/>
+  <rect x="20" y="22" width="4" height="4" rx="0.5" fill="#714B67"/>
+  <rect x="26" y="22" width="4" height="4" rx="0.5" fill="#714B67"/>
+  <rect x="14" y="28" width="4" height="4" rx="0.5" fill="#714B67"/>
+  <rect x="20" y="28" width="4" height="4" rx="0.5" fill="#714B67"/>
+  <rect x="26" y="28" width="4" height="4" rx="0.5" fill="#714B67"/>
+
+  <!-- App name in navbar -->
+  <text x="50" y="29" font-family="'Helvetica Neue',Arial,sans-serif" font-size="15" font-weight="600" fill="#374151">Accounting</text>
+
+  <!-- Nav menu items -->
+  <text x="160" y="29" font-family="'Helvetica Neue',Arial,sans-serif" font-size="13" fill="#374151">Customer Invoices</text>
+  <rect x="155" y="33" width="118" height="2" rx="1" fill="#017e84" opacity="0.8"/>
+
+  <text x="292" y="29" font-family="'Helvetica Neue',Arial,sans-serif" font-size="13" fill="#374151">Vendors</text>
+  <text x="370" y="29" font-family="'Helvetica Neue',Arial,sans-serif" font-size="13" fill="#374151">Accounting</text>
+  <text x="460" y="29" font-family="'Helvetica Neue',Arial,sans-serif" font-size="13" fill="#374151">Reporting</text>
+  <text x="545" y="29" font-family="'Helvetica Neue',Arial,sans-serif" font-size="13" fill="#374151">Configuration</text>
+
+  <!-- Systray -->
+  <!-- Discuss icon -->
+  <rect x="1130" y="8" width="30" height="30" rx="6" fill="rgba(0,0,0,0)"/>
+  <text x="1145" y="29" font-family="Arial" font-size="16" fill="#374151" text-anchor="middle">&#128172;</text>
+  <!-- Debug icon -->
+  <text x="1180" y="29" font-family="Arial" font-size="16" fill="#374151" text-anchor="middle">&#128027;</text>
+  <!-- User avatar -->
+  <circle cx="1230" cy="23" r="16" fill="#e7e9ed"/>
+  <text x="1230" y="28" font-family="Arial" font-size="12" font-weight="700" fill="#374151" text-anchor="middle">AD</text>
+  <!-- Notification badge -->
+  <circle cx="1155" cy="12" r="7" fill="#e74c3c"/>
+  <text x="1155" y="16" font-family="Arial" font-size="8" font-weight="700" fill="#fff" text-anchor="middle">5</text>
+
+  <!-- Content area — simulated view -->
+  <!-- Breadcrumb -->
+  <text x="32" y="80" font-family="'Helvetica Neue',Arial,sans-serif" font-size="13" fill="#999">Accounting  /</text>
+  <text x="105" y="80" font-family="'Helvetica Neue',Arial,sans-serif" font-size="13" fill="#374151">Customer Invoices</text>
+
+  <!-- Control panel -->
+  <rect x="0" y="55" width="1280" height="40" fill="#fff" opacity="0.7"/>
+  <rect x="24" y="62" width="100" height="26" rx="5" fill="#714B67"/>
+  <text x="74" y="80" font-family="'Helvetica Neue',Arial,sans-serif" font-size="12" font-weight="600" fill="#fff" text-anchor="middle">New Invoice</text>
+  <rect x="136" y="62" width="80" height="26" rx="5" fill="transparent" stroke="#d8dadd" stroke-width="1"/>
+  <text x="176" y="80" font-family="'Helvetica Neue',Arial,sans-serif" font-size="12" fill="#374151" text-anchor="middle">Actions</text>
+
+  <!-- Search bar -->
+  <rect x="800" y="62" width="280" height="26" rx="5" fill="#f8f9fa" stroke="#d8dadd" stroke-width="1"/>
+  <text x="816" y="80" font-family="Arial" font-size="12" fill="#9a9ca5">Search...</text>
+  <text x="1072" y="80" font-family="Arial" font-size="14" fill="#9a9ca5" text-anchor="middle">&#128269;</text>
+
+  <!-- List view -->
+  <rect x="0" y="95" width="1280" height="35" fill="#f8f9fa" stroke="#e7e9ed" stroke-width="0.5"/>
+  <text x="50"  y="118" font-family="Arial" font-size="11" font-weight="600" fill="#5f636f">Invoice Number</text>
+  <text x="200" y="118" font-family="Arial" font-size="11" font-weight="600" fill="#5f636f">Customer</text>
+  <text x="450" y="118" font-family="Arial" font-size="11" font-weight="600" fill="#5f636f">Invoice Date</text>
+  <text x="620" y="118" font-family="Arial" font-size="11" font-weight="600" fill="#5f636f">Due Date</text>
+  <text x="800" y="118" font-family="Arial" font-size="11" font-weight="600" fill="#5f636f">Status</text>
+  <text x="1050" y="118" font-family="Arial" font-size="11" font-weight="600" fill="#5f636f" text-anchor="end">Amount Due</text>
+
+  <!-- Table rows -->
+  <rect x="0" y="130" width="1280" height="40" fill="#fff"/>
+  <text x="50"  y="155" font-family="Arial" font-size="12" fill="#374151">INV/2024/00125</text>
+  <text x="200" y="155" font-family="Arial" font-size="12" fill="#374151">Al Madar Trading LLC</text>
+  <text x="450" y="155" font-family="Arial" font-size="12" fill="#374151">03/15/2024</text>
+  <text x="620" y="155" font-family="Arial" font-size="12" fill="#374151">04/14/2024</text>
+  <rect x="795" y="143" width="60" height="20" rx="10" fill="#d4f5e9"/>
+  <text x="825" y="157" font-family="Arial" font-size="11" font-weight="600" fill="#017e84" text-anchor="middle">Posted</text>
+  <text x="1050" y="155" font-family="Arial" font-size="12" fill="#374151" text-anchor="end">SAR 12,500.00</text>
+
+  <rect x="0" y="170" width="1280" height="40" fill="#fafafa"/>
+  <text x="50"  y="195" font-family="Arial" font-size="12" fill="#374151">INV/2024/00124</text>
+  <text x="200" y="195" font-family="Arial" font-size="12" fill="#374151">Saudi Logistics Co.</text>
+  <text x="450" y="195" font-family="Arial" font-size="12" fill="#374151">03/14/2024</text>
+  <text x="620" y="195" font-family="Arial" font-size="12" fill="#374151">04/13/2024</text>
+  <rect x="795" y="183" width="70" height="20" rx="10" fill="#fde8e8"/>
+  <text x="830" y="197" font-family="Arial" font-size="11" font-weight="600" fill="#e74c3c" text-anchor="middle">Overdue</text>
+  <text x="1050" y="195" font-family="Arial" font-size="12" fill="#e74c3c" text-anchor="end">SAR 8,750.00</text>
+
+  <rect x="0" y="210" width="1280" height="40" fill="#fff"/>
+  <text x="50"  y="235" font-family="Arial" font-size="12" fill="#374151">INV/2024/00123</text>
+  <text x="200" y="235" font-family="Arial" font-size="12" fill="#374151">Riyadh Supply Chain</text>
+  <text x="450" y="235" font-family="Arial" font-size="12" fill="#374151">03/10/2024</text>
+  <text x="620" y="235" font-family="Arial" font-size="12" fill="#374151">04/09/2024</text>
+  <rect x="795" y="223" width="60" height="20" rx="10" fill="#d4f5e9"/>
+  <text x="825" y="237" font-family="Arial" font-size="11" font-weight="600" fill="#017e84" text-anchor="middle">Posted</text>
+  <text x="1050" y="235" font-family="Arial" font-size="12" fill="#374151" text-anchor="end">SAR 31,200.00</text>
+
+  <!-- Caption -->
+  <rect x="0" y="680" width="1280" height="40" fill="rgba(0,0,0,0.5)"/>
+  <text x="640" y="706" font-family="'Helvetica Neue',Arial,sans-serif" font-size="14" fill="#fff" text-anchor="middle">White Enterprise-style navbar with dark text — identical to Odoo 19 Enterprise</text>
+</svg>

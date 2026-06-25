@@ -1,0 +1,46 @@
+// ============================================================
+// Enterprise brand colors — loaded BEFORE web's primary_variables.scss
+// so these override Community defaults.
+// ============================================================
+
+$o-enterprise-color:        #714B67;
+$o-enterprise-action-color: #017e84;
+
+$o-brand-odoo:          $o-enterprise-color;
+$o-brand-primary:       $o-enterprise-color;
+$o-brand-secondary:     #8f8f8f;
+$o-brand-lightsecondary:#F9FAFB;
+
+$o-action:              $o-enterprise-action-color;
+$o-main-link-color:     $o-enterprise-action-color;
+
+$o-component-active-color:  #000;
+$o-component-active-bg:     mix($o-enterprise-action-color, #fff, 10%);
+$o-component-active-border: $o-enterprise-action-color;
+
+// Gray scale (same as Enterprise)
+$o-gray-100: #F9FAFB;
+$o-gray-200: #e7e9ed;
+$o-gray-300: #d8dadd;
+$o-gray-400: #9a9ca5;
+$o-gray-500: #7c7f89;
+$o-gray-600: #5f636f;
+$o-gray-700: #374151;
+$o-gray-800: #1F2937;
+$o-gray-900: #111827;
+
+// ── Navbar variables — must be here (before web glob *.variables.scss) ────────
+// SCSS placeholders use #{} string-interpolation which is evaluated eagerly at
+// definition time.  community's %-main-navbar-entry-base (in navbar.variables.scss)
+// captures $o-navbar-padding-v at that moment.  If we only set it in
+// home_menu.variables.scss (appended after the glob) it arrives too late.
+$o-navbar-padding-v:             10px;  // enterprise standard — drives entry height calc
+$o-navbar-background:            #fff;
+$o-navbar-border-bottom:         0;
+$o-navbar-entry-margin-h:        1px;   // enterprise uses 1px; community default is 0
+$o-navbar-entry-color:           $o-gray-700;
+$o-navbar-entry-color--hover:    #000;
+$o-navbar-entry-bg--hover:       $o-gray-200;
+$o-navbar-entry-bg--active:      unset;
+$o-navbar-entry-color--active:   unset;
+$o-navbar-brand-color:           $o-gray-700;

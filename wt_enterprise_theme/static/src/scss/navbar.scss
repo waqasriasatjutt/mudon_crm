@@ -1,0 +1,75 @@
+// ── Enterprise-style white navbar ────────────────────────────────────────────
+// Odoo 19 Enterprise uses a white navbar with dark text.
+// We apply the same appearance using the same CSS custom properties
+// that Odoo's community navbar SCSS reads.
+
+.o_main_navbar {
+    // White background — Enterprise standard
+    background-color: $o-navbar-background;
+    border-bottom: $o-navbar-border-bottom;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .08);
+
+    // Override CSS custom properties used by community navbar entries
+    --NavBar-entry-color:                  #{$o-navbar-entry-color};
+    --NavBar-entry-color--hover:           #{$o-navbar-entry-color--hover};
+    --NavBar-entry-backgroundColor--hover: #{$o-navbar-entry-bg--hover};
+    --NavBar-entry-backgroundColor--focus: #{$o-navbar-entry-bg--hover};
+    --NavBar-entry-color--active:          #{$o-component-active-color};
+    --NavBar-entry-borderColor-active:     #{$o-component-active-border};
+    --NavBar-entry-backgroundColor--active:#{$o-component-active-bg};
+
+    // Dark text for all nav entries and dropdowns
+    .o_nav_entry,
+    .o_dropdown > .dropdown-toggle,
+    .o_menu_sections .o_nav_entry,
+    .o_menu_sections .dropdown-toggle {
+        color: $o-navbar-entry-color;
+
+        &:hover,
+        &:focus {
+            color: $o-navbar-entry-color--hover;
+            background-color: $o-navbar-entry-bg--hover;
+        }
+    }
+
+    // Brand / current app name
+    .o_menu_brand {
+        color: $o-navbar-brand-color;
+    }
+
+    // Home menu toggle button (grid dots) — enterprise purple
+    .o_menu_toggle {
+        color: var(--NavBar-menuToggle-color, #{$o-brand-odoo});
+    }
+
+    // Dropdown menus spawned from navbar
+    .dropdown-menu {
+        .dropdown-item {
+            color: #212529;
+
+            &:hover,
+            &:focus {
+                background-color: $o-navbar-entry-bg--hover;
+                color: $o-navbar-entry-color--hover;
+            }
+        }
+    }
+
+    // Icons inside navbar inherit current color
+    .oi,
+    .fa {
+        color: inherit;
+    }
+}
+
+// Transparent navbar when home menu is open (same as Enterprise)
+.o_home_menu_background .o_main_navbar {
+    background-color: transparent;
+    box-shadow: none;
+    border-bottom-color: transparent;
+}
+
+// Ensuring enterprise design menu is not compressed when superuser bar is shown
+body.o_is_superuser .o_menu_systray {
+    border-image-outset: 5px;
+}

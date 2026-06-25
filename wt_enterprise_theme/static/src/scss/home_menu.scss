@@ -1,0 +1,87 @@
+// Enterprise-style Home Menu
+.o_home_menu {
+    font-size: $o-home-menu-font-size-base;
+    scrollbar-color: rgba(0, 0, 0, .3) transparent;
+
+    &::-webkit-scrollbar {
+        width: 8px;
+    }
+    &::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, .3);
+        border-radius: 4px;
+    }
+
+    .container {
+        @include media-breakpoint-up(md) {
+            max-width: $o-home-menu-container-size !important;
+        }
+    }
+
+    .o_app {
+        .o_app_icon {
+            width: $o-home-menu-app-icon-max-width;
+            aspect-ratio: 1;
+            padding: $o-home-menu-app-icon-padding;
+            background-color: $o-home-menu-app-icon-background-color;
+            object-fit: cover;
+            border-radius: 16px;
+            transform-origin: center bottom;
+            transition: box-shadow 0.1s ease-in, transform 0.1s ease-in;
+            box-shadow:
+                inset 0 0 0 1px rgba(0, 0, 0, .15),
+                0 1px 1px rgba(0, 0, 0, .03),
+                0 2px 2px rgba(0, 0, 0, .03),
+                0 4px 4px rgba(0, 0, 0, .03),
+                0 8px 8px rgba(0, 0, 0, .03);
+
+            .fa {
+                font-size: $o-home-menu-app-icon-max-width * 0.5;
+            }
+        }
+
+        &:hover .o_app_icon {
+            box-shadow:
+                inset 0 0 0 1px rgba(0, 0, 0, .15),
+                0 2px 4px rgba(0, 0, 0, .05),
+                0 4px 8px rgba(0, 0, 0, .05),
+                0 8px 16px rgba(0, 0, 0, .05),
+                0 16px 24px rgba(0, 0, 0, .05);
+            transform: translateY(-3px);
+        }
+
+        &:active .o_app_icon {
+            transform: translateY(-3px) scale(.97);
+            transition: none;
+        }
+
+        .o_caption {
+            color: $o-home-menu-caption-color;
+            text-shadow: $o-home-menu-caption-shadow;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        &.o_focused {
+            background: $o-component-active-bg;
+            outline: 1px solid $o-action;
+            border-radius: $border-radius;
+        }
+    }
+
+    .o_dragged_app {
+        transition: transform 0.5s;
+        transform: rotate(6deg);
+
+        .o_app_icon {
+            box-shadow: 0 8px 20px -8px rgba(0, 0, 0, .5);
+            transform: translateY(-2px);
+        }
+    }
+
+    @include media-breakpoint-down(md) {
+        .o_caption {
+            font-size: $font-size-sm;
+            font-weight: $font-weight-bold;
+        }
+    }
+}
