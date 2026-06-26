@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="mudon_admin_task_view_kanban" model="ir.ui.view">
+        <field name="name">mudon.admin.task.kanban</field>
+        <field name="model">mudon.admin.task</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="state" string="Admin Funnel">
+                <field name="state"/>
+                <field name="name"/>
+                <field name="lead_id"/>
+                <field name="assigned_user_id"/>
+                <field name="need_invoice"/>
+                <templates>
+                    <t t-name="card">
+                        <strong><field name="name"/></strong>
+                        <div class="text-muted small">
+                            <field name="lead_id"/>
+                        </div>
+                        <div class="mt-1 small">
+                            Owner: <field name="assigned_user_id"/>
+                        </div>
+                        <div t-if="record.need_invoice.raw_value"
+                             class="badge text-bg-warning mt-1">
+                            Invoice needed
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="mudon_admin_task_view_tree" model="ir.ui.view">
+        <field name="name">mudon.admin.task.tree</field>
+        <field name="model">mudon.admin.task</field>
+        <field name="arch" type="xml">
+            <list string="Admin Tasks">
+                <field name="name"/>
+                <field name="lead_id"/>
+                <field name="team_id"/>
+                <field name="need_invoice"/>
+                <field name="assigned_user_id"/>
+                <field name="state" widget="badge"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="mudon_admin_task_view_form" model="ir.ui.view">
+        <field name="name">mudon.admin.task.form</field>
+        <field name="model">mudon.admin.task</field>
+        <field name="arch" type="xml">
+            <form string="Admin Task">
+                <header>
+                    <button name="action_mark_in_progress" type="object"
+                            string="Start" class="oe_highlight"
+                            invisible="state != 'new'"/>
+                    <button name="action_mark_done" type="object"
+                            string="Done" class="oe_highlight"
+                            invisible="state == 'done' or state == 'cancelled'"/>
+                    <button name="action_cancel" type="object"
+                            string="Cancel"
+                            invisible="state == 'done' or state == 'cancelled'"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="new,in_progress,done"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="Task title"/></h1>
+                    </div>
+                    <group>
+                        <field name="lead_id"/>
+                        <field name="team_id"/>
+                        <field name="need_invoice"/>
+                        <field name="assigned_user_id"/>
+                    </group>
+                    <field name="notes" placeholder="Notes…"/>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="mudon_admin_task_action" model="ir.actions.act_window">
+        <field name="name">Admin Funnel</field>
+        <field name="res_model">mudon.admin.task</field>
+        <field name="view_mode">kanban,list,form</field>
+    </record>
+</odoo>

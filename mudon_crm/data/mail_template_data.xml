@@ -1,14 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo noupdate="1">
     <!--
-        Mail templates carry the message bodies that get pushed to
-        WhatsApp through the abstract `_mudon_send_whatsapp` hook.
-        The body is rendered as HTML; the WA Cloud API accepts only
-        plain text, so when we switch from the stub provider to a
-        real one the sender strips tags before send.
+        Mail templates carry the message bodies that are pushed to
+        WhatsApp via the `_mudon_send_whatsapp` abstraction. Stored
+        as mail.template so the client can edit copy in the UI
+        without a code deploy.
 
-        Storing them as mail.template (not Python constants) lets the
-        client edit copy in the UI without a code deploy.
+        Today the senders interpolate Python strings inline; the
+        templates are also wired so future provider switches (Meta
+        Cloud / Twilio / 360Dialog) can render them through Odoo's
+        Jinja-style engine without changing the senders.
     -->
     <record id="mudon_template_client_greeting" model="mail.template">
         <field name="name">Mudon — Client greeting on new lead</field>
@@ -28,8 +29,113 @@
         <field name="subject">You have new client!</field>
         <field name="body_html" type="html">
             <p><b>You have new client!</b></p>
-            <p>Name: <t t-out="object.contact_name or object.name or ''"/><br/>
-            Phone: <t t-out="object.phone or ''"/></p>
+            <p>Name: <t t-out="object.contact_name or object.name or ''"/></p>
+        </field>
+    </record>
+
+    <record id="mudon_template_agent_qualified" model="mail.template">
+        <field name="name">Mudon — Agent qualified-client notification</field>
+        <field name="model_id" ref="crm.model_crm_lead"/>
+        <field name="subject">You have new qualified client!</field>
+        <field name="body_html" type="html">
+            <p><b>You have new qualified client!</b></p>
+            <p>Name: <t t-out="object.contact_name or object.name or ''"/></p>
+        </field>
+    </record>
+
+    <record id="mudon_template_offer_3hr" model="mail.template">
+        <field name="name">Mudon — Offer 3-hour follow-up</field>
+        <field name="model_id" ref="crm.model_crm_lead"/>
+        <field name="subject">Reminder — contact client for feedback</field>
+        <field name="body_html" type="html">
+            <p><b>Reminder!</b> The offer was sent 3 hrs ago.
+            Contact Client for Feedback.</p>
+        </field>
+    </record>
+
+    <record id="mudon_template_offer_evd_15" model="mail.template">
+        <field name="name">Mudon — 15-days-before-visit reminder</field>
+        <field name="model_id" ref="crm.model_crm_lead"/>
+        <field name="subject">Client visit is 15 days away</field>
+        <field name="body_html" type="html">
+            <p><b>Reminder!</b> Client visit is 15 days away! Confirm with Client.</p>
+        </field>
+    </record>
+
+    <record id="mudon_template_offer_periodic" model="mail.template">
+        <field name="name">Mudon — Periodic 15-day stay-in-touch</field>
+        <field name="model_id" ref="crm.model_crm_lead"/>
+        <field name="subject">Stay in touch — don't let leads go cold</field>
+        <field name="body_html" type="html">
+            <p>Stay in touch — don't let leads go cold.</p>
+        </field>
+    </record>
+
+    <record id="mudon_template_3rd_offer_client_survey" model="mail.template">
+        <field name="name">Mudon — 3rd-offer client survey (Company WA)</field>
+        <field name="model_id" ref="crm.model_crm_lead"/>
+        <field name="subject">Quick check on the offers we sent you</field>
+        <field name="body_html" type="html">
+            <p><b>Quick check on the offers we sent you:</b></p>
+            <p>1. Did you receive an offer? Yes / No<br/>
+            2. Was it suitable? Yes / No<br/>
+            3. Do you need support from another agent or management? Yes / No</p>
+            <p><b>Property options</b><br/>
+            ☐ Suitable ☐ Partially Suitable ☐ Not Suitable</p>
+            <p><b>Status</b><br/>
+            ☐ Interested ☐ Comparing ☐ Not Ready ☐ Not Interested</p>
+            <p><b>Preferred support</b><br/>
+            ☐ Same Agent ☐ Different Agent ☐ Manager</p>
+        </field>
+    </record>
+
+    <record id="mudon_template_meeting_entry" model="mail.template">
+        <field name="name">Mudon — Meeting stage entry (manager)</field>
+        <field name="model_id" ref="crm.model_crm_lead"/>
+        <field name="subject">Client in Meeting Stage</field>
+        <field name="body_html" type="html">
+            <p><b>Client in Meeting Stage!</b></p>
+            <p>Name: <t t-out="object.contact_name or object.name or ''"/></p>
+        </field>
+    </record>
+
+    <record id="mudon_template_meeting_reminder" model="mail.template">
+        <field name="name">Mudon — Meeting reminder (T-3 / T-2 / T-1)</field>
+        <field name="model_id" ref="crm.model_crm_lead"/>
+        <field name="subject">Client Meeting Reminder</field>
+        <field name="body_html" type="html">
+            <p><b>Client Meeting Reminder!</b></p>
+            <p>Name: <t t-out="object.contact_name or object.name or ''"/></p>
+        </field>
+    </record>
+
+    <record id="mudon_template_eoi_entry" model="mail.template">
+        <field name="name">Mudon — EOI / Booking stage entry</field>
+        <field name="model_id" ref="crm.model_crm_lead"/>
+        <field name="subject">Client Booked EOI</field>
+        <field name="body_html" type="html">
+            <p><b>Client Booked EOI</b></p>
+            <p>Name: <t t-out="object.contact_name or object.name or ''"/></p>
+        </field>
+    </record>
+
+    <record id="mudon_template_won_entry" model="mail.template">
+        <field name="name">Mudon — WON / SPA Signed</field>
+        <field name="model_id" ref="crm.model_crm_lead"/>
+        <field name="subject">Congratulations! Client is WON</field>
+        <field name="body_html" type="html">
+            <p><b>Congratulations! Client is WON</b></p>
+            <p>Name: <t t-out="object.contact_name or object.name or ''"/></p>
+        </field>
+    </record>
+
+    <record id="mudon_template_lost" model="mail.template">
+        <field name="name">Mudon — Lost</field>
+        <field name="model_id" ref="crm.model_crm_lead"/>
+        <field name="subject">Client Lost</field>
+        <field name="body_html" type="html">
+            <p><b>Client Lost</b></p>
+            <p>Reason: <t t-out="object.mudon_lost_reason or ''"/></p>
         </field>
     </record>
 
@@ -39,8 +145,6 @@
         <field name="subject">You didn't contact the client!</field>
         <field name="body_html" type="html">
             <p><b>You didn't contact the client!</b></p>
-            <p>Name: <t t-out="object.contact_name or object.name or ''"/><br/>
-            Phone: <t t-out="object.phone or ''"/></p>
         </field>
     </record>
 
@@ -50,14 +154,36 @@
         <field name="subject">didn't contact client for 1 hrs.</field>
         <field name="body_html" type="html">
             <p><b>didn't contact client for 1 hrs.</b></p>
-            <p>Name: <t t-out="object.contact_name or object.name or ''"/><br/>
-            Phone: <t t-out="object.phone or ''"/></p>
         </field>
     </record>
 
-    <!-- Default config: WA provider = stub until creds arrive -->
+    <record id="mudon_template_sla_2hour" model="mail.template">
+        <field name="name">Mudon — SLA 2-hour escalation</field>
+        <field name="model_id" ref="crm.model_crm_lead"/>
+        <field name="subject">didn't contact client for 2 hrs.</field>
+        <field name="body_html" type="html">
+            <p><b>'[Agent Name]' didn't contact client for 2 hrs.</b></p>
+        </field>
+    </record>
+
+    <!-- Config defaults -->
     <record id="mudon_config_wa_provider" model="ir.config_parameter">
         <field name="key">mudon_crm.wa_provider</field>
         <field name="value">stub</field>
+    </record>
+
+    <record id="mudon_config_wa_company_number" model="ir.config_parameter">
+        <field name="key">mudon_crm.wa_company_number</field>
+        <field name="value"></field>
+    </record>
+
+    <record id="mudon_config_wa_verify_token" model="ir.config_parameter">
+        <field name="key">mudon_crm.wa_verify_token</field>
+        <field name="value"></field>
+    </record>
+
+    <record id="mudon_config_marketing_user_id" model="ir.config_parameter">
+        <field name="key">mudon_crm.marketing_user_id</field>
+        <field name="value">0</field>
     </record>
 </odoo>

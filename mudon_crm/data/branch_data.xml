@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo noupdate="1">
+    <!--
+        Seed the branches that the spec explicitly names. Admin adds
+        more under CRM → Configuration → Mudon → Branches. Spec rule
+        for cities NOT covered here ("Others") → fall through to the
+        team's Sales Manager (`team_id.user_id`).
+    -->
+    <record id="mudon_branch_istanbul" model="mudon.branch">
+        <field name="name">Istanbul Branch</field>
+        <field name="team_id" ref="mudon_team_turkey"/>
+        <field name="city_key">istanbul</field>
+        <field name="member_ids" eval="[(4, ref('mudon_user_agent1'))]"/>
+    </record>
+
+    <record id="mudon_branch_trabzon" model="mudon.branch">
+        <field name="name">Trabzon Branch</field>
+        <field name="team_id" ref="mudon_team_turkey"/>
+        <field name="city_key">trabzon</field>
+        <field name="member_ids" eval="[(4, ref('mudon_user_agent1'))]"/>
+    </record>
+
+    <record id="mudon_branch_dubai" model="mudon.branch">
+        <field name="name">Dubai Branch</field>
+        <field name="team_id" ref="mudon_team_uae"/>
+        <field name="city_key">dubai</field>
+        <field name="member_ids" eval="[(4, ref('mudon_user_agent2'))]"/>
+    </record>
+</odoo>

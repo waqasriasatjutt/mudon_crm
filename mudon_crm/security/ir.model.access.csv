@@ -1,3 +1,11 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_mudon_country_agent_mapping_user,mudon.country.agent.mapping user,model_mudon_country_agent_mapping,sales_team.group_sale_salesman,1,0,0,0
 access_mudon_country_agent_mapping_manager,mudon.country.agent.mapping manager,model_mudon_country_agent_mapping,sales_team.group_sale_manager,1,1,1,1
+access_mudon_branch_user,mudon.branch user,model_mudon_branch,sales_team.group_sale_salesman,1,0,0,0
+access_mudon_branch_manager,mudon.branch manager,model_mudon_branch,sales_team.group_sale_manager,1,1,1,1
+access_mudon_developer_user,mudon.developer user,model_mudon_developer,sales_team.group_sale_salesman,1,0,0,0
+access_mudon_developer_manager,mudon.developer manager,model_mudon_developer,sales_team.group_sale_manager,1,1,1,1
+access_mudon_admin_task_user,mudon.admin.task user,model_mudon_admin_task,sales_team.group_sale_salesman,1,1,1,0
+access_mudon_admin_task_manager,mudon.admin.task manager,model_mudon_admin_task,sales_team.group_sale_manager,1,1,1,1
+access_mudon_after_sales_task_user,mudon.after.sales.task user,model_mudon_after_sales_task,sales_team.group_sale_salesman,1,1,1,0
+access_mudon_after_sales_task_manager,mudon.after.sales.task manager,model_mudon_after_sales_task,sales_team.group_sale_manager,1,1,1,1

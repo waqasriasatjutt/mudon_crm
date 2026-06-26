@@ -1,9 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
     <!--
-        Menu placement: CRM → Configuration → Mudon → Country/Agent
-        Mapping. Configuration is sales-manager-only by default, so
-        agents don't accidentally edit the routing table.
+        CRM → Configuration → Mudon
+            ├ Country → Agent Mapping
+            ├ Branches
+            └ Developers
+
+        CRM → Mudon Funnels
+            ├ Admin Funnel
+            └ After-Sales Funnel
     -->
     <menuitem id="mudon_menu_root_config"
               name="Mudon"
@@ -15,4 +20,33 @@
               parent="mudon_menu_root_config"
               action="mudon_country_agent_mapping_action"
               sequence="10"/>
+
+    <menuitem id="mudon_menu_branches"
+              name="Branches"
+              parent="mudon_menu_root_config"
+              action="mudon_branch_action"
+              sequence="20"/>
+
+    <menuitem id="mudon_menu_developers"
+              name="Developers"
+              parent="mudon_menu_root_config"
+              action="mudon_developer_action"
+              sequence="30"/>
+
+    <menuitem id="mudon_menu_funnels_root"
+              name="Mudon Funnels"
+              parent="crm.crm_menu_root"
+              sequence="40"/>
+
+    <menuitem id="mudon_menu_admin_funnel"
+              name="Admin Funnel"
+              parent="mudon_menu_funnels_root"
+              action="mudon_admin_task_action"
+              sequence="10"/>
+
+    <menuitem id="mudon_menu_after_sales_funnel"
+              name="After-Sales Funnel"
+              parent="mudon_menu_funnels_root"
+              action="mudon_after_sales_action"
+              sequence="20"/>
 </odoo>

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="mudon_branch_view_tree" model="ir.ui.view">
+        <field name="name">mudon.branch.tree</field>
+        <field name="model">mudon.branch</field>
+        <field name="arch" type="xml">
+            <list string="Branches">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="team_id"/>
+                <field name="city_key"/>
+                <field name="manager_id"/>
+                <field name="member_ids" widget="many2many_tags"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="mudon_branch_view_form" model="ir.ui.view">
+        <field name="name">mudon.branch.form</field>
+        <field name="model">mudon.branch</field>
+        <field name="arch" type="xml">
+            <form string="Branch">
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="team_id"/>
+                        <field name="city_key"/>
+                        <field name="manager_id"/>
+                        <field name="active"/>
+                    </group>
+                    <group string="Agents (round-robin pool)">
+                        <field name="member_ids" widget="many2many_tags"
+                               nolabel="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="mudon_branch_action" model="ir.actions.act_window">
+        <field name="name">Branches</field>
+        <field name="res_model">mudon.branch</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No branches yet.</p>
+            <p>Map a city to a sales team and its round-robin pool of
+            agents. Leads created with a matching city auto-route to
+            the next agent in this pool.</p>
+        </field>
+    </record>
+</odoo>

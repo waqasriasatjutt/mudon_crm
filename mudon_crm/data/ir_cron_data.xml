@@ -1,19 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo noupdate="1">
     <!--
-        Two crons sweep Mudon leads on a 5-minute cadence and fire the
-        agent reminder / manager escalation whenever:
-          • the lead is past its threshold (30 or 60 minutes since create)
-          • no chatter message from the assigned agent has landed yet
-          • the same SLA hasn't already fired (avoids duplicate pings)
-
-        5-minute interval is a reasonable trade-off between responsiveness
-        and database load: in the worst case the agent gets the reminder
-        at ~35 minutes (not exactly 30), which the proposal treats as
-        acceptable since WA delivery itself isn't second-precision.
+        Cron sweep cadences:
+        - 5 min: short-window SLA sweeps (30-min / 1-hour / 2-hour) — the
+          5-minute granularity means worst-case the agent gets the
+          reminder ~5 minutes late, which the spec treats as acceptable.
+        - 15 min: 3-hour offer-feedback reminder (granularity not
+          critical, lower load).
+        - daily at 08:00 UTC: date-based reminders that compare
+          mudon_visit_date against today (15-days-before-EVD,
+          periodic-15-days, meeting T-3/T-2/T-1).
     -->
+
+    <!-- Stage 1 SLA crons -->
     <record id="mudon_cron_sla_30min" model="ir.cron">
-        <field name="name">Mudon — SLA 30-min reminder</field>
+        <field name="name">Mudon — SLA 30-min (Stage 1 New Lead)</field>
         <field name="model_id" ref="crm.model_crm_lead"/>
         <field name="state">code</field>
         <field name="code">model._mudon_cron_sla_30min()</field>
@@ -23,12 +24,88 @@
     </record>
 
     <record id="mudon_cron_sla_1hour" model="ir.cron">
-        <field name="name">Mudon — SLA 1-hour escalation</field>
+        <field name="name">Mudon — SLA 1-hour (Stage 1 New Lead)</field>
         <field name="model_id" ref="crm.model_crm_lead"/>
         <field name="state">code</field>
         <field name="code">model._mudon_cron_sla_1hour()</field>
         <field name="interval_number">5</field>
         <field name="interval_type">minutes</field>
+        <field name="active">True</field>
+    </record>
+
+    <!-- Stage 2 SLA crons -->
+    <record id="mudon_cron_qualified_30min" model="ir.cron">
+        <field name="name">Mudon — SLA 30-min (Stage 2 Qualified)</field>
+        <field name="model_id" ref="crm.model_crm_lead"/>
+        <field name="state">code</field>
+        <field name="code">model._mudon_cron_qualified_30min()</field>
+        <field name="interval_number">5</field>
+        <field name="interval_type">minutes</field>
+        <field name="active">True</field>
+    </record>
+
+    <record id="mudon_cron_qualified_2hour" model="ir.cron">
+        <field name="name">Mudon — SLA 2-hour (Stage 2 Qualified)</field>
+        <field name="model_id" ref="crm.model_crm_lead"/>
+        <field name="state">code</field>
+        <field name="code">model._mudon_cron_qualified_2hour()</field>
+        <field name="interval_number">5</field>
+        <field name="interval_type">minutes</field>
+        <field name="active">True</field>
+    </record>
+
+    <!-- Stage 3 SLA crons -->
+    <record id="mudon_cron_offer_3hour" model="ir.cron">
+        <field name="name">Mudon — Offer 3-hour follow-up (Stage 3)</field>
+        <field name="model_id" ref="crm.model_crm_lead"/>
+        <field name="state">code</field>
+        <field name="code">model._mudon_cron_offer_3hour()</field>
+        <field name="interval_number">15</field>
+        <field name="interval_type">minutes</field>
+        <field name="active">True</field>
+    </record>
+
+    <record id="mudon_cron_offer_evd_15_before" model="ir.cron">
+        <field name="name">Mudon — 15-days-before-visit reminder (Stage 3)</field>
+        <field name="model_id" ref="crm.model_crm_lead"/>
+        <field name="state">code</field>
+        <field name="code">model._mudon_cron_offer_evd_15days_before()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="nextcall" eval="(DateTime.now().replace(hour=8, minute=0, second=0, microsecond=0))"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="mudon_cron_offer_periodic_15" model="ir.cron">
+        <field name="name">Mudon — Periodic 15-day stay-in-touch (Stage 3)</field>
+        <field name="model_id" ref="crm.model_crm_lead"/>
+        <field name="state">code</field>
+        <field name="code">model._mudon_cron_offer_periodic_15days()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="nextcall" eval="(DateTime.now().replace(hour=8, minute=15, second=0, microsecond=0))"/>
+        <field name="active">True</field>
+    </record>
+
+    <record id="mudon_cron_offer_3rd_survey" model="ir.cron">
+        <field name="name">Mudon — 3rd-offer client survey (Stage 3)</field>
+        <field name="model_id" ref="crm.model_crm_lead"/>
+        <field name="state">code</field>
+        <field name="code">model._mudon_cron_offer_3rd_survey()</field>
+        <field name="interval_number">15</field>
+        <field name="interval_type">minutes</field>
+        <field name="active">True</field>
+    </record>
+
+    <!-- Stage 4 meeting reminders -->
+    <record id="mudon_cron_meeting_reminders" model="ir.cron">
+        <field name="name">Mudon — Meeting reminders T-3 / T-2 / T-1 (Stage 4)</field>
+        <field name="model_id" ref="crm.model_crm_lead"/>
+        <field name="state">code</field>
+        <field name="code">model._mudon_cron_meeting_reminders()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="nextcall" eval="(DateTime.now().replace(hour=8, minute=30, second=0, microsecond=0))"/>
         <field name="active">True</field>
     </record>
 </odoo>

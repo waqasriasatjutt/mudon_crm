@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="mudon_developer_view_tree" model="ir.ui.view">
+        <field name="name">mudon.developer.tree</field>
+        <field name="model">mudon.developer</field>
+        <field name="arch" type="xml">
+            <list editable="bottom" string="Developers">
+                <field name="name"/>
+                <field name="country"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="mudon_developer_view_form" model="ir.ui.view">
+        <field name="name">mudon.developer.form</field>
+        <field name="model">mudon.developer</field>
+        <field name="arch" type="xml">
+            <form string="Developer">
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="country"/>
+                        <field name="active"/>
+                    </group>
+                    <field name="notes" placeholder="Internal notes…"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="mudon_developer_action" model="ir.actions.act_window">
+        <field name="name">Developers</field>
+        <field name="res_model">mudon.developer</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>
