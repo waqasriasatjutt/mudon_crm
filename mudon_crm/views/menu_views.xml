@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!--
+        Menu placement: CRM → Configuration → Mudon → Country/Agent
+        Mapping. Configuration is sales-manager-only by default, so
+        agents don't accidentally edit the routing table.
+    -->
+    <menuitem id="mudon_menu_root_config"
+              name="Mudon"
+              parent="crm.crm_menu_config"
+              sequence="50"/>
+
+    <menuitem id="mudon_menu_country_agent_mapping"
+              name="Country → Agent Mapping"
+              parent="mudon_menu_root_config"
+              action="mudon_country_agent_mapping_action"
+              sequence="10"/>
+</odoo>

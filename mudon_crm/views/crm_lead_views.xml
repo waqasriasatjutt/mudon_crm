@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!--
+        Inherit the standard Pipeline form and add a "Mudon" notebook
+        page carrying the stage-1 fields. Visibility of Turkey-only /
+        UAE-only fields is driven by the computed `mudon_pipeline_kind`
+        marker so the form auto-adapts when the team is switched.
+    -->
+    <record id="mudon_crm_lead_view_form" model="ir.ui.view">
+        <field name="name">crm.lead.form.mudon</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_lead_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="Mudon" name="mudon_page"
+                      invisible="not mudon_pipeline_kind">
+                    <field name="mudon_pipeline_kind" invisible="1"/>
+                    <group>
+                        <group string="Lead Qualification">
+                            <field name="mudon_service"/>
+                            <field name="mudon_city"/>
+                            <field name="mudon_city_other"
+                                   invisible="mudon_city != 'other_tr'"/>
+                            <field name="mudon_priority"/>
+                            <field name="mudon_budget"/>
+                            <field name="mudon_budget_currency_id"
+                                   groups="base.group_no_one"/>
+                            <field name="mudon_status"/>
+                            <field name="mudon_source"/>
+                        </group>
+                        <group string="Client Profile">
+                            <field name="mudon_nationality_id"
+                                   options="{'no_create': True}"/>
+                            <field name="mudon_living_in_id"
+                                   options="{'no_create': True}"/>
+                            <label for="mudon_in_country" string="In Turkey Now"
+                                   invisible="mudon_pipeline_kind != 'turkey'"/>
+                            <label for="mudon_in_country" string="In UAE Now"
+                                   invisible="mudon_pipeline_kind != 'uae'"/>
+                            <field name="mudon_in_country" nolabel="1"/>
+                            <field name="mudon_cbi_files"
+                                   invisible="mudon_pipeline_kind != 'turkey'"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Property">
+                            <field name="mudon_purpose"/>
+                            <field name="mudon_property_type"/>
+                            <field name="mudon_beds"/>
+                            <field name="mudon_other_specs"/>
+                        </group>
+                        <group string="Engagement">
+                            <field name="mudon_visit_date"/>
+                            <field name="mudon_notes"/>
+                        </group>
+                    </group>
+                    <group string="SLA Tracking" groups="base.group_no_one">
+                        <field name="mudon_first_contact_logged"/>
+                        <field name="mudon_sla_30min_fired"/>
+                        <field name="mudon_sla_1hour_fired"/>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <!--
+        Kanban: inherit the standard pipeline kanban and inject Mudon
+        badges (service / city / priority / status) just above the
+        card footer. Sort by create_date desc (set on _order in the
+        model so the kanban inherits it).
+
+        Odoo 19 restructured crm.crm_case_kanban_view_leads — the old
+        `<div class="o_kanban_record_bottom">` wrapper is gone, the
+        card now uses `<t t-name="card">` with a `<footer>` slot.
+        Anchoring on `//footer` is the stable insertion point.
+    -->
+    <record id="mudon_crm_lead_view_kanban" model="ir.ui.view">
+        <field name="name">crm.lead.kanban.mudon</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_case_kanban_view_leads"/>
+        <field name="arch" type="xml">
+            <xpath expr="//templates" position="before">
+                <field name="mudon_pipeline_kind"/>
+                <field name="mudon_service"/>
+                <field name="mudon_city"/>
+                <field name="mudon_priority"/>
+                <field name="mudon_status"/>
+            </xpath>
+            <xpath expr="//footer" position="before">
+                <div t-if="record.mudon_pipeline_kind.raw_value"
+                     class="mt-1 small text-muted">
+                    <span t-if="record.mudon_service.raw_value"
+                          class="badge text-bg-light me-1">
+                        <t t-out="record.mudon_service.value"/>
+                    </span>
+                    <span t-if="record.mudon_city.raw_value"
+                          class="badge text-bg-light me-1">
+                        <t t-out="record.mudon_city.value"/>
+                    </span>
+                    <span t-if="record.mudon_priority.raw_value == 'urgent'"
+                          class="badge text-bg-danger me-1">Urgent</span>
+                    <span t-if="record.mudon_status.raw_value"
+                          class="badge text-bg-secondary me-1">
+                        <t t-out="record.mudon_status.value"/>
+                    </span>
+                </div>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Search view: filter by Mudon pipeline, status, priority, source. -->
+    <record id="mudon_crm_lead_view_search" model="ir.ui.view">
+        <field name="name">crm.lead.search.mudon</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.view_crm_case_leads_filter"/>
+        <field name="arch" type="xml">
+            <xpath expr="//search" position="inside">
+                <separator/>
+                <filter name="mudon_turkey" string="Mudon Turkey"
+                        domain="[('mudon_pipeline_kind', '=', 'turkey')]"/>
+                <filter name="mudon_uae" string="Mudon UAE Dubai"
+                        domain="[('mudon_pipeline_kind', '=', 'uae')]"/>
+                <separator/>
+                <filter name="mudon_urgent" string="Urgent"
+                        domain="[('mudon_priority', '=', 'urgent')]"/>
+                <filter name="mudon_not_contacted"
+                        string="Not contacted yet"
+                        domain="[
+                            ('mudon_first_contact_logged', '=', False),
+                            ('mudon_pipeline_kind', 'in', ('turkey', 'uae'))]"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

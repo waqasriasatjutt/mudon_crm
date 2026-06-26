@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo noupdate="1">
+    <!--
+        Default country-code mappings — proposal §1 example list:
+        +966 (Saudi Arabia) → Agent 1
+        +971 (UAE)          → Agent 2
+
+        Admin edits these in CRM → Configuration → Mudon → Country Agent
+        Mapping. Adding more rows there is the only step needed to route
+        a new country to a different agent.
+    -->
+    <record id="mudon_mapping_966_agent1" model="mudon.country.agent.mapping">
+        <field name="sequence">10</field>
+        <field name="country_code">966</field>
+        <field name="agent_user_id" ref="mudon_user_agent1"/>
+    </record>
+    <record id="mudon_mapping_971_agent2" model="mudon.country.agent.mapping">
+        <field name="sequence">20</field>
+        <field name="country_code">971</field>
+        <field name="agent_user_id" ref="mudon_user_agent2"/>
+    </record>
+</odoo>

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="mudon_country_agent_mapping_view_tree" model="ir.ui.view">
+        <field name="name">mudon.country.agent.mapping.tree</field>
+        <field name="model">mudon.country.agent.mapping</field>
+        <field name="arch" type="xml">
+            <list editable="bottom" string="Country → Agent Mapping">
+                <field name="sequence" widget="handle"/>
+                <field name="country_code"/>
+                <field name="agent_user_id"/>
+                <field name="team_id" optional="show"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="mudon_country_agent_mapping_view_form" model="ir.ui.view">
+        <field name="name">mudon.country.agent.mapping.form</field>
+        <field name="model">mudon.country.agent.mapping</field>
+        <field name="arch" type="xml">
+            <form string="Country → Agent">
+                <sheet>
+                    <group>
+                        <field name="country_code"
+                               placeholder="966 (no leading +)"/>
+                        <field name="agent_user_id"/>
+                        <field name="team_id"/>
+                        <field name="sequence"/>
+                        <field name="active"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="mudon_country_agent_mapping_action" model="ir.actions.act_window">
+        <field name="name">Country → Agent Mapping</field>
+        <field name="res_model">mudon.country.agent.mapping</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Map a phone country code to a sales agent.
+            </p>
+            <p>
+                First mapping that matches a lead's phone prefix wins.
+                If no mapping matches, the lead falls back to round-robin
+                across team members.
+            </p>
+        </field>
+    </record>
+</odoo>

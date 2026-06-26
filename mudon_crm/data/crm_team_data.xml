@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo noupdate="1">
+    <!--
+        Two Mudon pipelines. `use_leads` left at False — the proposal
+        treats every incoming lead as an "opportunity" on the kanban
+        directly, matching how property-sales teams work in practice
+        (no separate lead-grading step before the pipeline).
+    -->
+    <record id="mudon_team_turkey" model="crm.team">
+        <field name="name">Mudon Turkey</field>
+        <field name="sequence">10</field>
+        <field name="member_ids" eval="[(4, ref('mudon_user_agent1'))]"/>
+        <field name="user_id" ref="base.user_admin"/>
+    </record>
+    <record id="mudon_team_uae" model="crm.team">
+        <field name="name">Mudon UAE Dubai</field>
+        <field name="sequence">20</field>
+        <field name="member_ids" eval="[(4, ref('mudon_user_agent2'))]"/>
+        <field name="user_id" ref="base.user_admin"/>
+    </record>
+</odoo>

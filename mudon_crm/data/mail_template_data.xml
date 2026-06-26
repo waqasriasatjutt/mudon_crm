@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo noupdate="1">
+    <!--
+        Mail templates carry the message bodies that get pushed to
+        WhatsApp through the abstract `_mudon_send_whatsapp` hook.
+        The body is rendered as HTML; the WA Cloud API accepts only
+        plain text, so when we switch from the stub provider to a
+        real one the sender strips tags before send.
+
+        Storing them as mail.template (not Python constants) lets the
+        client edit copy in the UI without a code deploy.
+    -->
+    <record id="mudon_template_client_greeting" model="mail.template">
+        <field name="name">Mudon — Client greeting on new lead</field>
+        <field name="model_id" ref="crm.model_crm_lead"/>
+        <field name="subject">Thank you for contacting Mudon</field>
+        <field name="body_html" type="html">
+            <p>Thank you for contacting Mudon<br/>
+            One of our property advisors will contact you shortly.</p>
+            <p dir="rtl" lang="ar">شكراً لتواصلكم مع مدن<br/>
+            سيقوم مستشار عقاري بالتواصل معكم قريباً.</p>
+        </field>
+    </record>
+
+    <record id="mudon_template_agent_new_lead" model="mail.template">
+        <field name="name">Mudon — Agent new-lead notification</field>
+        <field name="model_id" ref="crm.model_crm_lead"/>
+        <field name="subject">You have new client!</field>
+        <field name="body_html" type="html">
+            <p><b>You have new client!</b></p>
+            <p>Name: <t t-out="object.contact_name or object.name or ''"/><br/>
+            Phone: <t t-out="object.phone or ''"/></p>
+        </field>
+    </record>
+
+    <record id="mudon_template_sla_30min" model="mail.template">
+        <field name="name">Mudon — SLA 30-min reminder</field>
+        <field name="model_id" ref="crm.model_crm_lead"/>
+        <field name="subject">You didn't contact the client!</field>
+        <field name="body_html" type="html">
+            <p><b>You didn't contact the client!</b></p>
+            <p>Name: <t t-out="object.contact_name or object.name or ''"/><br/>
+            Phone: <t t-out="object.phone or ''"/></p>
+        </field>
+    </record>
+
+    <record id="mudon_template_sla_1hour" model="mail.template">
+        <field name="name">Mudon — SLA 1-hour escalation</field>
+        <field name="model_id" ref="crm.model_crm_lead"/>
+        <field name="subject">didn't contact client for 1 hrs.</field>
+        <field name="body_html" type="html">
+            <p><b>didn't contact client for 1 hrs.</b></p>
+            <p>Name: <t t-out="object.contact_name or object.name or ''"/><br/>
+            Phone: <t t-out="object.phone or ''"/></p>
+        </field>
+    </record>
+
+    <!-- Default config: WA provider = stub until creds arrive -->
+    <record id="mudon_config_wa_provider" model="ir.config_parameter">
+        <field name="key">mudon_crm.wa_provider</field>
+        <field name="value">stub</field>
+    </record>
+</odoo>

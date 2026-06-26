@@ -1,0 +1,3 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_mudon_country_agent_mapping_user,mudon.country.agent.mapping user,model_mudon_country_agent_mapping,sales_team.group_sale_salesman,1,0,0,0
+access_mudon_country_agent_mapping_manager,mudon.country.agent.mapping manager,model_mudon_country_agent_mapping,sales_team.group_sale_manager,1,1,1,1

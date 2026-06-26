@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo noupdate="1">
+    <!--
+        Two demo agents for the country-code routing on devmudon.
+        Both belong to "Sales / User: Own Documents Only" so they only
+        see their own leads. Phones used to receive the WhatsApp
+        notifications (M1 stub → chatter only).
+    -->
+    <record id="mudon_partner_agent1" model="res.partner">
+        <field name="name">Mudon Agent 1 (KSA)</field>
+        <field name="email">agent1@mudon.demo</field>
+        <field name="phone">+966500000001</field>
+        <field name="company_type">person</field>
+    </record>
+    <record id="mudon_partner_agent2" model="res.partner">
+        <field name="name">Mudon Agent 2 (UAE)</field>
+        <field name="email">agent2@mudon.demo</field>
+        <field name="phone">+971500000002</field>
+        <field name="company_type">person</field>
+    </record>
+
+    <record id="mudon_user_agent1" model="res.users">
+        <field name="name">Mudon Agent 1 (KSA)</field>
+        <field name="login">agent1@mudon.demo</field>
+        <field name="password">Mudon2026!</field>
+        <field name="partner_id" ref="mudon_partner_agent1"/>
+        <field name="groups_id" eval="[(6, 0, [
+            ref('base.group_user'),
+            ref('sales_team.group_sale_salesman'),
+        ])]"/>
+    </record>
+    <record id="mudon_user_agent2" model="res.users">
+        <field name="name">Mudon Agent 2 (UAE)</field>
+        <field name="login">agent2@mudon.demo</field>
+        <field name="password">Mudon2026!</field>
+        <field name="partner_id" ref="mudon_partner_agent2"/>
+        <field name="groups_id" eval="[(6, 0, [
+            ref('base.group_user'),
+            ref('sales_team.group_sale_salesman'),
+        ])]"/>
+    </record>
+</odoo>

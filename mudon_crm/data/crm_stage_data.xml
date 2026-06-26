@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo noupdate="1">
+    <!--
+        7 stages per pipeline (proposal §2). Stage 1 ("New Lead") is the
+        only one with bound automations in M1. Stages 2-7 are seeded as
+        named placeholders so the kanban shows the full sales path; the
+        per-stage requirements land in M2-M7.
+
+        Stage records are team-scoped via team_id, so the Turkey and UAE
+        kanbans show independent columns even though both teams use the
+        same crm.lead model.
+    -->
+    <!-- Turkey -->
+    <record id="mudon_stage_turkey_new_lead" model="crm.stage">
+        <field name="name">New Lead</field>
+        <field name="sequence">10</field>
+        <field name="team_id" ref="mudon_team_turkey"/>
+        <field name="is_won">False</field>
+    </record>
+    <record id="mudon_stage_turkey_qualified" model="crm.stage">
+        <field name="name">Qualified</field>
+        <field name="sequence">20</field>
+        <field name="team_id" ref="mudon_team_turkey"/>
+    </record>
+    <record id="mudon_stage_turkey_offer_sent" model="crm.stage">
+        <field name="name">Offer Sent</field>
+        <field name="sequence">30</field>
+        <field name="team_id" ref="mudon_team_turkey"/>
+    </record>
+    <record id="mudon_stage_turkey_meeting" model="crm.stage">
+        <field name="name">Meeting</field>
+        <field name="sequence">40</field>
+        <field name="team_id" ref="mudon_team_turkey"/>
+    </record>
+    <record id="mudon_stage_turkey_eoi" model="crm.stage">
+        <field name="name">EOI / Booking</field>
+        <field name="sequence">50</field>
+        <field name="team_id" ref="mudon_team_turkey"/>
+    </record>
+    <record id="mudon_stage_turkey_won" model="crm.stage">
+        <field name="name">WON (SPA Signed)</field>
+        <field name="sequence">60</field>
+        <field name="team_id" ref="mudon_team_turkey"/>
+        <field name="is_won">True</field>
+    </record>
+    <record id="mudon_stage_turkey_lost" model="crm.stage">
+        <field name="name">Lost</field>
+        <field name="sequence">70</field>
+        <field name="team_id" ref="mudon_team_turkey"/>
+    </record>
+
+    <!-- UAE Dubai -->
+    <record id="mudon_stage_uae_new_lead" model="crm.stage">
+        <field name="name">New Lead</field>
+        <field name="sequence">10</field>
+        <field name="team_id" ref="mudon_team_uae"/>
+        <field name="is_won">False</field>
+    </record>
+    <record id="mudon_stage_uae_qualified" model="crm.stage">
+        <field name="name">Qualified</field>
+        <field name="sequence">20</field>
+        <field name="team_id" ref="mudon_team_uae"/>
+    </record>
+    <record id="mudon_stage_uae_offer_sent" model="crm.stage">
+        <field name="name">Offer Sent</field>
+        <field name="sequence">30</field>
+        <field name="team_id" ref="mudon_team_uae"/>
+    </record>
+    <record id="mudon_stage_uae_meeting" model="crm.stage">
+        <field name="name">Meeting</field>
+        <field name="sequence">40</field>
+        <field name="team_id" ref="mudon_team_uae"/>
+    </record>
+    <record id="mudon_stage_uae_eoi" model="crm.stage">
+        <field name="name">EOI / Booking</field>
+        <field name="sequence">50</field>
+        <field name="team_id" ref="mudon_team_uae"/>
+    </record>
+    <record id="mudon_stage_uae_won" model="crm.stage">
+        <field name="name">WON (SPA Signed)</field>
+        <field name="sequence">60</field>
+        <field name="team_id" ref="mudon_team_uae"/>
+        <field name="is_won">True</field>
+    </record>
+    <record id="mudon_stage_uae_lost" model="crm.stage">
+        <field name="name">Lost</field>
+        <field name="sequence">70</field>
+        <field name="team_id" ref="mudon_team_uae"/>
+    </record>
+</odoo>
