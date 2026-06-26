@@ -63,22 +63,26 @@ class MudonWhatsAppWebhook(http.Controller):
         )
 
     @http.route(
-        "/mudon/wa/webhook", type="json", auth="public",
+        "/mudon/wa/webhook", type="http", auth="public",
         methods=["POST"], csrf=False,
     )
     def wa_webhook_inbound(self, **kw):
-        """Meta posts a JSON envelope per inbound message.
+        """Meta posts a flat JSON envelope per inbound message.
 
-        Sample shape (simplified):
+        type="http" (not "json") is required because Meta does NOT send
+        a JSON-RPC envelope — its body is a plain `{"entry": [...]}`
+        document, so Odoo's JSON-RPC dispatcher would reject it before
+        the controller runs. We parse the body manually and return a
+        non-JSON-RPC 200 so Meta keeps the subscription live.
+
+        Sample inbound shape (simplified):
             {
               "entry": [{
                 "changes": [{
                   "value": {
                     "messages": [{
                       "from": "966500000001",
-                      "text": {"body": "Offer Sent"},
-                      "timestamp": "...",
-                      "id": "..."
+                      "text": {"body": "Offer Sent"}
                     }]
                   }
                 }]
@@ -86,16 +90,13 @@ class MudonWhatsAppWebhook(http.Controller):
             }
         """
         try:
-            payload = request.get_json_data() or {}
-        except Exception:
+            raw = request.httprequest.get_data(as_text=True) or "{}"
+            payload = json.loads(raw)
+        except Exception as exc:
+            _logger.warning(
+                "mudon_crm: WA webhook body not parseable: %s", exc,
+            )
             payload = {}
-        if not payload:
-            try:
-                payload = json.loads(
-                    request.httprequest.get_data(as_text=True) or "{}"
-                )
-            except Exception:
-                payload = {}
 
         env = request.env(su=True)
         Lead = env["crm.lead"]
@@ -110,4 +111,7 @@ class MudonWhatsAppWebhook(http.Controller):
                     Lead._mudon_handle_inbound_wa_message(
                         sender_phone=sender, body=body,
                     )
-        return {"status": "ok"}
+        return request.make_response(
+            '{"status":"ok"}',
+            headers=[("Content-Type", "application/json")],
+        )

@@ -9,12 +9,16 @@
     <record id="mudon_team_turkey" model="crm.team">
         <field name="name">Mudon Turkey</field>
         <field name="sequence">10</field>
+        <field name="use_leads" eval="True"/>
+        <field name="use_opportunities" eval="True"/>
         <field name="member_ids" eval="[(4, ref('mudon_user_agent1'))]"/>
         <field name="user_id" ref="base.user_admin"/>
     </record>
     <record id="mudon_team_uae" model="crm.team">
         <field name="name">Mudon UAE Dubai</field>
         <field name="sequence">20</field>
+        <field name="use_leads" eval="True"/>
+        <field name="use_opportunities" eval="True"/>
         <field name="member_ids" eval="[(4, ref('mudon_user_agent2'))]"/>
         <field name="user_id" ref="base.user_admin"/>
     </record>

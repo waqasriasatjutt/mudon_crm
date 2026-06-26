@@ -420,7 +420,14 @@ class CrmLead(models.Model):
         Order matters: we capture pre-values, call super, then look at
         what flipped TRUE → fire the matching transition. Keeps each
         transition idempotent (won't re-fire on a no-op write).
+
+        Recursion guard: internal writes (advance_stage, counter bump,
+        first_contact flip) carry `mudon_in_write=True` in context so
+        the after-write hook short-circuits. Saves 5-8 redundant write
+        transactions per business action.
         """
+        if self.env.context.get("mudon_in_write"):
+            return super().write(vals)
         pre = {
             r.id: {
                 "stage_id": r.stage_id.id,
@@ -455,7 +462,7 @@ class CrmLead(models.Model):
             self._mudon_advance_stage("offer_sent")
             # First offer: counter goes 0 → 1, stamp last_offer_date
             if self.mudon_offer_counter < 1:
-                self.sudo().write({
+                self.sudo().with_context(mudon_in_write=True).write({
                     "mudon_offer_counter": 1,
                     "mudon_last_offer_date": fields.Datetime.now(),
                     "mudon_offer_3hr_reminder_idx": 0,
@@ -492,20 +499,59 @@ class CrmLead(models.Model):
         new_counter = self.mudon_offer_counter
         old_counter = prev.get("mudon_offer_counter") or 0
         if new_counter > old_counter and new_counter > 1:
-            self.sudo().write({
+            self.sudo().with_context(mudon_in_write=True).write({
                 "mudon_last_offer_date": fields.Datetime.now(),
                 "mudon_offer_3hr_reminder_idx": old_counter,
             })
 
+        # Stage 2 entry: fire qualified-client WA + reset SLA flags
+        # so the 30-min / 2-hour Qualified crons restart their clock.
+        prev_stage = prev.get("stage_id")
+        if (self.stage_id
+                and self.stage_id.id != prev_stage
+                and self.stage_id.id in self._mudon_stage_ids("qualified")):
+            self.sudo().with_context(mudon_in_write=True).write({
+                "mudon_qualified_entry_date": fields.Datetime.now(),
+                "mudon_sla_30min_fired": False,
+                "mudon_sla_2hour_fired": False,
+                "mudon_first_contact_logged": False,
+            })
+            self._mudon_notify_assigned_agent("qualified_entry")
+
     def _mudon_advance_stage(self, suffix):
-        """Move the lead to mudon_stage_<pipeline>_<suffix>."""
+        """Move the lead to mudon_stage_<pipeline>_<suffix>.
+
+        If the target stage xmlid is missing (admin renamed or the
+        data file failed to load), surface that loudly — log a
+        warning AND drop a chatter note on the lead. Silent no-op
+        would otherwise leave field staff confused when ticking the
+        transition box appears to do nothing.
+        """
         self.ensure_one()
         xmlid = "mudon_crm.mudon_stage_%s_%s" % (
             self.mudon_pipeline_kind, suffix,
         )
         stage = self.env.ref(xmlid, raise_if_not_found=False)
-        if stage and self.stage_id.id != stage.id:
-            self.sudo().write({"stage_id": stage.id})
+        if not stage:
+            _logger.warning(
+                "mudon_crm: target stage %s not found for lead %s — "
+                "stage seed data may have been renamed or removed.",
+                xmlid, self.id,
+            )
+            self.with_context(
+                mudon_skip_first_contact=True,
+            ).message_post(
+                body=Markup(
+                    "<p>Mudon: target stage <code>%s</code> not found "
+                    "— staying on current stage. Check Settings → "
+                    "Technical → External Identifiers.</p>"
+                ) % escape(xmlid),
+            )
+            return
+        if self.stage_id.id != stage.id:
+            self.sudo().with_context(
+                mudon_in_write=True,
+            ).write({"stage_id": stage.id})
 
     # ─── Branch + country-code routing ──────────────────────────────
     def _mudon_auto_assign_agent(self):
@@ -978,22 +1024,10 @@ class CrmLead(models.Model):
                 ids.append(stage.id)
         return ids
 
-    # ─── Stage-change tracking ──────────────────────────────────────
-    def _track_subtype(self, init_values):
-        # Stamp Stage 2 entry timestamp the first time the lead lands
-        # on the Qualified stage. Used by the 30-min / 2-hr Qualified
-        # SLA crons (without it those crons can't tell when the lead
-        # arrived in this stage).
-        for rec in self:
-            if "stage_id" in init_values and rec.stage_id:
-                if (rec.stage_id.id in rec._mudon_stage_ids("qualified")
-                        and not rec.mudon_qualified_entry_date):
-                    rec.mudon_qualified_entry_date = fields.Datetime.now()
-                    # reset the per-stage SLA flags so escalations restart
-                    rec.mudon_sla_30min_fired = False
-                    rec.mudon_sla_2hour_fired = False
-                    rec.mudon_first_contact_logged = False
-        return super()._track_subtype(init_values)
+    # Stage-2 entry timestamp + SLA flag reset is handled inside
+    # `_mudon_after_write` — keeping it out of `_track_subtype` avoids
+    # writing tracked fields during Odoo's tracking pipeline, which
+    # would re-enter our own write() and cascade.
 
     # ─── Inbound WA webhook handler ─────────────────────────────────
     @api.model
@@ -1075,5 +1109,7 @@ class CrmLead(models.Model):
         if self.mudon_pipeline_kind and not self.mudon_first_contact_logged:
             author = kwargs.get("author_id") or self.env.user.partner_id.id
             if self.user_id and self.user_id.partner_id.id == author:
-                self.sudo().mudon_first_contact_logged = True
+                self.sudo().with_context(
+                    mudon_in_write=True,
+                ).write({"mudon_first_contact_logged": True})
         return res

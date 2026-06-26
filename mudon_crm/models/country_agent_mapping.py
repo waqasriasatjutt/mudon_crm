@@ -40,12 +40,14 @@ class MudonCountryAgentMapping(models.Model):
     active = fields.Boolean(default=True)
 
     _sql_constraints = [
-        # `active` in the unique tuple so an archived row stays in the
-        # table without blocking a fresh replacement for the same
-        # (country_code, team_id) pair.
+        # Strict unique on (country_code, team_id). Archived rows stay
+        # in the table; admin un-archives the existing row rather than
+        # creating a duplicate. Including `active` only lets ONE
+        # archived row coexist with the live one — second archive
+        # collides.
         (
             "country_code_team_unique",
-            "unique(country_code, team_id, active)",
+            "unique(country_code, team_id)",
             "A mapping for this country code already exists on this team.",
         ),
     ]
