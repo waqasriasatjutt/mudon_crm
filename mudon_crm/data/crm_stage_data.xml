@@ -14,77 +14,77 @@
     <record id="mudon_stage_turkey_new_lead" model="crm.stage">
         <field name="name">New Lead</field>
         <field name="sequence">10</field>
-        <field name="team_id" ref="mudon_team_turkey"/>
+        <field name="team_ids" eval="[(6, 0, [ref('mudon_team_turkey')])]"/>
         <field name="is_won">False</field>
     </record>
     <record id="mudon_stage_turkey_qualified" model="crm.stage">
         <field name="name">Qualified</field>
         <field name="sequence">20</field>
-        <field name="team_id" ref="mudon_team_turkey"/>
+        <field name="team_ids" eval="[(6, 0, [ref('mudon_team_turkey')])]"/>
     </record>
     <record id="mudon_stage_turkey_offer_sent" model="crm.stage">
         <field name="name">Offer Sent</field>
         <field name="sequence">30</field>
-        <field name="team_id" ref="mudon_team_turkey"/>
+        <field name="team_ids" eval="[(6, 0, [ref('mudon_team_turkey')])]"/>
     </record>
     <record id="mudon_stage_turkey_meeting" model="crm.stage">
         <field name="name">Meeting</field>
         <field name="sequence">40</field>
-        <field name="team_id" ref="mudon_team_turkey"/>
+        <field name="team_ids" eval="[(6, 0, [ref('mudon_team_turkey')])]"/>
     </record>
     <record id="mudon_stage_turkey_eoi" model="crm.stage">
         <field name="name">EOI / Booking</field>
         <field name="sequence">50</field>
-        <field name="team_id" ref="mudon_team_turkey"/>
+        <field name="team_ids" eval="[(6, 0, [ref('mudon_team_turkey')])]"/>
     </record>
     <record id="mudon_stage_turkey_won" model="crm.stage">
         <field name="name">WON (SPA Signed)</field>
         <field name="sequence">60</field>
-        <field name="team_id" ref="mudon_team_turkey"/>
+        <field name="team_ids" eval="[(6, 0, [ref('mudon_team_turkey')])]"/>
         <field name="is_won">True</field>
     </record>
     <record id="mudon_stage_turkey_lost" model="crm.stage">
         <field name="name">Lost</field>
         <field name="sequence">70</field>
-        <field name="team_id" ref="mudon_team_turkey"/>
+        <field name="team_ids" eval="[(6, 0, [ref('mudon_team_turkey')])]"/>
     </record>
 
     <!-- UAE Dubai -->
     <record id="mudon_stage_uae_new_lead" model="crm.stage">
         <field name="name">New Lead</field>
         <field name="sequence">10</field>
-        <field name="team_id" ref="mudon_team_uae"/>
+        <field name="team_ids" eval="[(6, 0, [ref('mudon_team_uae')])]"/>
         <field name="is_won">False</field>
     </record>
     <record id="mudon_stage_uae_qualified" model="crm.stage">
         <field name="name">Qualified</field>
         <field name="sequence">20</field>
-        <field name="team_id" ref="mudon_team_uae"/>
+        <field name="team_ids" eval="[(6, 0, [ref('mudon_team_uae')])]"/>
     </record>
     <record id="mudon_stage_uae_offer_sent" model="crm.stage">
         <field name="name">Offer Sent</field>
         <field name="sequence">30</field>
-        <field name="team_id" ref="mudon_team_uae"/>
+        <field name="team_ids" eval="[(6, 0, [ref('mudon_team_uae')])]"/>
     </record>
     <record id="mudon_stage_uae_meeting" model="crm.stage">
         <field name="name">Meeting</field>
         <field name="sequence">40</field>
-        <field name="team_id" ref="mudon_team_uae"/>
+        <field name="team_ids" eval="[(6, 0, [ref('mudon_team_uae')])]"/>
     </record>
     <record id="mudon_stage_uae_eoi" model="crm.stage">
         <field name="name">EOI / Booking</field>
         <field name="sequence">50</field>
-        <field name="team_id" ref="mudon_team_uae"/>
+        <field name="team_ids" eval="[(6, 0, [ref('mudon_team_uae')])]"/>
     </record>
     <record id="mudon_stage_uae_won" model="crm.stage">
         <field name="name">WON (SPA Signed)</field>
         <field name="sequence">60</field>
-        <field name="team_id" ref="mudon_team_uae"/>
+        <field name="team_ids" eval="[(6, 0, [ref('mudon_team_uae')])]"/>
         <field name="is_won">True</field>
     </record>
     <record id="mudon_stage_uae_lost" model="crm.stage">
         <field name="name">Lost</field>
         <field name="sequence">70</field>
-        <field name="team_id" ref="mudon_team_uae"/>
+        <field name="team_ids" eval="[(6, 0, [ref('mudon_team_uae')])]"/>
     </record>
 </odoo>
