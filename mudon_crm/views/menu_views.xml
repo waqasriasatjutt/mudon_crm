@@ -21,17 +21,21 @@
             └ Developers
     -->
 
-    <!-- Per-pipeline pipeline actions (pre-filter by team) -->
+    <!--
+        Per-pipeline pipeline actions (pre-filter by team).
+        Using `eval=` so `ref()` resolves the team xmlid at XML load
+        time to the actual DB integer ID. `%(xmlid)d` substitution
+        is unreliable for domain/context in Odoo 19, stored literally
+        and crashing at click-time.
+    -->
     <record id="mudon_pipeline_turkey_action" model="ir.actions.act_window">
         <field name="name">Turkey Pipeline</field>
         <field name="res_model">crm.lead</field>
         <field name="view_mode">kanban,list,form,calendar,activity,graph,pivot</field>
-        <field name="domain">[('team_id', '=', %(mudon_team_turkey)d)]</field>
-        <field name="context">{
-            'default_team_id': %(mudon_team_turkey)d,
-            'default_type': 'opportunity',
-            'search_default_mudon_turkey': 1,
-        }</field>
+        <field name="domain"
+               eval="'[(\'team_id\', \'=\', %d)]' % ref('mudon_team_turkey')"/>
+        <field name="context"
+               eval="'{\'default_team_id\': %d, \'default_type\': \'opportunity\', \'search_default_mudon_turkey\': 1}' % ref('mudon_team_turkey')"/>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
                 Click <b>New</b> to create a Turkey lead.
@@ -48,12 +52,10 @@
         <field name="name">UAE Dubai Pipeline</field>
         <field name="res_model">crm.lead</field>
         <field name="view_mode">kanban,list,form,calendar,activity,graph,pivot</field>
-        <field name="domain">[('team_id', '=', %(mudon_team_uae)d)]</field>
-        <field name="context">{
-            'default_team_id': %(mudon_team_uae)d,
-            'default_type': 'opportunity',
-            'search_default_mudon_uae': 1,
-        }</field>
+        <field name="domain"
+               eval="'[(\'team_id\', \'=\', %d)]' % ref('mudon_team_uae')"/>
+        <field name="context"
+               eval="'{\'default_team_id\': %d, \'default_type\': \'opportunity\', \'search_default_mudon_uae\': 1}' % ref('mudon_team_uae')"/>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
                 Click <b>New</b> to create a UAE Dubai lead.
