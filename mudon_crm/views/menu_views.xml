@@ -1,42 +1,109 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
     <!--
-        CRM → Configuration → Mudon
+        Top-level Mudon CRM app menu. Replaces the buried CRM →
+        Configuration → Mudon entry from the first iteration so the
+        client can find their pipelines in one click from the home
+        screen.
+
+        Tree:
+
+        Mudon CRM (root)
+        ├ Turkey Pipeline      → kanban filtered to Mudon Turkey team
+        ├ UAE Dubai Pipeline   → kanban filtered to Mudon UAE Dubai team
+        ├ All Mudon Leads      → list view (no team filter)
+        ├ Mudon Funnels
+        │   ├ Admin Funnel
+        │   └ After-Sales Funnel
+        └ Configuration
             ├ Country → Agent Mapping
             ├ Branches
             └ Developers
-
-        CRM → Mudon Funnels
-            ├ Admin Funnel
-            └ After-Sales Funnel
     -->
-    <menuitem id="mudon_menu_root_config"
-              name="Mudon"
-              parent="crm.crm_menu_config"
-              sequence="50"/>
 
-    <menuitem id="mudon_menu_country_agent_mapping"
-              name="Country → Agent Mapping"
-              parent="mudon_menu_root_config"
-              action="mudon_country_agent_mapping_action"
+    <!-- Per-pipeline pipeline actions (pre-filter by team) -->
+    <record id="mudon_pipeline_turkey_action" model="ir.actions.act_window">
+        <field name="name">Turkey Pipeline</field>
+        <field name="res_model">crm.lead</field>
+        <field name="view_mode">kanban,list,form,calendar,activity,graph,pivot</field>
+        <field name="domain">[('team_id', '=', %(mudon_team_turkey)d)]</field>
+        <field name="context">{
+            'default_team_id': %(mudon_team_turkey)d,
+            'default_type': 'opportunity',
+            'search_default_mudon_turkey': 1,
+        }</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Click <b>New</b> to create a Turkey lead.
+            </p>
+            <p>
+                The card auto-routes by city: Istanbul → Istanbul branch,
+                Trabzon → Trabzon branch, other cities → Sales Manager.
+                Ticking <b>MTick: Offer Sent</b> advances to Stage 3.
+            </p>
+        </field>
+    </record>
+
+    <record id="mudon_pipeline_uae_action" model="ir.actions.act_window">
+        <field name="name">UAE Dubai Pipeline</field>
+        <field name="res_model">crm.lead</field>
+        <field name="view_mode">kanban,list,form,calendar,activity,graph,pivot</field>
+        <field name="domain">[('team_id', '=', %(mudon_team_uae)d)]</field>
+        <field name="context">{
+            'default_team_id': %(mudon_team_uae)d,
+            'default_type': 'opportunity',
+            'search_default_mudon_uae': 1,
+        }</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Click <b>New</b> to create a UAE Dubai lead.
+            </p>
+            <p>
+                Dubai → Dubai branch round-robin; other cities → Sales
+                Manager. Ticking <b>MTick: Offer Sent</b> advances to
+                Stage 3 — Offer Sent.
+            </p>
+        </field>
+    </record>
+
+    <record id="mudon_all_leads_action" model="ir.actions.act_window">
+        <field name="name">All Mudon Leads</field>
+        <field name="res_model">crm.lead</field>
+        <field name="view_mode">list,kanban,form,calendar,activity,graph,pivot</field>
+        <field name="domain">[('mudon_pipeline_kind', 'in', ('turkey', 'uae'))]</field>
+        <field name="context">{}</field>
+    </record>
+
+    <!-- Root menu -->
+    <menuitem id="mudon_menu_app_root"
+              name="Mudon CRM"
+              web_icon="mudon_crm,static/description/icon.png"
+              sequence="2"/>
+
+    <!-- Pipelines -->
+    <menuitem id="mudon_menu_pipeline_turkey"
+              name="Turkey Pipeline"
+              parent="mudon_menu_app_root"
+              action="mudon_pipeline_turkey_action"
               sequence="10"/>
 
-    <menuitem id="mudon_menu_branches"
-              name="Branches"
-              parent="mudon_menu_root_config"
-              action="mudon_branch_action"
+    <menuitem id="mudon_menu_pipeline_uae"
+              name="UAE Dubai Pipeline"
+              parent="mudon_menu_app_root"
+              action="mudon_pipeline_uae_action"
               sequence="20"/>
 
-    <menuitem id="mudon_menu_developers"
-              name="Developers"
-              parent="mudon_menu_root_config"
-              action="mudon_developer_action"
+    <menuitem id="mudon_menu_all_leads"
+              name="All Mudon Leads"
+              parent="mudon_menu_app_root"
+              action="mudon_all_leads_action"
               sequence="30"/>
 
+    <!-- Funnels -->
     <menuitem id="mudon_menu_funnels_root"
               name="Mudon Funnels"
-              parent="crm.crm_menu_root"
-              sequence="40"/>
+              parent="mudon_menu_app_root"
+              sequence="50"/>
 
     <menuitem id="mudon_menu_admin_funnel"
               name="Admin Funnel"
@@ -49,4 +116,28 @@
               parent="mudon_menu_funnels_root"
               action="mudon_after_sales_action"
               sequence="20"/>
+
+    <!-- Configuration -->
+    <menuitem id="mudon_menu_config_root"
+              name="Configuration"
+              parent="mudon_menu_app_root"
+              sequence="90"/>
+
+    <menuitem id="mudon_menu_country_agent_mapping"
+              name="Country → Agent Mapping"
+              parent="mudon_menu_config_root"
+              action="mudon_country_agent_mapping_action"
+              sequence="10"/>
+
+    <menuitem id="mudon_menu_branches"
+              name="Branches"
+              parent="mudon_menu_config_root"
+              action="mudon_branch_action"
+              sequence="20"/>
+
+    <menuitem id="mudon_menu_developers"
+              name="Developers"
+              parent="mudon_menu_config_root"
+              action="mudon_developer_action"
+              sequence="30"/>
 </odoo>
