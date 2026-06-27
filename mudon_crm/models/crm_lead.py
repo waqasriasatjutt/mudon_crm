@@ -518,34 +518,37 @@ class CrmLead(models.Model):
             })
             self._mudon_notify_assigned_agent("qualified_entry")
 
-    def _mudon_advance_stage(self, suffix):
-        """Move the lead to mudon_stage_<pipeline>_<suffix>.
+    def _mudon_advance_stage(self, kind):
+        """Move the lead to the stage in THIS lead's team whose
+        `mudon_stage_kind` equals `kind`.
 
-        If the target stage xmlid is missing (admin renamed or the
-        data file failed to load), surface that loudly — log a
-        warning AND drop a chatter note on the lead. Silent no-op
-        would otherwise leave field staff confused when ticking the
-        transition box appears to do nothing.
+        Looks up by (team_id, mudon_stage_kind) — no xmlid coupling.
+        Adding a new Mudon pipeline (e.g. KSA) needs no code change:
+        just seed its 7 stages with the right `mudon_stage_kind`
+        values and transitions Just Work.
+
+        Surfaces missing stages loudly via warning + chatter note so
+        field staff don't see ticks silently no-op.
         """
         self.ensure_one()
-        xmlid = "mudon_crm.mudon_stage_%s_%s" % (
-            self.mudon_pipeline_kind, suffix,
-        )
-        stage = self.env.ref(xmlid, raise_if_not_found=False)
+        if not self.team_id:
+            return
+        stage = self.env["crm.stage"].sudo().search([
+            ("team_ids", "=", self.team_id.id),
+            ("mudon_stage_kind", "=", kind),
+        ], limit=1)
         if not stage:
             _logger.warning(
-                "mudon_crm: target stage %s not found for lead %s — "
-                "stage seed data may have been renamed or removed.",
-                xmlid, self.id,
+                "mudon_crm: no stage with kind=%s on team %s for lead %s",
+                kind, self.team_id.name, self.id,
             )
             self.with_context(
                 mudon_skip_first_contact=True,
             ).message_post(
                 body=Markup(
-                    "<p>Mudon: target stage <code>%s</code> not found "
-                    "— staying on current stage. Check Settings → "
-                    "Technical → External Identifiers.</p>"
-                ) % escape(xmlid),
+                    "<p>Mudon: no stage with kind <code>%s</code> on "
+                    "team <code>%s</code> — staying on current stage.</p>"
+                ) % (escape(kind), escape(self.team_id.name or "")),
             )
             return
         if self.stage_id.id != stage.id:
@@ -1008,26 +1011,30 @@ class CrmLead(models.Model):
 
     @api.model
     def _read_group_stage_ids(self, stages, domain):
-        """Hide Odoo's global default stages (New / Qualified /
-        Proposition / Won) from the Mudon pipeline kanbans. Standard
-        behavior pools `team_ids = empty` (global) + `team_ids = this
-        team` stages — for Mudon teams the client only wants their
-        7 seeded stages, not the 4 defaults that would otherwise
-        appear alongside (giving 11 columns).
+        """Dynamic stage-filter override:
 
-        Falls through to standard behavior for non-Mudon teams so
-        other CRM users aren't affected.
+        - If the current team has AT LEAST ONE stage bound to it via
+          `team_ids`, the kanban shows ONLY those team-bound stages
+          (the global Odoo defaults — New / Qualified / Proposition /
+          Won — are filtered out).
+        - If the team has no custom stages, standard behavior applies:
+          pool of global stages + any team-bound ones.
+
+        This is fully data-driven — no hardcoded team xmlid check —
+        so any future Mudon pipeline (KSA, Qatar, a new region…) gets
+        a clean kanban the moment its stages are seeded, with zero
+        code changes. The semantic is "if you customised your stages,
+        you own the column set."
+
+        Cost: one indexed search_count per kanban load. Negligible.
         """
         team_id = self._context.get("default_team_id")
         if team_id:
-            turkey = self.env.ref(
-                "mudon_crm.mudon_team_turkey", raise_if_not_found=False,
+            Stage = self.env["crm.stage"].sudo()
+            has_custom_stages = Stage.search_count(
+                [("team_ids", "=", team_id)], limit=1,
             )
-            uae = self.env.ref(
-                "mudon_crm.mudon_team_uae", raise_if_not_found=False,
-            )
-            mudon_ids = [t.id for t in (turkey, uae) if t]
-            if team_id in mudon_ids:
+            if has_custom_stages:
                 return stages.search(
                     [("team_ids", "=", team_id)],
                     order=stages._order,
@@ -1037,22 +1044,19 @@ class CrmLead(models.Model):
         return stages.search(domain, order=stages._order)
 
     @api.model
-    def _mudon_stage_ids(self, suffix):
-        """Return both Turkey + UAE stage ids for a given suffix.
+    def _mudon_stage_ids(self, kind):
+        """Return EVERY stage record across ALL Mudon teams whose
+        `mudon_stage_kind` equals `kind`.
 
-        Cached on the env to avoid an `env.ref` lookup per cron call.
-        Stages are seeded with `noupdate=1` so the xmlid stability
-        across upgrades is guaranteed.
+        Used by the SLA crons to filter leads by stage. Dynamic —
+        a new Mudon pipeline added later (KSA, Qatar…) auto-rolls
+        into the cron sweep without code changes, as long as its
+        stages carry the right `mudon_stage_kind`.
         """
-        ids = []
-        for kind in ("turkey", "uae"):
-            stage = self.env.ref(
-                "mudon_crm.mudon_stage_%s_%s" % (kind, suffix),
-                raise_if_not_found=False,
-            )
-            if stage:
-                ids.append(stage.id)
-        return ids
+        stages = self.env["crm.stage"].sudo().search([
+            ("mudon_stage_kind", "=", kind),
+        ])
+        return stages.ids
 
     # Stage-2 entry timestamp + SLA flag reset is handled inside
     # `_mudon_after_write` — keeping it out of `_track_subtype` avoids
