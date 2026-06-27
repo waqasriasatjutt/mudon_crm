@@ -24,7 +24,7 @@
         <field name="login">agent1@mudon.demo</field>
         <field name="password">Mudon2026!</field>
         <field name="partner_id" ref="mudon_partner_agent1"/>
-        <field name="groups_id" eval="[(6, 0, [
+        <field name="group_ids" eval="[(6, 0, [
             ref('base.group_user'),
             ref('sales_team.group_sale_salesman'),
         ])]"/>
@@ -34,7 +34,7 @@
         <field name="login">agent2@mudon.demo</field>
         <field name="password">Mudon2026!</field>
         <field name="partner_id" ref="mudon_partner_agent2"/>
-        <field name="groups_id" eval="[(6, 0, [
+        <field name="group_ids" eval="[(6, 0, [
             ref('base.group_user'),
             ref('sales_team.group_sale_salesman'),
         ])]"/>
