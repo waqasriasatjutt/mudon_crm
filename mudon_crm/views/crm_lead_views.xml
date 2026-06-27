@@ -248,12 +248,10 @@
                 <filter name="mudon_high_offers" string="Offers ≥ 3"
                         domain="[('mudon_offer_counter', '>=', 3)]"/>
                 <separator/>
-                <group string="Group By">
-                    <filter name="mudon_group_branch" string="Branch"
-                            context="{'group_by': 'mudon_branch_id'}"/>
-                    <filter name="mudon_group_source" string="Source"
-                            context="{'group_by': 'mudon_source'}"/>
-                </group>
+                <filter name="mudon_group_branch" string="Branch"
+                        context="{'group_by': 'mudon_branch_id'}"/>
+                <filter name="mudon_group_source" string="Source"
+                        context="{'group_by': 'mudon_source'}"/>
             </xpath>
         </field>
     </record>
