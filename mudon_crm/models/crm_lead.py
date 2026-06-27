@@ -1007,6 +1007,36 @@ class CrmLead(models.Model):
         return fired
 
     @api.model
+    def _read_group_stage_ids(self, stages, domain):
+        """Hide Odoo's global default stages (New / Qualified /
+        Proposition / Won) from the Mudon pipeline kanbans. Standard
+        behavior pools `team_ids = empty` (global) + `team_ids = this
+        team` stages — for Mudon teams the client only wants their
+        7 seeded stages, not the 4 defaults that would otherwise
+        appear alongside (giving 11 columns).
+
+        Falls through to standard behavior for non-Mudon teams so
+        other CRM users aren't affected.
+        """
+        team_id = self._context.get("default_team_id")
+        if team_id:
+            turkey = self.env.ref(
+                "mudon_crm.mudon_team_turkey", raise_if_not_found=False,
+            )
+            uae = self.env.ref(
+                "mudon_crm.mudon_team_uae", raise_if_not_found=False,
+            )
+            mudon_ids = [t.id for t in (turkey, uae) if t]
+            if team_id in mudon_ids:
+                return stages.search(
+                    [("team_ids", "=", team_id)],
+                    order=stages._order,
+                )
+        if hasattr(super(), "_read_group_stage_ids"):
+            return super()._read_group_stage_ids(stages, domain)
+        return stages.search(domain, order=stages._order)
+
+    @api.model
     def _mudon_stage_ids(self, suffix):
         """Return both Turkey + UAE stage ids for a given suffix.
 
