@@ -162,6 +162,16 @@ class CrmLead(models.Model):
         index=True,
     )
 
+    # Related field so view-level `required="..."` / `invisible="..."`
+    # expressions can branch on the current stage's semantic kind.
+    mudon_stage_kind_current = fields.Selection(
+        related="stage_id.mudon_stage_kind",
+        store=True,
+        readonly=True,
+        index=True,
+        string="Stage Kind (current)",
+    )
+
     # ─── STAGE 1: New Lead ──────────────────────────────────────────
     mudon_service = fields.Selection(SERVICE_SELECTION, string="MService")
     mudon_city = fields.Selection(CITY_SELECTION, string="MCity")
@@ -414,6 +424,49 @@ class CrmLead(models.Model):
                 )
         return leads
 
+    # Fields that must be set before a New-Lead-stage lead can move
+    # forward to Qualified. Defined as a class-level tuple so the
+    # validation method, the view's `required=` expression, and the
+    # error message stay in lock-step.
+    MUDON_REQUIRED_TO_QUALIFY = (
+        "mudon_service",
+        "mudon_city",
+        "mudon_priority",
+        "mudon_budget",
+    )
+
+    def _mudon_check_required_to_qualify(self, new_stage):
+        """Raise if moving OUT of a new_lead stage to any other Mudon
+        stage with any of the 4 qualification fields empty.
+
+        Called from write() before super(), so the transition is
+        blocked at the DB layer — the kanban drag-and-drop snaps back
+        and the user sees a clear toast explaining what's missing.
+        """
+        if not new_stage or not new_stage.mudon_stage_kind:
+            return
+        if new_stage.mudon_stage_kind == "new_lead":
+            return
+        from odoo.exceptions import UserError
+        labels = {
+            "mudon_service": "MService",
+            "mudon_city": "MCity",
+            "mudon_priority": "MPriority",
+            "mudon_budget": "MBudget",
+        }
+        for rec in self:
+            if rec.mudon_stage_kind_current != "new_lead":
+                continue
+            missing = []
+            for fname in self.MUDON_REQUIRED_TO_QUALIFY:
+                val = rec[fname]
+                if not val:
+                    missing.append(labels.get(fname, fname))
+            if missing:
+                raise UserError(_(
+                    "Fill in %s before moving %s out of New Lead."
+                ) % (", ".join(missing), rec.name or rec.contact_name or "this lead"))
+
     def write(self, vals):
         """Drive stage transitions + side-effects from field flips.
 
@@ -425,9 +478,18 @@ class CrmLead(models.Model):
         first_contact flip) carry `mudon_in_write=True` in context so
         the after-write hook short-circuits. Saves 5-8 redundant write
         transactions per business action.
+
+        Validation: a user-driven `stage_id` change OUT of New Lead is
+        rejected if MService / MCity / MPriority / MBudget aren't set.
+        Internal stage advances (set via `mudon_in_write` context) are
+        already protected because those only fire when our own field
+        flips happen — which presume the lead is past New Lead.
         """
         if self.env.context.get("mudon_in_write"):
             return super().write(vals)
+        if "stage_id" in vals and vals["stage_id"]:
+            new_stage = self.env["crm.stage"].sudo().browse(vals["stage_id"])
+            self._mudon_check_required_to_qualify(new_stage)
         pre = {
             r.id: {
                 "stage_id": r.stage_id.id,

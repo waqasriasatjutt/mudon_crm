@@ -13,51 +13,82 @@
         <field name="model">crm.lead</field>
         <field name="inherit_id" ref="crm.crm_lead_view_form"/>
         <field name="arch" type="xml">
+            <!--
+                Inject Stage 1 (New Lead) fields directly into the
+                main opportunity body, right after the phone block
+                (anchored at lost_reason_id which sits one line below
+                phone in Odoo 19's stock form). The Mudon notebook
+                page keeps the Stage 2-7 working fields only.
+
+                The 4 fields MService / MCity / MPriority / MBudget
+                are flagged required="..." at the view layer (UX —
+                user sees the red border immediately) AND validated
+                in the backend write() override (safety — blocks
+                stage drag-and-drop without these set).
+            -->
+            <xpath expr="//field[@name='lost_reason_id']" position="before">
+                <field name="mudon_pipeline_kind" invisible="1"/>
+                <field name="mudon_card_color_hint" invisible="1"/>
+                <field name="mudon_kanban_priority_rank" invisible="1"/>
+                <field name="mudon_stage_kind_current" invisible="1"/>
+
+                <field name="mudon_service"
+                       invisible="not mudon_pipeline_kind"
+                       required="mudon_pipeline_kind and mudon_stage_kind_current != 'new_lead'"/>
+                <field name="mudon_city"
+                       invisible="not mudon_pipeline_kind"
+                       required="mudon_pipeline_kind and mudon_stage_kind_current != 'new_lead'"/>
+                <field name="mudon_city_other"
+                       invisible="mudon_city != 'other_tr'"/>
+                <field name="mudon_priority"
+                       invisible="not mudon_pipeline_kind"
+                       required="mudon_pipeline_kind and mudon_stage_kind_current != 'new_lead'"/>
+                <field name="mudon_budget"
+                       invisible="not mudon_pipeline_kind"
+                       required="mudon_pipeline_kind and mudon_stage_kind_current != 'new_lead'"/>
+                <field name="mudon_budget_currency_id"
+                       groups="base.group_no_one"/>
+                <field name="mudon_status"
+                       invisible="not mudon_pipeline_kind"/>
+                <field name="mudon_nationality_id"
+                       invisible="not mudon_pipeline_kind"
+                       options="{'no_create': True}"/>
+                <field name="mudon_living_in_id"
+                       invisible="not mudon_pipeline_kind"
+                       options="{'no_create': True}"/>
+                <label for="mudon_in_country" string="In Turkey Now"
+                       invisible="mudon_pipeline_kind != 'turkey'"/>
+                <label for="mudon_in_country" string="In UAE Now"
+                       invisible="mudon_pipeline_kind != 'uae'"/>
+                <field name="mudon_in_country" nolabel="1"
+                       invisible="not mudon_pipeline_kind"/>
+                <field name="mudon_cbi_files"
+                       invisible="mudon_pipeline_kind != 'turkey'"/>
+                <field name="mudon_branch_id" readonly="1"
+                       invisible="not mudon_pipeline_kind"/>
+                <field name="mudon_purpose"
+                       invisible="not mudon_pipeline_kind"/>
+                <field name="mudon_property_type"
+                       invisible="not mudon_pipeline_kind"/>
+                <field name="mudon_beds"
+                       invisible="not mudon_pipeline_kind"/>
+                <field name="mudon_other_specs"
+                       invisible="not mudon_pipeline_kind"/>
+                <field name="mudon_visit_date"
+                       invisible="not mudon_pipeline_kind"/>
+                <field name="mudon_notes"
+                       invisible="not mudon_pipeline_kind"/>
+                <field name="mudon_source"
+                       invisible="not mudon_pipeline_kind"/>
+            </xpath>
+
+            <!--
+                The Mudon notebook page now hosts Stage 2-7 only —
+                Stage 1 lives in the main form above.
+            -->
             <xpath expr="//notebook" position="inside">
-                <page string="Mudon" name="mudon_page"
+                <page string="Mudon — Stages 2-7" name="mudon_page"
                       invisible="not mudon_pipeline_kind">
-                    <field name="mudon_pipeline_kind" invisible="1"/>
-                    <field name="mudon_card_color_hint" invisible="1"/>
-                    <field name="mudon_kanban_priority_rank" invisible="1"/>
-
-                    <!-- Stage 1: New Lead -->
-                    <group string="Stage 1 — New Lead">
-                        <group>
-                            <field name="mudon_service"/>
-                            <field name="mudon_city"/>
-                            <field name="mudon_city_other"
-                                   invisible="mudon_city != 'other_tr'"/>
-                            <field name="mudon_priority"/>
-                            <field name="mudon_budget"/>
-                            <field name="mudon_budget_currency_id"
-                                   groups="base.group_no_one"/>
-                            <field name="mudon_status"/>
-                            <field name="mudon_source"/>
-                        </group>
-                        <group>
-                            <field name="mudon_nationality_id"
-                                   options="{'no_create': True}"/>
-                            <field name="mudon_living_in_id"
-                                   options="{'no_create': True}"/>
-                            <label for="mudon_in_country" string="In Turkey Now"
-                                   invisible="mudon_pipeline_kind != 'turkey'"/>
-                            <label for="mudon_in_country" string="In UAE Now"
-                                   invisible="mudon_pipeline_kind != 'uae'"/>
-                            <field name="mudon_in_country" nolabel="1"/>
-                            <field name="mudon_cbi_files"
-                                   invisible="mudon_pipeline_kind != 'turkey'"/>
-                            <field name="mudon_branch_id" readonly="1"/>
-                        </group>
-                        <group>
-                            <field name="mudon_purpose"/>
-                            <field name="mudon_property_type"/>
-                            <field name="mudon_beds"/>
-                            <field name="mudon_other_specs"/>
-                            <field name="mudon_visit_date"/>
-                            <field name="mudon_notes"/>
-                        </group>
-                    </group>
-
                     <!-- Stage 2: Qualified -->
                     <group string="Stage 2 — Qualified" colspan="2">
                         <field name="mudon_tick_offer_sent"
