@@ -80,6 +80,32 @@
                        invisible="not mudon_pipeline_kind"/>
                 <field name="mudon_source"
                        invisible="not mudon_pipeline_kind"/>
+
+                <!--
+                    Per-stage progression controls. Only the ONE field
+                    relevant to the lead's current stage_kind is
+                    rendered — flipping it triggers the matching
+                    transition in the write() override. Keeps the form
+                    contextual: the user only ever sees the action they
+                    can take next.
+                -->
+                <separator string="Move to next stage"
+                           invisible="not mudon_pipeline_kind or mudon_stage_kind_current in ('won', 'lost') or not mudon_stage_kind_current"/>
+                <field name="mudon_tick_offer_sent"
+                       string="MTick: Offer Sent → Offer Sent stage"
+                       invisible="mudon_stage_kind_current != 'qualified'"/>
+                <field name="mudon_visit_confirmed"
+                       string="MVisit Confirmed → Meeting stage"
+                       invisible="mudon_stage_kind_current != 'offer_sent'"/>
+                <field name="mudon_paid_booking"
+                       string="MPaid Booking → EOI / Booking stage"
+                       invisible="mudon_stage_kind_current != 'meeting'"/>
+                <field name="mudon_fully_paid"
+                       string="MFully Paid → WON (SPA Signed)"
+                       invisible="mudon_stage_kind_current != 'eoi'"/>
+                <field name="mudon_lost_reason"
+                       string="Move to Lost (pick reason)"
+                       invisible="not mudon_pipeline_kind or mudon_stage_kind_current in ('won', 'lost')"/>
             </xpath>
 
             <!--
