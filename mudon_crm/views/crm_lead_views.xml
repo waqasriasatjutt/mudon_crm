@@ -94,6 +94,27 @@
                 <field name="mudon_tick_offer_sent"
                        string="MTick: Offer Sent → Offer Sent stage"
                        invisible="mudon_stage_kind_current != 'qualified'"/>
+                <!-- Offer Sent stage controls: counter + button.
+                     "+ Mark New Offer Sent" is the agent-facing action
+                     each time they share new property videos/photos on
+                     WhatsApp — the counter and 3-hr SLA cron pivot off
+                     this. -->
+                <label for="mudon_offer_counter"
+                       invisible="mudon_stage_kind_current != 'offer_sent'"/>
+                <div class="o_row"
+                     invisible="mudon_stage_kind_current != 'offer_sent'">
+                    <field name="mudon_offer_counter" readonly="1" nolabel="1"
+                           style="width:60px"/>
+                    <span class="text-muted ms-2">/ 10</span>
+                    <button name="action_mudon_mark_offer_sent" type="object"
+                            string="+ Mark New Offer Sent"
+                            class="btn btn-primary ms-3"
+                            confirm="Confirm a new offer was sent to the client. The counter will increment by 1 and a 3-hour follow-up reminder will be queued."/>
+                </div>
+                <field name="mudon_seriousness"
+                       invisible="mudon_stage_kind_current != 'offer_sent'"/>
+                <field name="mudon_last_offer_date" readonly="1"
+                       invisible="mudon_stage_kind_current != 'offer_sent'"/>
                 <field name="mudon_visit_confirmed"
                        string="MVisit Confirmed → Meeting stage"
                        invisible="mudon_stage_kind_current != 'offer_sent'"/>

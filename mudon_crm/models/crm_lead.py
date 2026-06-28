@@ -151,7 +151,17 @@ STAGE_FLOW = [
 
 class CrmLead(models.Model):
     _inherit = "crm.lead"
-    _order = "create_date desc, id desc"
+    # Sort order applies to every kanban column on every team.
+    # 1. priority rank — P1 Citizenship+Urgent → P4 Investment+Normal
+    # 2. nearest expected visit date — relevant on Offer Sent + Meeting
+    # 3. most recent on top (the New Lead default per spec)
+    # Non-Mudon teams have null on all Mudon fields → sort collapses
+    # to the standard create_date desc behaviour for them.
+    _order = (
+        "mudon_kanban_priority_rank asc, "
+        "mudon_visit_date asc nulls last, "
+        "create_date desc, id desc"
+    )
 
     # ─── Pipeline marker ────────────────────────────────────────────
     mudon_pipeline_kind = fields.Selection(
@@ -1124,6 +1134,40 @@ class CrmLead(models.Model):
     # `_mudon_after_write` — keeping it out of `_track_subtype` avoids
     # writing tracked fields during Odoo's tracking pipeline, which
     # would re-enter our own write() and cascade.
+
+    # ─── Manual "+ Mark New Offer Sent" button ──────────────────────
+    def action_mudon_mark_offer_sent(self):
+        """Agent clicks this each time they send a new offer to the
+        client (videos/photos manually shared on WhatsApp). Bumps the
+        counter by 1 (capped at 10), stamps `last_offer_date`, and
+        resets the 3-hour reminder tracker so the next reminder fires
+        for THIS offer.
+
+        Equivalent to the agent sending an "Offer Sent" message via
+        the META Cloud webhook — that path calls the same field
+        writes, so behaviour is identical regardless of channel.
+        """
+        for rec in self:
+            if rec.mudon_stage_kind_current != "offer_sent":
+                from odoo.exceptions import UserError
+                raise UserError(_(
+                    "This action only applies on the Offer Sent stage."
+                ))
+            new_counter = min((rec.mudon_offer_counter or 0) + 1, 10)
+            rec.sudo().with_context(mudon_in_write=True).write({
+                "mudon_offer_counter": new_counter,
+                "mudon_last_offer_date": fields.Datetime.now(),
+                "mudon_offer_3hr_reminder_idx": (rec.mudon_offer_counter or 0),
+            })
+            rec.with_context(
+                mudon_skip_first_contact=True,
+            ).message_post(
+                body=Markup(
+                    "<p><b>Offer #%d marked sent.</b> "
+                    "3-hour follow-up reminder queued.</p>"
+                ) % new_counter,
+            )
+        return True
 
     # ─── Inbound WA webhook handler ─────────────────────────────────
     @api.model
