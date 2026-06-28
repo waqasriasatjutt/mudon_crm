@@ -129,9 +129,59 @@
                 <field name="mudon_fully_paid"
                        string="MFully Paid → WON (SPA Signed)"
                        invisible="mudon_stage_kind_current != 'eoi'"/>
+
+                <!--
+                    WON (SPA Signed) stage — closing details + funnel
+                    triggers. Filling the Admin / After-Sales Y/N
+                    flags BEFORE the lead lands on WON has no effect
+                    (funnels spawn at the MFully Paid tick on EOI);
+                    most agents will land on WON FIRST and then fill
+                    these alongside Closing Amount, so we keep them
+                    editable here. To re-spawn funnel tasks after
+                    editing, the agent can tick MFully Paid off and
+                    on again on the EOI side.
+                -->
+                <field name="mudon_closing_amount"
+                       invisible="mudon_stage_kind_current != 'won'"/>
+                <field name="mudon_developer_id"
+                       invisible="mudon_stage_kind_current != 'won'"
+                       options="{'no_create_edit': True}"/>
+                <field name="mudon_project_name"
+                       invisible="mudon_stage_kind_current != 'won'"/>
+                <field name="mudon_commission"
+                       invisible="mudon_stage_kind_current != 'won'"/>
+                <field name="mudon_handover_type"
+                       invisible="mudon_stage_kind_current != 'won'"/>
+                <field name="mudon_reason_to_win"
+                       invisible="mudon_stage_kind_current != 'won'"/>
+                <separator string="Admin Funnel"
+                           invisible="mudon_stage_kind_current != 'won'"/>
+                <field name="mudon_need_invoice"
+                       invisible="mudon_stage_kind_current != 'won'"/>
+                <separator string="After-Sales Funnel"
+                           invisible="mudon_stage_kind_current != 'won'"/>
+                <field name="mudon_title_deed_required"
+                       invisible="mudon_stage_kind_current != 'won'"/>
+                <field name="mudon_citizenship_required"
+                       invisible="mudon_stage_kind_current != 'won' or mudon_pipeline_kind != 'turkey'"/>
+                <field name="mudon_residence_required"
+                       invisible="mudon_stage_kind_current != 'won' or mudon_pipeline_kind != 'uae'"/>
+                <field name="mudon_furniture_required"
+                       invisible="mudon_stage_kind_current != 'won'"/>
+
+                <!--
+                    Lost reason — dual-purpose:
+                    - On any non-terminal Mudon stage (qualified /
+                      offer_sent / meeting / eoi): editable, picking
+                      a value moves the lead to Lost.
+                    - On Lost: read-only, so the user can review WHY
+                      the lead was lost without being able to change
+                      it accidentally.
+                -->
                 <field name="mudon_lost_reason"
-                       string="Move to Lost (pick reason)"
-                       invisible="not mudon_pipeline_kind or mudon_stage_kind_current in ('won', 'lost')"/>
+                       string="Lost Reason"
+                       readonly="mudon_stage_kind_current == 'lost'"
+                       invisible="not mudon_pipeline_kind or mudon_stage_kind_current == 'won'"/>
             </xpath>
 
             <!--
