@@ -477,6 +477,69 @@ class CrmLead(models.Model):
                     "Fill in %s before moving %s out of New Lead."
                 ) % (", ".join(missing), rec.name or rec.contact_name or "this lead"))
 
+    def _mudon_check_stage_transitions(self, new_stage):
+        """Enforce the spec's per-stage move-in trigger.
+
+        Each stage has exactly one field that must be set before a
+        manual drag-and-drop into it is allowed:
+
+          - Offer Sent:  MTick: Offer Sent must be ticked
+          - Meeting:     MVisit Confirmed must be Yes
+          - EOI/Booking: MPaid Booking must be ticked
+          - WON:         MFully Paid must be ticked
+          - Lost:        a Lost Reason must be selected
+
+        Auto-advance writes (mudon_in_write context flag) bypass this
+        check — those are triggered BY ticking the matching field,
+        so the gate is satisfied by definition. The check only fires
+        for user-initiated stage changes (kanban drag or form edit).
+        """
+        if not new_stage or not new_stage.mudon_stage_kind:
+            return
+        from odoo.exceptions import UserError
+        gates = {
+            "offer_sent": (
+                "mudon_tick_offer_sent",
+                "MTick: Offer Sent",
+                lambda v: bool(v),
+            ),
+            "meeting": (
+                "mudon_visit_confirmed",
+                "MVisit Confirmed = Yes",
+                lambda v: v == "yes",
+            ),
+            "eoi": (
+                "mudon_paid_booking",
+                "MPaid Booking",
+                lambda v: bool(v),
+            ),
+            "won": (
+                "mudon_fully_paid",
+                "MFully Paid",
+                lambda v: bool(v),
+            ),
+            "lost": (
+                "mudon_lost_reason",
+                "Lost Reason",
+                lambda v: bool(v),
+            ),
+        }
+        kind = new_stage.mudon_stage_kind
+        if kind not in gates:
+            return
+        fname, label, predicate = gates[kind]
+        for rec in self:
+            if not rec.mudon_pipeline_kind:
+                continue
+            if not predicate(rec[fname]):
+                raise UserError(_(
+                    "Set '%s' before moving %s to %s."
+                ) % (
+                    label,
+                    rec.name or rec.contact_name or "this lead",
+                    new_stage.name,
+                ))
+
     def write(self, vals):
         """Drive stage transitions + side-effects from field flips.
 
@@ -500,6 +563,7 @@ class CrmLead(models.Model):
         if "stage_id" in vals and vals["stage_id"]:
             new_stage = self.env["crm.stage"].sudo().browse(vals["stage_id"])
             self._mudon_check_required_to_qualify(new_stage)
+            self._mudon_check_stage_transitions(new_stage)
         pre = {
             r.id: {
                 "stage_id": r.stage_id.id,
