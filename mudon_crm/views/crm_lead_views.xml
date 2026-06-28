@@ -118,6 +118,11 @@
                 <field name="mudon_visit_confirmed"
                        string="MVisit Confirmed → Meeting stage"
                        invisible="mudon_stage_kind_current != 'offer_sent'"/>
+                <!-- Meeting stage controls -->
+                <field name="mudon_client_type"
+                       invisible="mudon_stage_kind_current != 'meeting'"/>
+                <field name="mudon_property_requirements"
+                       invisible="mudon_stage_kind_current != 'meeting'"/>
                 <field name="mudon_paid_booking"
                        string="MPaid Booking → EOI / Booking stage"
                        invisible="mudon_stage_kind_current != 'meeting'"/>
