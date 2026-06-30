@@ -8,7 +8,7 @@
     -->
     <data noupdate="0">
         <record id="base.AED" model="res.currency">
-            <field name="active">True</field>
+            <field name="active" eval="True"/>
         </record>
     </data>
 
