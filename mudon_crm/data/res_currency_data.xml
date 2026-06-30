@@ -1,22 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
     <!--
-        v19.0.1.3.0 — the UAE Dubai pipeline bills in AED (Turkey in USD).
-        Activate the AED currency so the MBudget / Closing Amount /
-        Commission monetary widgets render it. NOT noupdate so it
-        re-applies on upgrade for existing tenants, not only fresh installs.
-    -->
-    <data noupdate="0">
-        <record id="base.AED" model="res.currency">
-            <field name="active" eval="True"/>
-        </record>
-    </data>
+        v19.0.1.3.x — the UAE Dubai pipeline bills in AED (Turkey in USD).
+        AED is ACTIVATED in code (post_init_hook on fresh install +
+        migration on upgrade), because a base currency's xmlid is noupdate
+        and cannot be flipped from a data file.
 
-    <!--
-        Seed the standard AED↔USD peg (1 USD = 3.6725 AED) so any future
-        multi-currency reporting converts sanely instead of falling back to
-        1:1. noupdate so the client can adjust the rate under
-        Accounting → Currencies without it being reset on the next upgrade.
+        Here we only seed the standard AED↔USD peg (1 USD = 3.6725 AED) so
+        any future multi-currency reporting converts sanely instead of
+        falling back to 1:1. noupdate so the client can adjust the rate
+        under Accounting → Currencies without it being reset on upgrade.
     -->
     <data noupdate="1">
         <record id="mudon_aed_rate_seed" model="res.currency.rate">
