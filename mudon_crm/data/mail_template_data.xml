@@ -135,7 +135,7 @@
         <field name="subject">Client Lost</field>
         <field name="body_html" type="html">
             <p><b>Client Lost</b></p>
-            <p>Reason: <t t-out="object.mudon_lost_reason or ''"/></p>
+            <p>Reason: <t t-out="object.mudon_lost_reason_id.complete_name or ''"/></p>
         </field>
     </record>
 

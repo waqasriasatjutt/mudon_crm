@@ -32,14 +32,18 @@
                 <field name="mudon_kanban_priority_rank" invisible="1"/>
                 <field name="mudon_stage_kind_current" invisible="1"/>
 
-                <field name="mudon_service"
+                <field name="mudon_show_city_other" invisible="1"/>
+                <field name="mudon_service_id"
+                       options="{'no_create_edit': True}"
                        invisible="not mudon_pipeline_kind"
                        required="mudon_pipeline_kind and mudon_stage_kind_current != 'new_lead'"/>
-                <field name="mudon_city"
+                <field name="mudon_city_ids"
+                       widget="many2many_tags"
+                       options="{'no_create_edit': True, 'color_field': 'color'}"
                        invisible="not mudon_pipeline_kind"
                        required="mudon_pipeline_kind and mudon_stage_kind_current != 'new_lead'"/>
                 <field name="mudon_city_other"
-                       invisible="mudon_city != 'other_tr'"/>
+                       invisible="not mudon_show_city_other"/>
                 <field name="mudon_priority"
                        invisible="not mudon_pipeline_kind"
                        required="mudon_pipeline_kind and mudon_stage_kind_current != 'new_lead'"/>
@@ -48,7 +52,8 @@
                        required="mudon_pipeline_kind and mudon_stage_kind_current != 'new_lead'"/>
                 <field name="mudon_budget_currency_id"
                        groups="base.group_no_one"/>
-                <field name="mudon_status"
+                <field name="mudon_status_id"
+                       options="{'no_create_edit': True}"
                        invisible="not mudon_pipeline_kind"/>
                 <field name="mudon_nationality_id"
                        invisible="not mudon_pipeline_kind"
@@ -66,9 +71,13 @@
                        invisible="mudon_pipeline_kind != 'turkey'"/>
                 <field name="mudon_branch_id" readonly="1"
                        invisible="not mudon_pipeline_kind"/>
-                <field name="mudon_purpose"
+                <field name="mudon_purpose_ids"
+                       widget="many2many_tags"
+                       options="{'no_create_edit': True, 'color_field': 'color'}"
                        invisible="not mudon_pipeline_kind"/>
-                <field name="mudon_property_type"
+                <field name="mudon_property_type_ids"
+                       widget="many2many_tags"
+                       options="{'no_create_edit': True, 'color_field': 'color'}"
                        invisible="not mudon_pipeline_kind"/>
                 <field name="mudon_beds"
                        invisible="not mudon_pipeline_kind"/>
@@ -78,7 +87,8 @@
                        invisible="not mudon_pipeline_kind"/>
                 <field name="mudon_notes"
                        invisible="not mudon_pipeline_kind"/>
-                <field name="mudon_source"
+                <field name="mudon_source_id"
+                       options="{'no_create_edit': True}"
                        invisible="not mudon_pipeline_kind"/>
 
                 <!--
@@ -178,8 +188,9 @@
                       the lead was lost without being able to change
                       it accidentally.
                 -->
-                <field name="mudon_lost_reason"
+                <field name="mudon_lost_reason_id"
                        string="Lost Reason"
+                       options="{'no_create_edit': True}"
                        readonly="mudon_stage_kind_current == 'lost'"
                        invisible="not mudon_pipeline_kind or mudon_stage_kind_current == 'won'"/>
             </xpath>
@@ -279,7 +290,8 @@
 
                     <!-- Stage 7: Lost -->
                     <group string="Stage 7 — Lost" colspan="2">
-                        <field name="mudon_lost_reason"
+                        <field name="mudon_lost_reason_id"
+                               options="{'no_create_edit': True}"
                                help="Picking a reason advances the lead to Lost."/>
                     </group>
 
@@ -315,36 +327,63 @@
         <field name="arch" type="xml">
             <xpath expr="//templates" position="before">
                 <field name="mudon_pipeline_kind"/>
-                <field name="mudon_service"/>
-                <field name="mudon_city"/>
+                <field name="mudon_service_id"/>
+                <field name="mudon_service_code"/>
                 <field name="mudon_priority"/>
-                <field name="mudon_status"/>
+                <field name="mudon_status_id"/>
                 <field name="mudon_card_color_hint"/>
                 <field name="mudon_kanban_priority_rank"/>
+                <field name="mudon_stage_kind_current"/>
                 <field name="mudon_offer_counter"/>
+                <field name="mudon_budget"/>
                 <field name="mudon_visit_date"/>
+                <field name="stage_id"/>
             </xpath>
+            <!--
+                v19.0.1.2.0 — styled Mudon card block: a stage-coloured
+                band header + a priority-coloured left accent + native
+                coloured tags for City / Property Type. The block carries
+                its own colour coding so it reads at a glance regardless of
+                the upstream card chrome. Injected just before <footer> (a
+                stable anchor in the Odoo 18+ kanban card structure).
+            -->
             <xpath expr="//footer" position="before">
                 <div t-if="record.mudon_pipeline_kind.raw_value"
-                     class="mt-1 small text-muted">
-                    <span t-if="record.mudon_priority.raw_value == 'urgent'"
-                          class="badge text-bg-danger me-1">🔴 Urgent</span>
-                    <span t-if="record.mudon_priority.raw_value == 'normal'"
-                          class="badge text-bg-warning me-1">🟡 Normal</span>
-                    <span t-if="record.mudon_service.raw_value == 'investment'"
-                          class="badge text-bg-primary me-1">🟦 Investment</span>
-                    <span t-if="record.mudon_service.raw_value == 'citizenship'"
-                          class="badge text-bg-success me-1">🟩 Citizenship</span>
-                    <span t-if="record.mudon_service.raw_value == 'goldenvisa'"
-                          class="badge text-bg-success me-1">🟩 Golden Visa</span>
-                    <span t-if="record.mudon_city.raw_value"
-                          class="badge text-bg-light me-1">
-                        <t t-out="record.mudon_city.value"/>
-                    </span>
-                    <span t-if="record.mudon_offer_counter.raw_value"
-                          class="badge text-bg-secondary me-1">
-                        Offers: <t t-out="record.mudon_offer_counter.value"/>
-                    </span>
+                     t-attf-class="mudon_card_block mudon_prio_#{record.mudon_priority.raw_value or 'normal'}">
+                    <!-- Stage band header (colour by stage kind) -->
+                    <div t-attf-class="mudon_band mudon_band_#{record.mudon_stage_kind_current.raw_value or 'new_lead'}">
+                        <t t-out="record.stage_id.value"/>
+                    </div>
+                    <!-- Priority + service badges -->
+                    <div class="mudon_badges mt-1">
+                        <span t-if="record.mudon_priority.raw_value == 'urgent'"
+                              class="badge text-bg-danger me-1">🔴 Urgent</span>
+                        <span t-if="record.mudon_priority.raw_value == 'normal'"
+                              class="badge text-bg-warning me-1">🟡 Normal</span>
+                        <span t-if="record.mudon_service_code.raw_value == 'investment'"
+                              class="badge text-bg-primary me-1">🟦 Investment</span>
+                        <span t-if="record.mudon_service_code.raw_value == 'citizenship'"
+                              class="badge text-bg-success me-1">🟩 Citizenship</span>
+                        <span t-if="record.mudon_service_code.raw_value == 'goldenvisa'"
+                              class="badge text-bg-success me-1">🟩 Golden Visa</span>
+                    </div>
+                    <!-- Coloured tags: city + property type -->
+                    <div class="mudon_tags mt-1">
+                        <field name="mudon_city_ids" widget="many2many_tags"
+                               options="{'color_field': 'color'}"/>
+                        <field name="mudon_property_type_ids" widget="many2many_tags"
+                               options="{'color_field': 'color'}"/>
+                    </div>
+                    <!-- Budget + offers -->
+                    <div class="mudon_meta mt-1 small text-muted">
+                        <span t-if="record.mudon_budget.raw_value" class="me-2">
+                            💰 <t t-out="record.mudon_budget.value"/>
+                        </span>
+                        <span t-if="record.mudon_offer_counter.raw_value"
+                              class="badge text-bg-secondary">
+                            Offers: <t t-out="record.mudon_offer_counter.value"/>
+                        </span>
+                    </div>
                 </div>
             </xpath>
         </field>
@@ -384,7 +423,7 @@
                 <filter name="mudon_group_branch" string="Branch"
                         context="{'group_by': 'mudon_branch_id'}"/>
                 <filter name="mudon_group_source" string="Source"
-                        context="{'group_by': 'mudon_source'}"/>
+                        context="{'group_by': 'mudon_source_id'}"/>
             </xpath>
         </field>
     </record>

@@ -14,75 +14,20 @@ PIPELINE_KIND_SELECTION = [
     ("uae", "UAE Dubai Golden Visa / Investment"),
 ]
 
-SERVICE_SELECTION = [
-    ("citizenship", "Citizenship"),
-    ("goldenvisa", "Golden Visa"),
-    ("investment", "Investment"),
-]
-
-CITY_SELECTION = [
-    ("istanbul", "Istanbul"),
-    ("trabzon", "Trabzon"),
-    ("other_tr", "Other (Turkey)"),
-    ("dubai", "Dubai"),
-    ("abudhabi", "Abu Dhabi"),
-    ("sharjah", "Sharjah"),
-    ("rak", "Ras Al Khaimah"),
-]
+# v19.0.1.2.0 — the lists previously here as module constants
+# (SERVICE_SELECTION, CITY_SELECTION, STATUS_SELECTION, PURPOSE_SELECTION,
+# PROPERTY_TYPE_SELECTION, SOURCE_SELECTION, LOST_REASON_SELECTION) now
+# live as admin-managed master tables:
+#   mudon.service / mudon.city / mudon.lead.status / mudon.purpose /
+#   mudon.property.type / mudon.source / mudon.lost.reason
+# Their seeded `code` fields match the old Selection keys 1-for-1 so the
+# automation rules below (kanban color, sort priority, transitions) keep
+# the same code-based identity checks (e.g. `rec.mudon_service_id.code
+# == "citizenship"`). Admins rename `name` freely; don't touch `code`.
 
 PRIORITY_SELECTION = [
     ("urgent", "Urgent"),
     ("normal", "Normal"),
-]
-
-STATUS_SELECTION = [
-    ("no_answer_1", "No Answer 1"),
-    ("no_answer_2", "No Answer 2"),
-    ("no_answer_3", "No Answer 3"),
-    ("not_interested", "Not Interested"),
-]
-
-PURPOSE_SELECTION = [
-    ("citizenship", "Citizenship"),
-    ("goldenvisa", "Golden Visa"),
-    ("residency_permit", "Residency Permit"),
-    ("end_user", "End User"),
-    ("investment", "Investment"),
-    ("other", "Other"),
-]
-
-PROPERTY_TYPE_SELECTION = [
-    ("apartment", "Apartment"),
-    ("villa", "Villa"),
-    ("townhouse", "Townhouse"),
-    ("penthouse", "Penthouse"),
-    ("duplex", "Duplex"),
-    ("mansion", "Mansion"),
-    ("hotel_apartment", "Hotel Apartment"),
-    ("office", "Office"),
-    ("retail_shop", "Retail Shop"),
-    ("warehouse", "Warehouse"),
-    ("land", "Land"),
-    ("farm", "Farm"),
-]
-
-SOURCE_SELECTION = [
-    ("meta", "META"),
-    ("google_ads", "Google Ads"),
-    ("website", "Website"),
-    ("whatsapp_direct", "WhatsApp Direct"),
-    ("property_finder", "Property Finder"),
-    ("bayut", "Bayut"),
-    ("referral", "Referral"),
-    ("existing_client", "Existing Client"),
-    ("agency_partner", "Agency Partner"),
-    ("instagram", "Instagram"),
-    ("tiktok", "TikTok"),
-    ("linkedin", "LinkedIn"),
-    ("exhibition_event", "Exhibition / Event"),
-    ("cold_call", "Cold Call"),
-    ("manual_entry", "Manual Entry"),
-    ("other", "Other"),
 ]
 
 # Stage 3
@@ -124,20 +69,9 @@ HANDOVER_TYPE_SELECTION = [
     ("off_plan", "Off-Plan"),
 ]
 
-# Stage 7 — 2-level taxonomy held as one Selection (category_subreason)
-LOST_REASON_SELECTION = [
-    ("irrelevant_services", "Irrelevant Lead — Asking for services we don't offer"),
-    ("irrelevant_country", "Irrelevant Lead — Wrong country"),
-    ("irrelevant_spam", "Irrelevant Lead — Fake / spam"),
-    ("unreachable_no_answer", "Not Reachable — No answer after 3 attempts"),
-    ("unreachable_wrong_number", "Not Reachable — Wrong number"),
-    ("low_intent_exploring", "Low Intent — Just exploring"),
-    ("low_intent_no_urgency", "Low Intent — No urgency"),
-    ("financial_budget_low", "Financial Mismatch — Budget too low"),
-    ("financial_payment_plan", "Financial Mismatch — Payment plan unsuitable"),
-    ("product_options", "Product Mismatch — Didn't like options"),
-    ("product_location", "Product Mismatch — Location not suitable"),
-]
+# v19.0.1.2.0 — old LOST_REASON_SELECTION lifted into the
+# `mudon.lost.reason` hierarchical master (5 categories × 2-3
+# subreasons each, seeded with the same `code` values).
 
 
 # Map of stage transitions: (predicate_field, target_stage_xmlid_suffix)
@@ -183,9 +117,29 @@ class CrmLead(models.Model):
     )
 
     # ─── STAGE 1: New Lead ──────────────────────────────────────────
-    mudon_service = fields.Selection(SERVICE_SELECTION, string="MService")
-    mudon_city = fields.Selection(CITY_SELECTION, string="MCity")
+    # v19.0.1.2.0 — Selection enums replaced by admin-managed masters
+    # (see comment block at top of file). Field rename adds the _id /
+    # _ids suffix so the schema type is obvious at sight.
+    mudon_service_id = fields.Many2one(
+        "mudon.service", string="MService", ondelete="restrict",
+    )
+    # Stored mirror of the service `code` so the kanban template can do
+    # code-based identity checks (a Many2one's raw_value is the id, not
+    # the code) — e.g. badge colour for citizenship / goldenvisa / investment.
+    mudon_service_code = fields.Char(
+        related="mudon_service_id.code", store=True,
+    )
+    mudon_city_ids = fields.Many2many(
+        "mudon.city", "crm_lead_mudon_city_rel",
+        "lead_id", "city_id",
+        string="MCity",
+    )
     mudon_city_other = fields.Char(string="Other City")
+    mudon_show_city_other = fields.Boolean(
+        compute="_compute_mudon_show_city_other",
+        help="True if the customer picked the 'Other (Turkey)' city tag — "
+             "drives visibility of the free-text city field on the form.",
+    )
     mudon_priority = fields.Selection(
         PRIORITY_SELECTION, string="MPriority", default="normal",
     )
@@ -195,21 +149,29 @@ class CrmLead(models.Model):
     mudon_budget_currency_id = fields.Many2one(
         "res.currency", default=lambda s: s.env.ref("base.USD").id,
     )
-    mudon_status = fields.Selection(STATUS_SELECTION, string="Status")
+    mudon_status_id = fields.Many2one(
+        "mudon.lead.status", string="Status", ondelete="restrict",
+    )
     mudon_nationality_id = fields.Many2one("res.country", string="Nationality")
     mudon_living_in_id = fields.Many2one("res.country", string="Living In")
     mudon_in_country = fields.Boolean(string="In Country Now")
-    mudon_purpose = fields.Selection(
-        PURPOSE_SELECTION, string="Purpose of the Property",
+    mudon_purpose_ids = fields.Many2many(
+        "mudon.purpose", "crm_lead_mudon_purpose_rel",
+        "lead_id", "purpose_id",
+        string="Purpose of the Property",
     )
-    mudon_property_type = fields.Selection(
-        PROPERTY_TYPE_SELECTION, string="Property Type",
+    mudon_property_type_ids = fields.Many2many(
+        "mudon.property.type", "crm_lead_mudon_property_type_rel",
+        "lead_id", "property_type_id",
+        string="Property Type",
     )
     mudon_beds = fields.Integer(string="No. of Beds")
     mudon_other_specs = fields.Text(string="Other Specifications")
     mudon_visit_date = fields.Date(string="Expected Visit Date")
     mudon_notes = fields.Text(string="Notes")
-    mudon_source = fields.Selection(SOURCE_SELECTION, string="Source")
+    mudon_source_id = fields.Many2one(
+        "mudon.source", string="Source", ondelete="restrict",
+    )
     mudon_cbi_files = fields.Integer(string="No. of CBI Files")
 
     # SLA tracking — Stage 1 (30-min / 1-hour from spec)
@@ -355,11 +317,24 @@ class CrmLead(models.Model):
     )
 
     # ─── STAGE 7: Lost ──────────────────────────────────────────────
-    mudon_lost_reason = fields.Selection(
-        LOST_REASON_SELECTION, string="Lost Reason",
+    mudon_lost_reason_id = fields.Many2one(
+        "mudon.lost.reason",
+        string="Lost Reason",
+        domain="[('is_category', '=', False)]",
+        ondelete="restrict",
+        help="Pick a subreason (rows whose category isn't empty). "
+             "Category-only rows are not selectable as a lost reason "
+             "on a lead.",
     )
 
     # ─── Computes ───────────────────────────────────────────────────
+    @api.depends("mudon_city_ids")
+    def _compute_mudon_show_city_other(self):
+        for rec in self:
+            rec.mudon_show_city_other = bool(
+                rec.mudon_city_ids.filtered(lambda c: c.code == "other_tr")
+            )
+
     @api.depends("team_id")
     def _compute_mudon_pipeline_kind(self):
         turkey = self.env.ref(
@@ -376,23 +351,35 @@ class CrmLead(models.Model):
             else:
                 rec.mudon_pipeline_kind = False
 
-    @api.depends("team_id", "mudon_city")
+    @api.depends("team_id", "mudon_city_ids")
     def _compute_mudon_branch_id(self):
+        """Match the FIRST city tag whose `code` maps to a branch on
+        this team. If none match (or "Others"), no branch — auto-
+        assignment then falls through to the country-code mapping or
+        round-robin chain in `_mudon_auto_assign_agent`.
+        """
         Branch = self.env["mudon.branch"].sudo()
         for rec in self:
-            if not rec.team_id or not rec.mudon_city:
+            if not rec.team_id or not rec.mudon_city_ids:
                 rec.mudon_branch_id = False
                 continue
-            rec.mudon_branch_id = Branch.search([
-                ("team_id", "=", rec.team_id.id),
-                ("city_key", "=", rec.mudon_city),
-            ], limit=1)
+            branch = False
+            for city in rec.mudon_city_ids:
+                b = Branch.search([
+                    ("team_id", "=", rec.team_id.id),
+                    ("city_key", "=", city.code),
+                ], limit=1)
+                if b:
+                    branch = b
+                    break
+            rec.mudon_branch_id = branch
 
-    @api.depends("mudon_priority", "mudon_service", "mudon_pipeline_kind")
+    @api.depends("mudon_priority", "mudon_service_id.code", "mudon_pipeline_kind")
     def _compute_mudon_card_color_hint(self):
         for rec in self:
-            is_special = rec.mudon_service in ("citizenship", "goldenvisa")
-            is_invest = rec.mudon_service == "investment"
+            service_code = rec.mudon_service_id.code if rec.mudon_service_id else False
+            is_special = service_code in ("citizenship", "goldenvisa")
+            is_invest = service_code == "investment"
             if rec.mudon_priority == "urgent" and is_special:
                 rec.mudon_card_color_hint = "urgent_special"
             elif rec.mudon_priority == "urgent" and is_invest:
@@ -434,13 +421,14 @@ class CrmLead(models.Model):
                 )
         return leads
 
-    # Fields that must be set before a New-Lead-stage lead can move
-    # forward to Qualified. Defined as a class-level tuple so the
-    # validation method, the view's `required=` expression, and the
-    # error message stay in lock-step.
+    # v19.0.1.2.0 — field names switched from `mudon_service` /
+    # `mudon_city` (Selection) to `mudon_service_id` (Many2one) /
+    # `mudon_city_ids` (Many2many tags). The validation works
+    # identically — a Many2one is truthy when set, a Many2many is
+    # truthy when non-empty.
     MUDON_REQUIRED_TO_QUALIFY = (
-        "mudon_service",
-        "mudon_city",
+        "mudon_service_id",
+        "mudon_city_ids",
         "mudon_priority",
         "mudon_budget",
     )
@@ -459,8 +447,8 @@ class CrmLead(models.Model):
             return
         from odoo.exceptions import UserError
         labels = {
-            "mudon_service": "MService",
-            "mudon_city": "MCity",
+            "mudon_service_id": "MService",
+            "mudon_city_ids": "MCity",
             "mudon_priority": "MPriority",
             "mudon_budget": "MBudget",
         }
@@ -519,7 +507,7 @@ class CrmLead(models.Model):
                 lambda v: bool(v),
             ),
             "lost": (
-                "mudon_lost_reason",
+                "mudon_lost_reason_id",
                 "Lost Reason",
                 lambda v: bool(v),
             ),
@@ -571,7 +559,7 @@ class CrmLead(models.Model):
                 "mudon_visit_confirmed": r.mudon_visit_confirmed,
                 "mudon_paid_booking": r.mudon_paid_booking,
                 "mudon_fully_paid": r.mudon_fully_paid,
-                "mudon_lost_reason": r.mudon_lost_reason,
+                "mudon_lost_reason_id": r.mudon_lost_reason_id.id,
                 "mudon_offer_counter": r.mudon_offer_counter,
             }
             for r in self
@@ -627,7 +615,8 @@ class CrmLead(models.Model):
             )
 
         # Any → Stage 7: Lost
-        if self.mudon_lost_reason and not prev.get("mudon_lost_reason"):
+        if (self.mudon_lost_reason_id.id
+                and not prev.get("mudon_lost_reason_id")):
             self._mudon_advance_stage("lost")
             self._mudon_notify_marketing_lost()
 
@@ -942,18 +931,20 @@ class CrmLead(models.Model):
 
     def _mudon_notify_marketing_lost(self):
         self.ensure_one()
-        reason_label = dict(LOST_REASON_SELECTION).get(
-            self.mudon_lost_reason, "(no reason)",
+        # v19.0.1.2.0 — values now come from related records
+        # (Many2one / Many2many) instead of Selection dicts.
+        reason_label = (
+            self.mudon_lost_reason_id.complete_name
+            if self.mudon_lost_reason_id
+            else "(no reason)"
         )
+        cities = ", ".join(self.mudon_city_ids.mapped("name")) or ""
+        source_name = self.mudon_source_id.name or ""
         detail_bits = [
             "Phone: %s" % (self.phone or ""),
             "Email: %s" % (self.email_from or ""),
-            "City: %s" % (
-                dict(CITY_SELECTION).get(self.mudon_city or "", "") or ""
-            ),
-            "Source: %s" % (
-                dict(SOURCE_SELECTION).get(self.mudon_source or "", "") or ""
-            ),
+            "City: %s" % cities,
+            "Source: %s" % source_name,
         ]
         body = Markup(
             "<p><b>%s</b></p>"

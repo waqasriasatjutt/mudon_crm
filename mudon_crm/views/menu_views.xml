@@ -142,4 +142,42 @@
               parent="mudon_menu_config_root"
               action="mudon_developer_action"
               sequence="30"/>
+
+    <!-- v19.0.1.2.0 — 7 new admin-managed master tables (Many2one /
+         Many2many replacements for the old Selection enums) -->
+    <menuitem id="mudon_menu_services"
+              name="Services"
+              parent="mudon_menu_config_root"
+              action="mudon_service_action"
+              sequence="40"/>
+    <menuitem id="mudon_menu_cities"
+              name="Cities"
+              parent="mudon_menu_config_root"
+              action="mudon_city_action"
+              sequence="50"/>
+    <menuitem id="mudon_menu_lead_statuses"
+              name="Lead Statuses"
+              parent="mudon_menu_config_root"
+              action="mudon_lead_status_action"
+              sequence="60"/>
+    <menuitem id="mudon_menu_purposes"
+              name="Purposes"
+              parent="mudon_menu_config_root"
+              action="mudon_purpose_action"
+              sequence="70"/>
+    <menuitem id="mudon_menu_property_types"
+              name="Property Types"
+              parent="mudon_menu_config_root"
+              action="mudon_property_type_action"
+              sequence="80"/>
+    <menuitem id="mudon_menu_sources"
+              name="Lead Sources"
+              parent="mudon_menu_config_root"
+              action="mudon_source_action"
+              sequence="90"/>
+    <menuitem id="mudon_menu_lost_reasons"
+              name="Lost Reasons"
+              parent="mudon_menu_config_root"
+              action="mudon_lost_reason_action"
+              sequence="100"/>
 </odoo>

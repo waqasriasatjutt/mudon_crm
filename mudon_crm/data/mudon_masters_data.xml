@@ -1,0 +1,427 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo noupdate="1">
+    <!--
+        v19.0.1.2.0 — Pre-seed every master table with the SAME values
+        + same `code` strings the v1.1.x Selection enums used. The
+        Python rules (kanban color, sort priority, automation
+        transitions) all key off `code`, so upgrading from 1.1.x to
+        1.2.0 changes the storage type without changing behaviour.
+        Admins can rename the `name` freely afterwards.
+    -->
+
+    <!-- ============ SERVICE ============ -->
+    <record id="mudon_service_citizenship" model="mudon.service">
+        <field name="name">Citizenship</field>
+        <field name="code">citizenship</field>
+        <field name="sequence">10</field>
+        <field name="color">10</field>
+    </record>
+    <record id="mudon_service_goldenvisa" model="mudon.service">
+        <field name="name">Golden Visa</field>
+        <field name="code">goldenvisa</field>
+        <field name="sequence">20</field>
+        <field name="color">11</field>
+    </record>
+    <record id="mudon_service_investment" model="mudon.service">
+        <field name="name">Investment</field>
+        <field name="code">investment</field>
+        <field name="sequence">30</field>
+        <field name="color">4</field>
+    </record>
+
+    <!-- ============ CITY ============ -->
+    <record id="mudon_city_istanbul" model="mudon.city">
+        <field name="name">Istanbul</field>
+        <field name="code">istanbul</field>
+        <field name="pipeline_kind">turkey</field>
+        <field name="sequence">10</field>
+        <field name="color">1</field>
+    </record>
+    <record id="mudon_city_trabzon" model="mudon.city">
+        <field name="name">Trabzon</field>
+        <field name="code">trabzon</field>
+        <field name="pipeline_kind">turkey</field>
+        <field name="sequence">20</field>
+        <field name="color">2</field>
+    </record>
+    <record id="mudon_city_other_tr" model="mudon.city">
+        <field name="name">Other (Turkey)</field>
+        <field name="code">other_tr</field>
+        <field name="pipeline_kind">turkey</field>
+        <field name="sequence">30</field>
+    </record>
+    <record id="mudon_city_dubai" model="mudon.city">
+        <field name="name">Dubai</field>
+        <field name="code">dubai</field>
+        <field name="pipeline_kind">uae</field>
+        <field name="sequence">40</field>
+        <field name="color">3</field>
+    </record>
+    <record id="mudon_city_abudhabi" model="mudon.city">
+        <field name="name">Abu Dhabi</field>
+        <field name="code">abudhabi</field>
+        <field name="pipeline_kind">uae</field>
+        <field name="sequence">50</field>
+        <field name="color">4</field>
+    </record>
+    <record id="mudon_city_sharjah" model="mudon.city">
+        <field name="name">Sharjah</field>
+        <field name="code">sharjah</field>
+        <field name="pipeline_kind">uae</field>
+        <field name="sequence">60</field>
+        <field name="color">5</field>
+    </record>
+    <record id="mudon_city_rak" model="mudon.city">
+        <field name="name">Ras Al Khaimah</field>
+        <field name="code">rak</field>
+        <field name="pipeline_kind">uae</field>
+        <field name="sequence">70</field>
+        <field name="color">6</field>
+    </record>
+
+    <!-- ============ LEAD STATUS ============ -->
+    <record id="mudon_lead_status_no_answer_1" model="mudon.lead.status">
+        <field name="name">No Answer 1</field>
+        <field name="code">no_answer_1</field>
+        <field name="sequence">10</field>
+        <field name="color">2</field>
+    </record>
+    <record id="mudon_lead_status_no_answer_2" model="mudon.lead.status">
+        <field name="name">No Answer 2</field>
+        <field name="code">no_answer_2</field>
+        <field name="sequence">20</field>
+        <field name="color">3</field>
+    </record>
+    <record id="mudon_lead_status_no_answer_3" model="mudon.lead.status">
+        <field name="name">No Answer 3</field>
+        <field name="code">no_answer_3</field>
+        <field name="sequence">30</field>
+        <field name="color">4</field>
+    </record>
+    <record id="mudon_lead_status_not_interested" model="mudon.lead.status">
+        <field name="name">Not Interested</field>
+        <field name="code">not_interested</field>
+        <field name="sequence">40</field>
+        <field name="color">1</field>
+        <field name="is_lost_signal" eval="True"/>
+    </record>
+
+    <!-- ============ PURPOSE ============ -->
+    <record id="mudon_purpose_citizenship" model="mudon.purpose">
+        <field name="name">Citizenship</field>
+        <field name="code">citizenship</field>
+        <field name="sequence">10</field>
+        <field name="color">10</field>
+    </record>
+    <record id="mudon_purpose_goldenvisa" model="mudon.purpose">
+        <field name="name">Golden Visa</field>
+        <field name="code">goldenvisa</field>
+        <field name="sequence">20</field>
+        <field name="color">11</field>
+    </record>
+    <record id="mudon_purpose_residency_permit" model="mudon.purpose">
+        <field name="name">Residency Permit</field>
+        <field name="code">residency_permit</field>
+        <field name="sequence">30</field>
+        <field name="color">7</field>
+    </record>
+    <record id="mudon_purpose_end_user" model="mudon.purpose">
+        <field name="name">End User</field>
+        <field name="code">end_user</field>
+        <field name="sequence">40</field>
+        <field name="color">8</field>
+    </record>
+    <record id="mudon_purpose_investment" model="mudon.purpose">
+        <field name="name">Investment</field>
+        <field name="code">investment</field>
+        <field name="sequence">50</field>
+        <field name="color">4</field>
+    </record>
+    <record id="mudon_purpose_other" model="mudon.purpose">
+        <field name="name">Other</field>
+        <field name="code">other</field>
+        <field name="sequence">60</field>
+    </record>
+
+    <!-- ============ PROPERTY TYPE ============ -->
+    <record id="mudon_property_type_apartment" model="mudon.property.type">
+        <field name="name">Apartment</field>
+        <field name="code">apartment</field>
+        <field name="sequence">10</field>
+        <field name="color">4</field>
+    </record>
+    <record id="mudon_property_type_villa" model="mudon.property.type">
+        <field name="name">Villa</field>
+        <field name="code">villa</field>
+        <field name="sequence">20</field>
+        <field name="color">10</field>
+    </record>
+    <record id="mudon_property_type_townhouse" model="mudon.property.type">
+        <field name="name">Townhouse</field>
+        <field name="code">townhouse</field>
+        <field name="sequence">30</field>
+        <field name="color">7</field>
+    </record>
+    <record id="mudon_property_type_penthouse" model="mudon.property.type">
+        <field name="name">Penthouse</field>
+        <field name="code">penthouse</field>
+        <field name="sequence">40</field>
+        <field name="color">11</field>
+    </record>
+    <record id="mudon_property_type_duplex" model="mudon.property.type">
+        <field name="name">Duplex</field>
+        <field name="code">duplex</field>
+        <field name="sequence">50</field>
+        <field name="color">5</field>
+    </record>
+    <record id="mudon_property_type_mansion" model="mudon.property.type">
+        <field name="name">Mansion</field>
+        <field name="code">mansion</field>
+        <field name="sequence">60</field>
+        <field name="color">9</field>
+    </record>
+    <record id="mudon_property_type_hotel_apartment" model="mudon.property.type">
+        <field name="name">Hotel Apartment</field>
+        <field name="code">hotel_apartment</field>
+        <field name="sequence">70</field>
+        <field name="color">3</field>
+    </record>
+    <record id="mudon_property_type_office" model="mudon.property.type">
+        <field name="name">Office</field>
+        <field name="code">office</field>
+        <field name="sequence">80</field>
+        <field name="color">2</field>
+    </record>
+    <record id="mudon_property_type_retail_shop" model="mudon.property.type">
+        <field name="name">Retail Shop</field>
+        <field name="code">retail_shop</field>
+        <field name="sequence">90</field>
+        <field name="color">6</field>
+    </record>
+    <record id="mudon_property_type_warehouse" model="mudon.property.type">
+        <field name="name">Warehouse</field>
+        <field name="code">warehouse</field>
+        <field name="sequence">100</field>
+        <field name="color">1</field>
+    </record>
+    <record id="mudon_property_type_land" model="mudon.property.type">
+        <field name="name">Land</field>
+        <field name="code">land</field>
+        <field name="sequence">110</field>
+        <field name="color">8</field>
+    </record>
+    <record id="mudon_property_type_farm" model="mudon.property.type">
+        <field name="name">Farm</field>
+        <field name="code">farm</field>
+        <field name="sequence">120</field>
+        <field name="color">10</field>
+    </record>
+
+    <!-- ============ SOURCE — System ============ -->
+    <record id="mudon_source_meta" model="mudon.source">
+        <field name="name">META</field>
+        <field name="code">meta</field>
+        <field name="channel">system</field>
+        <field name="sequence">10</field>
+        <field name="color">4</field>
+    </record>
+    <record id="mudon_source_google_ads" model="mudon.source">
+        <field name="name">Google Ads</field>
+        <field name="code">google_ads</field>
+        <field name="channel">system</field>
+        <field name="sequence">20</field>
+        <field name="color">5</field>
+    </record>
+    <record id="mudon_source_website" model="mudon.source">
+        <field name="name">Website</field>
+        <field name="code">website</field>
+        <field name="channel">system</field>
+        <field name="sequence">30</field>
+        <field name="color">7</field>
+    </record>
+    <record id="mudon_source_whatsapp_direct" model="mudon.source">
+        <field name="name">WhatsApp Direct</field>
+        <field name="code">whatsapp_direct</field>
+        <field name="channel">system</field>
+        <field name="sequence">40</field>
+        <field name="color">10</field>
+    </record>
+    <record id="mudon_source_property_finder" model="mudon.source">
+        <field name="name">Property Finder</field>
+        <field name="code">property_finder</field>
+        <field name="channel">system</field>
+        <field name="sequence">50</field>
+        <field name="color">3</field>
+    </record>
+    <record id="mudon_source_bayut" model="mudon.source">
+        <field name="name">Bayut</field>
+        <field name="code">bayut</field>
+        <field name="channel">system</field>
+        <field name="sequence">60</field>
+        <field name="color">11</field>
+    </record>
+    <!-- ============ SOURCE — Manual ============ -->
+    <record id="mudon_source_referral" model="mudon.source">
+        <field name="name">Referral</field>
+        <field name="code">referral</field>
+        <field name="channel">manual</field>
+        <field name="sequence">70</field>
+        <field name="color">10</field>
+    </record>
+    <record id="mudon_source_existing_client" model="mudon.source">
+        <field name="name">Existing Client</field>
+        <field name="code">existing_client</field>
+        <field name="channel">manual</field>
+        <field name="sequence">80</field>
+        <field name="color">8</field>
+    </record>
+    <record id="mudon_source_agency_partner" model="mudon.source">
+        <field name="name">Agency Partner</field>
+        <field name="code">agency_partner</field>
+        <field name="channel">manual</field>
+        <field name="sequence">90</field>
+        <field name="color">2</field>
+    </record>
+    <record id="mudon_source_instagram" model="mudon.source">
+        <field name="name">Instagram</field>
+        <field name="code">instagram</field>
+        <field name="channel">manual</field>
+        <field name="sequence">100</field>
+        <field name="color">9</field>
+    </record>
+    <record id="mudon_source_tiktok" model="mudon.source">
+        <field name="name">TikTok</field>
+        <field name="code">tiktok</field>
+        <field name="channel">manual</field>
+        <field name="sequence">110</field>
+        <field name="color">1</field>
+    </record>
+    <record id="mudon_source_linkedin" model="mudon.source">
+        <field name="name">LinkedIn</field>
+        <field name="code">linkedin</field>
+        <field name="channel">manual</field>
+        <field name="sequence">120</field>
+        <field name="color">5</field>
+    </record>
+    <record id="mudon_source_exhibition_event" model="mudon.source">
+        <field name="name">Exhibition / Event</field>
+        <field name="code">exhibition_event</field>
+        <field name="channel">manual</field>
+        <field name="sequence">130</field>
+        <field name="color">6</field>
+    </record>
+    <record id="mudon_source_cold_call" model="mudon.source">
+        <field name="name">Cold Call</field>
+        <field name="code">cold_call</field>
+        <field name="channel">manual</field>
+        <field name="sequence">140</field>
+        <field name="color">7</field>
+    </record>
+    <record id="mudon_source_manual_entry" model="mudon.source">
+        <field name="name">Manual Entry</field>
+        <field name="code">manual_entry</field>
+        <field name="channel">manual</field>
+        <field name="sequence">150</field>
+    </record>
+    <record id="mudon_source_other" model="mudon.source">
+        <field name="name">Other</field>
+        <field name="code">other</field>
+        <field name="channel">manual</field>
+        <field name="sequence">160</field>
+    </record>
+
+    <!-- ============ LOST REASON — 5 categories ============ -->
+    <record id="mudon_lost_cat_irrelevant" model="mudon.lost.reason">
+        <field name="name">Irrelevant Lead</field>
+        <field name="code">irrelevant</field>
+        <field name="sequence">10</field>
+    </record>
+    <record id="mudon_lost_cat_unreachable" model="mudon.lost.reason">
+        <field name="name">Not Reachable</field>
+        <field name="code">unreachable</field>
+        <field name="sequence">20</field>
+    </record>
+    <record id="mudon_lost_cat_low_intent" model="mudon.lost.reason">
+        <field name="name">Low Intent</field>
+        <field name="code">low_intent</field>
+        <field name="sequence">30</field>
+    </record>
+    <record id="mudon_lost_cat_financial" model="mudon.lost.reason">
+        <field name="name">Financial Mismatch</field>
+        <field name="code">financial</field>
+        <field name="sequence">40</field>
+    </record>
+    <record id="mudon_lost_cat_product" model="mudon.lost.reason">
+        <field name="name">Product Mismatch</field>
+        <field name="code">product</field>
+        <field name="sequence">50</field>
+    </record>
+
+    <!-- ============ LOST REASON — 11 subreasons ============ -->
+    <record id="mudon_lost_irrelevant_services" model="mudon.lost.reason">
+        <field name="name">Asking for services we don't offer</field>
+        <field name="code">irrelevant_services</field>
+        <field name="parent_id" ref="mudon_lost_cat_irrelevant"/>
+        <field name="sequence">10</field>
+    </record>
+    <record id="mudon_lost_irrelevant_country" model="mudon.lost.reason">
+        <field name="name">Wrong country</field>
+        <field name="code">irrelevant_country</field>
+        <field name="parent_id" ref="mudon_lost_cat_irrelevant"/>
+        <field name="sequence">20</field>
+    </record>
+    <record id="mudon_lost_irrelevant_spam" model="mudon.lost.reason">
+        <field name="name">Fake / spam</field>
+        <field name="code">irrelevant_spam</field>
+        <field name="parent_id" ref="mudon_lost_cat_irrelevant"/>
+        <field name="sequence">30</field>
+    </record>
+    <record id="mudon_lost_unreachable_no_answer" model="mudon.lost.reason">
+        <field name="name">No answer after 3 attempts</field>
+        <field name="code">unreachable_no_answer</field>
+        <field name="parent_id" ref="mudon_lost_cat_unreachable"/>
+        <field name="sequence">10</field>
+    </record>
+    <record id="mudon_lost_unreachable_wrong_number" model="mudon.lost.reason">
+        <field name="name">Wrong number</field>
+        <field name="code">unreachable_wrong_number</field>
+        <field name="parent_id" ref="mudon_lost_cat_unreachable"/>
+        <field name="sequence">20</field>
+    </record>
+    <record id="mudon_lost_low_intent_exploring" model="mudon.lost.reason">
+        <field name="name">Just exploring</field>
+        <field name="code">low_intent_exploring</field>
+        <field name="parent_id" ref="mudon_lost_cat_low_intent"/>
+        <field name="sequence">10</field>
+    </record>
+    <record id="mudon_lost_low_intent_no_urgency" model="mudon.lost.reason">
+        <field name="name">No urgency</field>
+        <field name="code">low_intent_no_urgency</field>
+        <field name="parent_id" ref="mudon_lost_cat_low_intent"/>
+        <field name="sequence">20</field>
+    </record>
+    <record id="mudon_lost_financial_budget_low" model="mudon.lost.reason">
+        <field name="name">Budget too low</field>
+        <field name="code">financial_budget_low</field>
+        <field name="parent_id" ref="mudon_lost_cat_financial"/>
+        <field name="sequence">10</field>
+    </record>
+    <record id="mudon_lost_financial_payment_plan" model="mudon.lost.reason">
+        <field name="name">Payment plan unsuitable</field>
+        <field name="code">financial_payment_plan</field>
+        <field name="parent_id" ref="mudon_lost_cat_financial"/>
+        <field name="sequence">20</field>
+    </record>
+    <record id="mudon_lost_product_options" model="mudon.lost.reason">
+        <field name="name">Didn't like options</field>
+        <field name="code">product_options</field>
+        <field name="parent_id" ref="mudon_lost_cat_product"/>
+        <field name="sequence">10</field>
+    </record>
+    <record id="mudon_lost_product_location" model="mudon.lost.reason">
+        <field name="name">Location not suitable</field>
+        <field name="code">product_location</field>
+        <field name="parent_id" ref="mudon_lost_cat_product"/>
+        <field name="sequence">20</field>
+    </record>
+</odoo>

@@ -4,7 +4,7 @@ from odoo import api, fields, models
 class MudonBranch(models.Model):
     """A city-level branch that owns a roster of agents.
 
-    Stage 2+ routes leads from `crm.lead.mudon_city` → matching
+    Stage 2+ routes leads from `crm.lead.mudon_city_ids` → matching
     `mudon.branch` → round-robin across `member_ids`. If no branch
     matches the lead's city ("Others" in the spec), the lead falls
     back to the team's Sales Manager (`team_id.user_id`).
@@ -32,8 +32,8 @@ class MudonBranch(models.Model):
             ("rak", "Ras Al Khaimah"),
         ],
         required=True,
-        help="Matches `crm.lead.mudon_city`. Each city key may bind to "
-             "at most one branch per team.",
+        help="Matches a `mudon.city.code` on the lead's `mudon_city_ids`. "
+             "Each city key may bind to at most one branch per team.",
     )
     member_ids = fields.Many2many(
         "res.users",

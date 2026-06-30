@@ -1,0 +1,31 @@
+from odoo import fields, models
+
+
+class MudonService(models.Model):
+    """Service catalog managed via Configuration → Services.
+
+    `code` is the stable identifier the Python automation logic looks up
+    (e.g. `rec.mudon_service_id.code == "citizenship"`). Admin can rename
+    `name` without breaking any rule. Don't change `code` on seeded
+    records — that's the join point with the kanban color logic and the
+    sort priority ranking.
+    """
+
+    _name = "mudon.service"
+    _description = "Mudon — Service Type"
+    _order = "sequence, id"
+
+    name = fields.Char(required=True, translate=True)
+    code = fields.Char(
+        required=True,
+        help="Stable identifier used by the module's automation rules "
+             "(kanban color, sort priority). Do not change on seeded "
+             "records like 'citizenship', 'investment', 'goldenvisa'.",
+    )
+    sequence = fields.Integer(default=10)
+    active = fields.Boolean(default=True)
+    color = fields.Integer()
+
+    _sql_constraints = [
+        ("code_unique", "unique(code)", "Service code must be unique."),
+    ]
