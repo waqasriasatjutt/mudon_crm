@@ -147,7 +147,12 @@ class CrmLead(models.Model):
         string="MBudget", currency_field="mudon_budget_currency_id",
     )
     mudon_budget_currency_id = fields.Many2one(
-        "res.currency", default=lambda s: s.env.ref("base.USD").id,
+        "res.currency",
+        string="Currency",
+        compute="_compute_mudon_budget_currency",
+        store=True, readonly=True,
+        help="Per-pipeline currency — UAE Dubai = AED, Turkey = USD. "
+             "Drives MBudget, Closing Amount and Commission.",
     )
     mudon_status_id = fields.Many2one(
         "mudon.lead.status", string="Status", ondelete="restrict",
@@ -288,7 +293,9 @@ class CrmLead(models.Model):
     mudon_developer_id = fields.Many2one(
         "mudon.developer", string="Developer",
     )
-    mudon_project_name = fields.Char(string="Project Name")
+    mudon_project_id = fields.Many2one(
+        "mudon.project", string="Project", ondelete="restrict",
+    )
     mudon_commission = fields.Monetary(
         string="Commission", currency_field="mudon_budget_currency_id",
     )
@@ -350,6 +357,21 @@ class CrmLead(models.Model):
                 rec.mudon_pipeline_kind = "uae"
             else:
                 rec.mudon_pipeline_kind = False
+
+    @api.depends("mudon_pipeline_kind")
+    def _compute_mudon_budget_currency(self):
+        """Per-pipeline currency: UAE Dubai bills in AED, Turkey in USD.
+        Non-Mudon (or unresolved) leads fall back to USD. Stored so the
+        monetary widgets (MBudget / Closing Amount / Commission) render
+        each lead's amounts in its own pipeline currency."""
+        aed = self.env.ref("base.AED", raise_if_not_found=False)
+        usd = self.env.ref("base.USD", raise_if_not_found=False)
+        fallback = usd or self.env.company.currency_id
+        for rec in self:
+            if rec.mudon_pipeline_kind == "uae" and aed:
+                rec.mudon_budget_currency_id = aed
+            else:
+                rec.mudon_budget_currency_id = fallback
 
     @api.depends("team_id", "mudon_city_ids")
     def _compute_mudon_branch_id(self):

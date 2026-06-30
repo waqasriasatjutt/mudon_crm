@@ -182,4 +182,33 @@
             </p>
         </field>
     </record>
+
+    <!-- ============ PROJECT ============ -->
+    <record id="mudon_project_view_tree" model="ir.ui.view">
+        <field name="name">mudon.project.tree</field>
+        <field name="model">mudon.project</field>
+        <field name="arch" type="xml">
+            <list editable="bottom" string="Projects">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="developer_id"/>
+                <field name="pipeline_kind"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+    <record id="mudon_project_action" model="ir.actions.act_window">
+        <field name="name">Projects</field>
+        <field name="res_model">mudon.project</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Add a property project.
+            </p>
+            <p>
+                Link each project to its developer; the WON-stage form
+                shows projects filtered by the lead's pipeline.
+            </p>
+        </field>
+    </record>
 </odoo>

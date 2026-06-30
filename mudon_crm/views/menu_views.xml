@@ -144,6 +144,11 @@
               parent="mudon_menu_config_root"
               action="mudon_developer_action"
               sequence="30"/>
+    <menuitem id="mudon_menu_projects"
+              name="Projects"
+              parent="mudon_menu_config_root"
+              action="mudon_project_action"
+              sequence="35"/>
 
     <!-- v19.0.1.2.0 — 7 new admin-managed master tables (Many2one /
          Many2many replacements for the old Selection enums) -->
