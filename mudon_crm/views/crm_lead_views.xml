@@ -35,11 +35,13 @@
                 <field name="mudon_show_city_other" invisible="1"/>
                 <field name="mudon_service_id"
                        options="{'no_create_edit': True}"
+                       domain="[('pipeline_kind', 'in', [mudon_pipeline_kind, 'any'])]"
                        invisible="not mudon_pipeline_kind"
                        required="mudon_pipeline_kind and mudon_stage_kind_current != 'new_lead'"/>
                 <field name="mudon_city_ids"
                        widget="many2many_tags"
                        options="{'no_create_edit': True, 'color_field': 'color'}"
+                       domain="[('pipeline_kind', 'in', [mudon_pipeline_kind, 'any'])]"
                        invisible="not mudon_pipeline_kind"
                        required="mudon_pipeline_kind and mudon_stage_kind_current != 'new_lead'"/>
                 <field name="mudon_city_other"
@@ -74,6 +76,7 @@
                 <field name="mudon_purpose_ids"
                        widget="many2many_tags"
                        options="{'no_create_edit': True, 'color_field': 'color'}"
+                       domain="[('pipeline_kind', 'in', [mudon_pipeline_kind, 'any'])]"
                        invisible="not mudon_pipeline_kind"/>
                 <field name="mudon_property_type_ids"
                        widget="many2many_tags"

@@ -15,12 +15,14 @@
         <field name="code">citizenship</field>
         <field name="sequence">10</field>
         <field name="color">10</field>
+        <field name="pipeline_kind">turkey</field>
     </record>
     <record id="mudon_service_goldenvisa" model="mudon.service">
         <field name="name">Golden Visa</field>
         <field name="code">goldenvisa</field>
         <field name="sequence">20</field>
         <field name="color">11</field>
+        <field name="pipeline_kind">uae</field>
     </record>
     <record id="mudon_service_investment" model="mudon.service">
         <field name="name">Investment</field>
@@ -112,12 +114,14 @@
         <field name="code">citizenship</field>
         <field name="sequence">10</field>
         <field name="color">10</field>
+        <field name="pipeline_kind">turkey</field>
     </record>
     <record id="mudon_purpose_goldenvisa" model="mudon.purpose">
         <field name="name">Golden Visa</field>
         <field name="code">goldenvisa</field>
         <field name="sequence">20</field>
         <field name="color">11</field>
+        <field name="pipeline_kind">uae</field>
     </record>
     <record id="mudon_purpose_residency_permit" model="mudon.purpose">
         <field name="name">Residency Permit</field>

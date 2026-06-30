@@ -17,6 +17,7 @@
                 <field name="sequence" widget="handle"/>
                 <field name="name"/>
                 <field name="code"/>
+                <field name="pipeline_kind"/>
                 <field name="color" widget="color_picker" optional="show"/>
                 <field name="active" widget="boolean_toggle"/>
             </list>
@@ -79,6 +80,7 @@
                 <field name="sequence" widget="handle"/>
                 <field name="name"/>
                 <field name="code"/>
+                <field name="pipeline_kind"/>
                 <field name="color" widget="color_picker" optional="show"/>
                 <field name="active" widget="boolean_toggle"/>
             </list>

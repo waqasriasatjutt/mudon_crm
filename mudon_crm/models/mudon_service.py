@@ -25,6 +25,13 @@ class MudonService(models.Model):
     sequence = fields.Integer(default=10)
     active = fields.Boolean(default=True)
     color = fields.Integer()
+    pipeline_kind = fields.Selection(
+        [("turkey", "Turkey"), ("uae", "UAE Dubai"), ("any", "Any")],
+        default="any", required=True,
+        help="Which pipeline offers this service. Turkey = Citizenship; "
+             "UAE Dubai = Golden Visa; Investment = Any (both). The lead "
+             "form filters MService by the lead's pipeline.",
+    )
 
     _sql_constraints = [
         ("code_unique", "unique(code)", "Service code must be unique."),

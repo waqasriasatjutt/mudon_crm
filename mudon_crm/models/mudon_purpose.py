@@ -15,6 +15,13 @@ class MudonPurpose(models.Model):
     sequence = fields.Integer(default=10)
     active = fields.Boolean(default=True)
     color = fields.Integer()
+    pipeline_kind = fields.Selection(
+        [("turkey", "Turkey"), ("uae", "UAE Dubai"), ("any", "Any")],
+        default="any", required=True,
+        help="Which pipeline offers this purpose. Turkey = Citizenship; "
+             "UAE Dubai = Golden Visa; the rest = Any (both). The lead "
+             "form filters Purpose by the lead's pipeline.",
+    )
 
     _sql_constraints = [
         ("code_unique", "unique(code)", "Purpose code must be unique."),

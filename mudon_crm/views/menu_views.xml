@@ -41,8 +41,9 @@
                 Click <b>New</b> to create a Turkey lead.
             </p>
             <p>
-                The card auto-routes by city: Istanbul → Istanbul branch,
-                Trabzon → Trabzon branch, other cities → Sales Manager.
+                New leads auto-assign in order: matching city branch
+                (Istanbul / Trabzon) → phone country-code mapping →
+                round-robin across the team → Sales Manager fallback.
                 Ticking <b>MTick: Offer Sent</b> advances to Stage 3.
             </p>
         </field>
@@ -61,9 +62,10 @@
                 Click <b>New</b> to create a UAE Dubai lead.
             </p>
             <p>
-                Dubai → Dubai branch round-robin; other cities → Sales
-                Manager. Ticking <b>MTick: Offer Sent</b> advances to
-                Stage 3 — Offer Sent.
+                New leads auto-assign in order: matching city branch
+                (Dubai) → phone country-code mapping (e.g. +971) →
+                round-robin across the team → Sales Manager fallback.
+                Ticking <b>MTick: Offer Sent</b> advances to Stage 3.
             </p>
         </field>
     </record>
