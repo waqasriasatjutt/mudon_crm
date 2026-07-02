@@ -72,6 +72,7 @@
                 <field name="mudon_last_offer_date" readonly="1"
                        invisible="mudon_stage_kind_current != 'offer_sent'"/>
                 <field name="mudon_visit_confirmed"
+                       widget="boolean_toggle"
                        string="MVisit Confirmed → Meeting stage"
                        invisible="mudon_stage_kind_current != 'offer_sent'"/>
                 <!-- Meeting stage controls -->
@@ -134,9 +135,8 @@
                        domain="[('pipeline_kind', 'in', [mudon_pipeline_kind, 'any'])]"
                        invisible="not mudon_pipeline_kind"
                        required="mudon_pipeline_kind and mudon_stage_kind_current != 'new_lead'"/>
-                <field name="mudon_city_ids"
-                       widget="many2many_tags"
-                       options="{'no_create_edit': True, 'color_field': 'color'}"
+                <field name="mudon_city_id"
+                       options="{'no_create_edit': True}"
                        domain="[('pipeline_kind', 'in', [mudon_pipeline_kind, 'any'])]"
                        invisible="not mudon_pipeline_kind"
                        required="mudon_pipeline_kind and mudon_stage_kind_current != 'new_lead'"/>
@@ -223,7 +223,8 @@
                             <field name="mudon_last_offer_date" readonly="1"/>
                             <field name="mudon_seriousness"/>
                             <field name="mudon_visit_confirmed"
-                                   help="Set to 'Yes' to advance to Stage 4 (Meeting)."/>
+                                   widget="boolean_toggle"
+                                   help="Tick to advance to Stage 4 (Meeting)."/>
                         </group>
                         <group>
                             <field name="mudon_3rd_offer_survey_sent"
@@ -377,8 +378,7 @@
                     </div>
                     <!-- Coloured tags: city + property type -->
                     <div class="mudon_tags mt-1">
-                        <field name="mudon_city_ids" widget="many2many_tags"
-                               options="{'color_field': 'color'}"/>
+                        <field name="mudon_city_id"/>
                         <field name="mudon_property_type_ids" widget="many2many_tags"
                                options="{'color_field': 'color'}"/>
                     </div>

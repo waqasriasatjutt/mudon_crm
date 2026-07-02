@@ -129,9 +129,8 @@ class CrmLead(models.Model):
     mudon_service_code = fields.Char(
         related="mudon_service_id.code", store=True,
     )
-    mudon_city_ids = fields.Many2many(
-        "mudon.city", "crm_lead_mudon_city_rel",
-        "lead_id", "city_id",
+    mudon_city_id = fields.Many2one(
+        "mudon.city",
         string="MCity",
     )
     mudon_city_other = fields.Char(string="Other City")
@@ -229,11 +228,10 @@ class CrmLead(models.Model):
     mudon_seriousness = fields.Selection(
         SERIOUSNESS_SELECTION, string="Seriousness",
     )
-    mudon_visit_confirmed = fields.Selection(
-        YESNO_SELECTION,
+    mudon_visit_confirmed = fields.Boolean(
         string="MVisit Confirmed",
         copy=False,
-        help="Set to 'yes' to advance to Stage 4 — Meeting.",
+        help="Tick to advance to Stage 4 — Meeting.",
     )
     mudon_3rd_offer_survey_sent = fields.Boolean(copy=False)
     mudon_last_15day_reminder_date = fields.Date(copy=False)
@@ -335,11 +333,11 @@ class CrmLead(models.Model):
     )
 
     # ─── Computes ───────────────────────────────────────────────────
-    @api.depends("mudon_city_ids")
+    @api.depends("mudon_city_id")
     def _compute_mudon_show_city_other(self):
         for rec in self:
-            rec.mudon_show_city_other = bool(
-                rec.mudon_city_ids.filtered(lambda c: c.code == "other_tr")
+            rec.mudon_show_city_other = (
+                rec.mudon_city_id and rec.mudon_city_id.code == "other_tr"
             )
 
     @api.depends("team_id")
@@ -373,28 +371,22 @@ class CrmLead(models.Model):
             else:
                 rec.mudon_budget_currency_id = fallback
 
-    @api.depends("team_id", "mudon_city_ids")
+    @api.depends("team_id", "mudon_city_id")
     def _compute_mudon_branch_id(self):
-        """Match the FIRST city tag whose `code` maps to a branch on
-        this team. If none match (or "Others"), no branch — auto-
-        assignment then falls through to the country-code mapping or
-        round-robin chain in `_mudon_auto_assign_agent`.
+        """Match the selected city's `code` to a branch on this team. If
+        no match (or the city is "Others"), no branch — auto-assignment
+        then falls through to the country-code mapping or round-robin
+        chain in `_mudon_auto_assign_agent`.
         """
         Branch = self.env["mudon.branch"].sudo()
         for rec in self:
-            if not rec.team_id or not rec.mudon_city_ids:
+            if not rec.team_id or not rec.mudon_city_id:
                 rec.mudon_branch_id = False
                 continue
-            branch = False
-            for city in rec.mudon_city_ids:
-                b = Branch.search([
-                    ("team_id", "=", rec.team_id.id),
-                    ("city_key", "=", city.code),
-                ], limit=1)
-                if b:
-                    branch = b
-                    break
-            rec.mudon_branch_id = branch
+            rec.mudon_branch_id = Branch.search([
+                ("team_id", "=", rec.team_id.id),
+                ("city_key", "=", rec.mudon_city_id.code),
+            ], limit=1)
 
     @api.depends("mudon_priority", "mudon_service_id.code", "mudon_pipeline_kind")
     def _compute_mudon_card_color_hint(self):
@@ -443,112 +435,112 @@ class CrmLead(models.Model):
                 )
         return leads
 
-    # v19.0.1.2.0 — field names switched from `mudon_service` /
-    # `mudon_city` (Selection) to `mudon_service_id` (Many2one) /
-    # `mudon_city_ids` (Many2many tags). The validation works
-    # identically — a Many2one is truthy when set, a Many2many is
-    # truthy when non-empty.
+    # v19.0.1.4.0 — `mudon_city_ids` (Many2many tags) reduced to
+    # `mudon_city_id` (Many2one) so branch round-robin routing has one
+    # definitive city per lead. Client feedback: multi-city selection
+    # broke the routing logic.
     MUDON_REQUIRED_TO_QUALIFY = (
         "mudon_service_id",
-        "mudon_city_ids",
+        "mudon_city_id",
         "mudon_priority",
         "mudon_budget",
     )
 
     def _mudon_check_required_to_qualify(self, new_stage):
-        """Raise if moving OUT of a new_lead stage to any other Mudon
-        stage with any of the 4 qualification fields empty.
+        """Route stage-out-of-new-lead with missing fields to the
+        quick-fill wizard instead of raising a raw UserError.
 
-        Called from write() before super(), so the transition is
-        blocked at the DB layer — the kanban drag-and-drop snaps back
-        and the user sees a clear toast explaining what's missing.
+        Called from write() before super(). If any of the 4
+        qualification fields are unset, we throw a RedirectWarning that
+        Odoo renders with a "Fill Required Fields" button — the button
+        opens the wizard pre-linked to this lead + target stage. The
+        wizard collects the missing values and issues its own write
+        with stage_id set, so the after-write side effects still fire
+        exactly once.
         """
         if not new_stage or not new_stage.mudon_stage_kind:
             return
         if new_stage.mudon_stage_kind == "new_lead":
             return
-        from odoo.exceptions import UserError
+        from odoo.exceptions import RedirectWarning
         labels = {
             "mudon_service_id": "MService",
-            "mudon_city_ids": "MCity",
+            "mudon_city_id": "MCity",
             "mudon_priority": "MPriority",
             "mudon_budget": "MBudget",
         }
         for rec in self:
             if rec.mudon_stage_kind_current != "new_lead":
                 continue
-            missing = []
-            for fname in self.MUDON_REQUIRED_TO_QUALIFY:
-                val = rec[fname]
-                if not val:
-                    missing.append(labels.get(fname, fname))
-            if missing:
-                raise UserError(_(
-                    "Fill in %s before moving %s out of New Lead."
-                ) % (", ".join(missing), rec.name or rec.contact_name or "this lead"))
+            missing = [
+                labels.get(fname, fname)
+                for fname in self.MUDON_REQUIRED_TO_QUALIFY
+                if not rec[fname]
+            ]
+            if not missing:
+                continue
+            action = self.env["ir.actions.act_window"]._for_xml_id(
+                "mudon_crm.action_mudon_quick_fill_wizard",
+            )
+            action["context"] = {
+                "default_lead_id": rec.id,
+                "default_target_stage_id": new_stage.id,
+            }
+            raise RedirectWarning(
+                _(
+                    "Missing: %s. Click below to fill them in and move "
+                    "%s forward."
+                ) % (", ".join(missing), rec.name or rec.contact_name or _("this lead")),
+                action,
+                _("Fill Required Fields"),
+            )
+
+    # Stages where the drag-drop itself is the semantic action, so we
+    # auto-tick the corresponding field rather than blocking the user.
+    # The auto-tick is applied inside write() by mutating `vals` before
+    # super() is called; the after-write hook then sees the flip and
+    # fires the usual side-effects (notifications, counter bumps).
+    MUDON_AUTOTICK_GATES = {
+        "offer_sent": "mudon_tick_offer_sent",
+        "meeting": "mudon_visit_confirmed",
+        "eoi": "mudon_paid_booking",
+        "won": "mudon_fully_paid",
+    }
 
     def _mudon_check_stage_transitions(self, new_stage):
-        """Enforce the spec's per-stage move-in trigger.
+        """Only Lost still needs a hard gate — the reason can't be
+        auto-picked. The other 4 stage kinds are handled by the
+        auto-tick path in write().
 
-        Each stage has exactly one field that must be set before a
-        manual drag-and-drop into it is allowed:
-
-          - Offer Sent:  MTick: Offer Sent must be ticked
-          - Meeting:     MVisit Confirmed must be Yes
-          - EOI/Booking: MPaid Booking must be ticked
-          - WON:         MFully Paid must be ticked
-          - Lost:        a Lost Reason must be selected
-
-        Auto-advance writes (mudon_in_write context flag) bypass this
-        check — those are triggered BY ticking the matching field,
-        so the gate is satisfied by definition. The check only fires
-        for user-initiated stage changes (kanban drag or form edit).
+        On Lost with no Lost Reason set, we throw a RedirectWarning
+        pointing to the quick-fill wizard so the user picks a reason
+        inline (matches client feedback: 'no popup invalid, show me
+        the form to fulfil the condition').
         """
         if not new_stage or not new_stage.mudon_stage_kind:
             return
-        from odoo.exceptions import UserError
-        gates = {
-            "offer_sent": (
-                "mudon_tick_offer_sent",
-                "MTick: Offer Sent",
-                lambda v: bool(v),
-            ),
-            "meeting": (
-                "mudon_visit_confirmed",
-                "MVisit Confirmed = Yes",
-                lambda v: v == "yes",
-            ),
-            "eoi": (
-                "mudon_paid_booking",
-                "MPaid Booking",
-                lambda v: bool(v),
-            ),
-            "won": (
-                "mudon_fully_paid",
-                "MFully Paid",
-                lambda v: bool(v),
-            ),
-            "lost": (
-                "mudon_lost_reason_id",
-                "Lost Reason",
-                lambda v: bool(v),
-            ),
-        }
-        kind = new_stage.mudon_stage_kind
-        if kind not in gates:
+        if new_stage.mudon_stage_kind != "lost":
             return
-        fname, label, predicate = gates[kind]
+        from odoo.exceptions import RedirectWarning
         for rec in self:
             if not rec.mudon_pipeline_kind:
                 continue
-            if not predicate(rec[fname]):
-                raise UserError(_(
-                    "Set '%s' before moving %s to %s."
-                ) % (
-                    label,
-                    rec.name or rec.contact_name or "this lead",
-                    new_stage.name,
-                ))
+            if rec.mudon_lost_reason_id:
+                continue
+            action = self.env["ir.actions.act_window"]._for_xml_id(
+                "mudon_crm.action_mudon_quick_fill_wizard",
+            )
+            action["context"] = {
+                "default_lead_id": rec.id,
+                "default_target_stage_id": new_stage.id,
+            }
+            raise RedirectWarning(
+                _("Pick a Lost Reason to mark %s as Lost.") % (
+                    rec.name or rec.contact_name or _("this lead"),
+                ),
+                action,
+                _("Pick Lost Reason"),
+            )
 
     def write(self, vals):
         """Drive stage transitions + side-effects from field flips.
@@ -562,11 +554,14 @@ class CrmLead(models.Model):
         the after-write hook short-circuits. Saves 5-8 redundant write
         transactions per business action.
 
-        Validation: a user-driven `stage_id` change OUT of New Lead is
-        rejected if MService / MCity / MPriority / MBudget aren't set.
-        Internal stage advances (set via `mudon_in_write` context) are
-        already protected because those only fire when our own field
-        flips happen — which presume the lead is past New Lead.
+        Validation: a user-driven `stage_id` change OUT of New Lead
+        with any of MService / MCity / MPriority / MBudget unset opens
+        the quick-fill wizard (via RedirectWarning) instead of blocking
+        with a raw error — client feedback: fill the missing fields
+        inline so the drag isn't wasted. Internal stage advances (via
+        `mudon_in_write` context) are already protected because those
+        only fire when our own field flips happen — which presume the
+        lead is past New Lead.
         """
         if self.env.context.get("mudon_in_write"):
             return super().write(vals)
@@ -574,6 +569,22 @@ class CrmLead(models.Model):
             new_stage = self.env["crm.stage"].sudo().browse(vals["stage_id"])
             self._mudon_check_required_to_qualify(new_stage)
             self._mudon_check_stage_transitions(new_stage)
+            # Auto-tick the transition field when the user drags a card
+            # into offer_sent / meeting / eoi / won and the field isn't
+            # already ticked. The stage change IS the semantic
+            # confirmation, so we set the tick as part of this same
+            # write. The after-write hook then detects the flip and
+            # fires the normal side-effects (agent notifications,
+            # offer counter bumps, etc.) exactly once.
+            kind = new_stage.mudon_stage_kind
+            tick_field = self.MUDON_AUTOTICK_GATES.get(kind)
+            if tick_field and tick_field not in vals:
+                needs_tick = any(
+                    rec.mudon_pipeline_kind and not rec[tick_field]
+                    for rec in self
+                )
+                if needs_tick:
+                    vals[tick_field] = True
         pre = {
             r.id: {
                 "stage_id": r.stage_id.id,
@@ -615,8 +626,8 @@ class CrmLead(models.Model):
                 })
 
         # Stage 3 → Stage 4: Meeting (visit confirmed)
-        if (self.mudon_visit_confirmed == "yes"
-                and prev.get("mudon_visit_confirmed") != "yes"):
+        if (self.mudon_visit_confirmed
+                and not prev.get("mudon_visit_confirmed")):
             self._mudon_advance_stage("meeting")
             self._mudon_notify_assigned_agent("meeting_entry", to_manager=True)
 
@@ -960,12 +971,12 @@ class CrmLead(models.Model):
             if self.mudon_lost_reason_id
             else "(no reason)"
         )
-        cities = ", ".join(self.mudon_city_ids.mapped("name")) or ""
+        city_name = self.mudon_city_id.name or ""
         source_name = self.mudon_source_id.name or ""
         detail_bits = [
             "Phone: %s" % (self.phone or ""),
             "Email: %s" % (self.email_from or ""),
-            "City: %s" % cities,
+            "City: %s" % city_name,
             "Source: %s" % source_name,
         ]
         body = Markup(
