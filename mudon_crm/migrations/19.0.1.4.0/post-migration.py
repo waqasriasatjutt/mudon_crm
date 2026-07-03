@@ -9,7 +9,7 @@ Two data moves that follow the pre-migration schema shuffle:
   2. mudon_city_ids (Many2many) → mudon_city_id (Many2one)
      Take the FIRST city from crm_lead_mudon_city_rel per lead and
      write it to the new mudon_city_id column. "First" = lowest
-     rel-row id, which matches insertion order for our tags widget.
+     city id (the rel table has no row id, so pick is deterministic).
      The old rel table lingers until the module install cleans it up,
      which is fine — it's harmless and idempotent to re-run.
 
@@ -73,7 +73,7 @@ def migrate(cr, version):
               FROM (
                     SELECT DISTINCT ON (lead_id) lead_id, city_id
                       FROM crm_lead_mudon_city_rel
-                     ORDER BY lead_id, id
+                     ORDER BY lead_id, city_id
                    ) sub
              WHERE sub.lead_id = l.id
                AND l.mudon_city_id IS NULL
