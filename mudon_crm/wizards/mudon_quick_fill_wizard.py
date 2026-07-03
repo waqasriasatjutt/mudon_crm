@@ -28,7 +28,7 @@ class MudonQuickFillWizard(models.TransientModel):
         "crm.stage", required=True,
         string="Target Stage",
     )
-    target_stage_kind = fields.Char(
+    target_stage_kind = fields.Selection(
         related="target_stage_id.mudon_stage_kind", store=False,
     )
     pipeline_kind = fields.Selection(
