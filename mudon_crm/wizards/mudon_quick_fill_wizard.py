@@ -91,7 +91,7 @@ class MudonQuickFillWizard(models.TransientModel):
         kind = self.target_stage_id.mudon_stage_kind
         vals = {}
 
-        if kind and kind != "new_lead":
+        if kind and kind not in ("new_lead", "lost"):
             # If moving out of New Lead, enforce the 4 required fields.
             if self.lead_id.mudon_stage_kind_current == "new_lead":
                 missing = []

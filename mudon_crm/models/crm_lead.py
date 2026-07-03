@@ -446,7 +446,7 @@ class CrmLead(models.Model):
         "mudon_budget",
     )
 
-    def _mudon_check_required_to_qualify(self, new_stage):
+    def _mudon_check_required_to_qualify(self, new_stage, vals=None):
         """Route stage-out-of-new-lead with missing fields to the
         quick-fill wizard instead of raising a raw UserError.
 
@@ -462,6 +462,10 @@ class CrmLead(models.Model):
             return
         if new_stage.mudon_stage_kind == "new_lead":
             return
+        # Marking a lead Lost abandons it — don't force the 4
+        # qualification fields (the Lost wizard can't collect them).
+        if new_stage.mudon_stage_kind == "lost":
+            return
         from odoo.exceptions import RedirectWarning
         labels = {
             "mudon_service_id": "MService",
@@ -475,7 +479,7 @@ class CrmLead(models.Model):
             missing = [
                 labels.get(fname, fname)
                 for fname in self.MUDON_REQUIRED_TO_QUALIFY
-                if not rec[fname]
+                if not (rec[fname] or (vals or {}).get(fname))
             ]
             if not missing:
                 continue
@@ -507,7 +511,7 @@ class CrmLead(models.Model):
         "won": "mudon_fully_paid",
     }
 
-    def _mudon_check_stage_transitions(self, new_stage):
+    def _mudon_check_stage_transitions(self, new_stage, vals=None):
         """Only Lost still needs a hard gate — the reason can't be
         auto-picked. The other 4 stage kinds are handled by the
         auto-tick path in write().
@@ -525,7 +529,7 @@ class CrmLead(models.Model):
         for rec in self:
             if not rec.mudon_pipeline_kind:
                 continue
-            if rec.mudon_lost_reason_id:
+            if rec.mudon_lost_reason_id or (vals or {}).get("mudon_lost_reason_id"):
                 continue
             action = self.env["ir.actions.act_window"]._for_xml_id(
                 "mudon_crm.action_mudon_quick_fill_wizard",
@@ -567,8 +571,8 @@ class CrmLead(models.Model):
             return super().write(vals)
         if "stage_id" in vals and vals["stage_id"]:
             new_stage = self.env["crm.stage"].sudo().browse(vals["stage_id"])
-            self._mudon_check_required_to_qualify(new_stage)
-            self._mudon_check_stage_transitions(new_stage)
+            self._mudon_check_required_to_qualify(new_stage, vals)
+            self._mudon_check_stage_transitions(new_stage, vals)
             # Auto-tick the transition field when the user drags a card
             # into offer_sent / meeting / eoi / won and the field isn't
             # already ticked. The stage change IS the semantic
