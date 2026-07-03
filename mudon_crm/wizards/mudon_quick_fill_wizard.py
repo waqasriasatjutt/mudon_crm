@@ -120,4 +120,6 @@ class MudonQuickFillWizard(models.TransientModel):
 
         vals["stage_id"] = self.target_stage_id.id
         self.lead_id.write(vals)
-        return {"type": "ir.actions.act_window_close"}
+        # Soft-reload the calling view (kanban) so the card visually
+        # moves to its new stage without a full browser refresh.
+        return {"type": "ir.actions.client", "tag": "soft_reload"}
