@@ -70,19 +70,32 @@ class MudonDashboard(models.TransientModel):
         except (TypeError, ValueError):
             return None
 
+    @staticmethod
+    def _safe_to_date(v):
+        """Parse a 'YYYY-MM-DD' string, or None on anything malformed.
+
+        The export controller feeds raw query strings straight into filters,
+        so a hand-crafted bad date must degrade to the preset — never raise.
+        """
+        try:
+            return fields.Date.to_date(v)
+        except (TypeError, ValueError):
+            return None
+
     @api.model
     def _resolve_range(self, period, filters):
         """A custom date_from/date_to on ``filters`` overrides the preset.
 
         Either side may be supplied alone (the missing side stays open).
-        Swapped inputs are corrected.
+        Swapped inputs are corrected. A malformed date falls back to the
+        preset window instead of raising.
         """
         filters = filters or {}
         df, dt = filters.get("date_from"), filters.get("date_to")
         if df or dt:
             today = fields.Date.context_today(self)
-            d_from = fields.Date.to_date(df) if df else date(2000, 1, 1)
-            d_to = fields.Date.to_date(dt) if dt else today
+            d_from = self._safe_to_date(df) if df else date(2000, 1, 1)
+            d_to = self._safe_to_date(dt) if dt else today
             if d_from and d_to:
                 if d_to < d_from:
                     d_from, d_to = d_to, d_from
@@ -677,10 +690,15 @@ class MudonDashboard(models.TransientModel):
     # ── full deal register (used by the export controller) ──────────────
     @api.model
     def get_deal_register(self, pipeline="all", won_only=False, filters=None,
-                          limit=5000):
+                          limit=5000, period=None, basis=None):
         """Flat per-deal rows honoring pipeline + all extra filters, for the
-        downloadable report's ``Deals`` sheet. Not date-bound → a complete
-        register."""
+        downloadable report's ``Deals`` sheet.
+
+        When ``period`` is given the rows are date-bound to the same window the
+        board shows (by the basis date field), so the exported sheet matches
+        the on-screen figures. When ``period`` is None it is a complete,
+        un-bounded register.
+        """
         Lead = self.env["crm.lead"].sudo()
         domain = [("type", "=", "opportunity"),
                   ("mudon_pipeline_kind", "!=", False)]
@@ -693,11 +711,27 @@ class MudonDashboard(models.TransientModel):
             ff.pop("stage_kind", None)
         domain, country_prefix = self._apply_filters(domain, ff)
         _d = self._as_date
+
+        # optional date-bounding to mirror the board's active window
+        d_from = d_to = bound_field = None
+        if period is not None:
+            d_from, d_to = self._resolve_range(period, filters)
+            if won_only:
+                bound_field = self._FIN_BASIS.get(
+                    basis or "won", self._FIN_BASIS["won"])[1]
+            else:
+                bound_field = ("create_date" if (basis or "pipeline") == "pipeline"
+                               else "date_closed")
+
         pipe_lbl = {"turkey": "Turkey", "uae": "UAE Dubai"}
         rows = []
         for l in Lead.search(domain, order="create_date desc", limit=limit):
             if country_prefix and self._country_prefix_of(l.phone) != country_prefix:
                 continue
+            if bound_field:
+                dv = _d(l[bound_field])
+                if not dv or not (d_from <= dv <= d_to):
+                    continue
             rows.append({
                 "name": l.name or "",
                 "agent": l.user_id.name or "Unassigned",

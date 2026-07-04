@@ -163,19 +163,19 @@
                     </p>
                     <div class="scroll"><table class="mudon_table mudon_deals">
                         <thead><tr>
-                            <th class="srt" t-on-click="() => this.sortDeals('name')">Deal</th>
-                            <th class="srt" t-on-click="() => this.sortDeals('agent')">Agent</th>
-                            <th class="srt" t-on-click="() => this.sortDeals('pipeline')">Pipeline</th>
-                            <th class="srt" t-on-click="() => this.sortDeals('country')">Country</th>
-                            <th class="srt" t-on-click="() => this.sortDeals('nationality')">Nationality</th>
-                            <th class="srt" t-on-click="() => this.sortDeals('source')">Source</th>
-                            <th class="srt" t-on-click="() => this.sortDeals('expected_revenue')">Expected</th>
-                            <th class="srt" t-on-click="() => this.sortDeals('commission')">Commission</th>
-                            <th class="srt" t-on-click="() => this.sortDeals('invoiced')">Invoiced</th>
-                            <th class="srt" t-on-click="() => this.sortDeals('invoiced_date')">Inv. date</th>
-                            <th class="srt" t-on-click="() => this.sortDeals('collected')">Collected</th>
-                            <th class="srt" t-on-click="() => this.sortDeals('collected_date')">Pay. date</th>
-                            <th class="srt" t-on-click="() => this.sortDeals('closed')">Closed</th>
+                            <th t-attf-class="srt {{ state.sortKey === 'name' ? 'active' : '' }}" t-on-click="() => this.sortDeals('name')">Deal<t t-esc="sortCaret('name')"/></th>
+                            <th t-attf-class="srt {{ state.sortKey === 'agent' ? 'active' : '' }}" t-on-click="() => this.sortDeals('agent')">Agent<t t-esc="sortCaret('agent')"/></th>
+                            <th t-attf-class="srt {{ state.sortKey === 'pipeline' ? 'active' : '' }}" t-on-click="() => this.sortDeals('pipeline')">Pipeline<t t-esc="sortCaret('pipeline')"/></th>
+                            <th t-attf-class="srt {{ state.sortKey === 'country' ? 'active' : '' }}" t-on-click="() => this.sortDeals('country')">Country<t t-esc="sortCaret('country')"/></th>
+                            <th t-attf-class="srt {{ state.sortKey === 'nationality' ? 'active' : '' }}" t-on-click="() => this.sortDeals('nationality')">Nationality<t t-esc="sortCaret('nationality')"/></th>
+                            <th t-attf-class="srt {{ state.sortKey === 'source' ? 'active' : '' }}" t-on-click="() => this.sortDeals('source')">Source<t t-esc="sortCaret('source')"/></th>
+                            <th t-attf-class="srt {{ state.sortKey === 'expected_revenue' ? 'active' : '' }}" t-on-click="() => this.sortDeals('expected_revenue')">Expected<t t-esc="sortCaret('expected_revenue')"/></th>
+                            <th t-attf-class="srt {{ state.sortKey === 'commission' ? 'active' : '' }}" t-on-click="() => this.sortDeals('commission')">Commission<t t-esc="sortCaret('commission')"/></th>
+                            <th t-attf-class="srt {{ state.sortKey === 'invoiced' ? 'active' : '' }}" t-on-click="() => this.sortDeals('invoiced')">Invoiced<t t-esc="sortCaret('invoiced')"/></th>
+                            <th t-attf-class="srt {{ state.sortKey === 'invoiced_date' ? 'active' : '' }}" t-on-click="() => this.sortDeals('invoiced_date')">Inv. date<t t-esc="sortCaret('invoiced_date')"/></th>
+                            <th t-attf-class="srt {{ state.sortKey === 'collected' ? 'active' : '' }}" t-on-click="() => this.sortDeals('collected')">Collected<t t-esc="sortCaret('collected')"/></th>
+                            <th t-attf-class="srt {{ state.sortKey === 'collected_date' ? 'active' : '' }}" t-on-click="() => this.sortDeals('collected_date')">Pay. date<t t-esc="sortCaret('collected_date')"/></th>
+                            <th t-attf-class="srt {{ state.sortKey === 'closed' ? 'active' : '' }}" t-on-click="() => this.sortDeals('closed')">Closed<t t-esc="sortCaret('closed')"/></th>
                         </tr></thead>
                         <tbody>
                             <tr t-foreach="dealRows" t-as="d" t-key="d.id">

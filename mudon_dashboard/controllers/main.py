@@ -43,12 +43,14 @@ class MudonDashboardExport(http.Controller):
             basis = basis or "won"
             data = Dash.get_financial_data(pipeline, period, basis, source,
                                            filters)
-            deals = Dash.get_deal_register(pipeline, True, filters)
+            deals = Dash.get_deal_register(pipeline, True, filters, 5000,
+                                           period, basis)
             stub = "mudon_financial_report"
         else:
             basis = basis or "pipeline"
             data = Dash.get_management_data(pipeline, period, basis, filters)
-            deals = Dash.get_deal_register(pipeline, False, filters)
+            deals = Dash.get_deal_register(pipeline, False, filters, 5000,
+                                           period, basis)
             stub = "mudon_management_report"
 
         meta = data.get("meta", {})

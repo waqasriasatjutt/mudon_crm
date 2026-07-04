@@ -151,6 +151,10 @@ class MudonFinancialDashboard extends Component {
             this.state.sortDir = this.state.sortDir === "asc" ? "desc" : "asc";
         } else { this.state.sortKey = key; this.state.sortDir = "asc"; }
     }
+    sortCaret(key) {
+        if (this.state.sortKey !== key) { return ""; }
+        return this.state.sortDir === "asc" ? " ▲" : " ▼";
+    }
     fmtDate(s) { return s || "—"; }
 
     fmtMoney(v) {

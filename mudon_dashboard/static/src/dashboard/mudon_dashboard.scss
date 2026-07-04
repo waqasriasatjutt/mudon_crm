@@ -17,17 +17,20 @@
     --mgap: 12px;
     --mchart-h: 320px;
 
-    padding: var(--mpad-y) var(--mpad-x) 60px;
+    padding: var(--mpad-y) var(--mpad-x) 48px;
     background: #f4f5f2;
-    min-height: 100%;
     color: var(--mink);
     font-size: 14px;
 
-    // Global overflow guard: no child may scroll the whole page body.
-    // Anything that must scroll (tables) opts in via .scroll { overflow-x:auto }.
+    // Own scroll container: fill the action area and scroll INTERNALLY, so a
+    // tall board is never clipped by Odoo's overflow-hidden action manager.
+    // (Same pattern as the Lena dashboard.)
+    height: 100%;
+    width: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
     max-width: 100%;
     box-sizing: border-box;
-    overflow-x: hidden;
     *, *::before, *::after { box-sizing: border-box; }
 
     // Ultrawide cap so tables/KPIs don't stretch to unreadable widths.
@@ -188,6 +191,7 @@
             &:first-child { text-align: left; }
             &.srt { cursor: pointer; user-select: none; }
             &.srt:hover { color: var(--mnavy); }
+            &.srt.active { color: var(--mnavy); }
         }
         td {
             text-align: right;
