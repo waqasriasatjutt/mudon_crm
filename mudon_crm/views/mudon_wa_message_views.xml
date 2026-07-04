@@ -69,10 +69,9 @@
                 <separator/>
                 <filter name="failed" string="Failed" domain="[('status','in',('failed','failed_permanent'))]"/>
                 <filter name="sent" string="Sent" domain="[('status','in',('sent','delivered','read'))]"/>
-                <group expand="0" string="Group By">
-                    <filter name="g_status" string="Status" context="{'group_by':'status'}"/>
-                    <filter name="g_direction" string="Direction" context="{'group_by':'direction'}"/>
-                </group>
+                <separator/>
+                <filter name="g_status" string="Status" context="{'group_by':'status'}"/>
+                <filter name="g_direction" string="Direction" context="{'group_by':'direction'}"/>
             </search>
         </field>
     </record>
