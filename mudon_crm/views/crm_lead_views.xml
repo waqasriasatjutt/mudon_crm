@@ -320,6 +320,24 @@
                     </group>
                 </page>
             </xpath>
+
+            <!--
+                Client feedback: "2 budget boxes (Expected Revenue + Budget),
+                why 2?". The custom Budget field carries the per-pipeline
+                currency (AED for UAE / USD for Turkey) which Odoo's native
+                Expected Revenue can't, so Budget is the money field of
+                record. Hide the native Expected Revenue on this form to
+                remove the duplicate (field kept in DB — reporting untouched).
+            -->
+            <xpath expr="//label[@for='expected_revenue']" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+            <xpath expr="//field[@name='expected_revenue'][@class='o_input_13ch']" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+            <xpath expr="//field[@name='expected_revenue'][@class='oe_inline me-5 o_field_highlight mb-0']" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
         </field>
     </record>
 
