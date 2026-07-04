@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!-- Brand the installed PWA + browser tab as "Mudon CRM". set_param
+         upserts, so it never clashes with an existing key. -->
+    <function model="ir.config_parameter" name="set_param"
+              eval="('web.web_app_name', 'Mudon CRM')"/>
+</odoo>

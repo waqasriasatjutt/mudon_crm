@@ -63,6 +63,15 @@
     }
 }
 
+// ── Offer Sent row (form): wrap cleanly, full-width button on phones ──
+.mudon_offer_row {
+    gap: 4px 8px;
+    .mudon_offer_count { max-width: 70px; }
+    @media (max-width: 767.98px) {
+        .btn { flex: 1 1 100%; min-height: 44px; }
+    }
+}
+
 // ── Touch / small-screen sizing: bigger tap targets ───────────────────
 @media (max-width: 992px) {
     .mudon_card_block {

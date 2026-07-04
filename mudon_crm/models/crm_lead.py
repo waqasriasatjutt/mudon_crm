@@ -146,6 +146,19 @@ class CrmLead(models.Model):
         index=True,
         string="Stage Kind (current)",
     )
+    # True when the lead sits on one of the 6 ordered funnel stages — used to
+    # gate the touch stage-move buttons so they never render on a non-funnel
+    # / blank stage (where advance/back would raise a bare UserError).
+    mudon_is_funnel_stage = fields.Boolean(
+        compute="_compute_mudon_is_funnel_stage", store=True,
+        string="On a funnel stage",
+    )
+
+    @api.depends("stage_id.mudon_stage_kind")
+    def _compute_mudon_is_funnel_stage(self):
+        for rec in self:
+            rec.mudon_is_funnel_stage = (
+                rec.stage_id.mudon_stage_kind in MUDON_STAGE_ORDER)
 
     # ─── STAGE 1: New Lead ──────────────────────────────────────────
     # v19.0.1.2.0 — Selection enums replaced by admin-managed masters
@@ -840,11 +853,22 @@ class CrmLead(models.Model):
         return True
 
     def action_mudon_kanban_back(self):
-        """One-step backward move for a kanban card (no gate on retreat)."""
+        """One-step backward move for a kanban card (no gate on retreat).
+
+        From Lost it reopens the lead at the first funnel stage (mistaken-Lost
+        recovery from a phone, where there is no drag).
+        """
         self.ensure_one()
         from odoo.exceptions import UserError
         order = MUDON_STAGE_ORDER
         ck = self.stage_id.mudon_stage_kind
+        if ck == "lost":
+            stage = self._mudon_stage_of_kind("new_lead")
+            if not stage:
+                raise UserError(
+                    _("No “New Lead” stage is configured for this pipeline."))
+            self.write({"stage_id": stage.id})
+            return True
         if ck not in order:
             raise UserError(_("This lead is not on a Mudon funnel stage."))
         i = order.index(ck)

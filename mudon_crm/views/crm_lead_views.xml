@@ -94,7 +94,7 @@
                                 <field name="name"/>
                                 <field name="kind"/>
                                 <field name="state"/>
-                                <field name="assigned_user_id"/>
+                                <field name="assigned_user_id" optional="hide"/>
                             </list>
                         </field>
                     </group>
@@ -120,13 +120,13 @@
                 <group invisible="mudon_stage_kind_current not in ('offer_sent', 'meeting', 'eoi', 'won')">
                     <group string="Offer Sent">
                         <label for="mudon_offer_counter" string="Offers sent"/>
-                        <div class="o_row">
+                        <div class="mudon_offer_row d-flex flex-wrap align-items-center">
                             <field name="mudon_offer_counter" readonly="1" nolabel="1"
-                                   style="width:60px"/>
+                                   class="mudon_offer_count"/>
                             <span class="text-muted ms-2">/ 10</span>
                             <button name="action_mudon_mark_offer_sent" type="object"
                                     string="+ Mark New Offer Sent"
-                                    class="btn btn-primary ms-3"
+                                    class="btn btn-primary ms-md-3 mt-2 mt-md-0"
                                     confirm="Confirm a new offer was sent to the client. The counter will increment by 1 and a 3-hour follow-up reminder will be queued."/>
                         </div>
                         <field name="mudon_seriousness"/>
@@ -267,6 +267,7 @@
                 <field name="mudon_card_color_hint"/>
                 <field name="mudon_kanban_priority_rank"/>
                 <field name="mudon_stage_kind_current"/>
+                <field name="mudon_is_funnel_stage"/>
                 <field name="mudon_offer_counter"/>
                 <field name="expected_revenue"/>
                 <field name="mudon_visit_date"/>
@@ -317,18 +318,19 @@
                         </span>
                     </div>
                     <!-- Touch stage-move (mobile/tablet can't drag) — same
-                         gate + quick-fill wizard as a drag. -->
+                         gate + quick-fill wizard as a drag. Only rendered on
+                         real funnel stages (+ Lost, for reopen). -->
                     <div class="mudon_stage_move"
-                         t-if="record.mudon_stage_kind_current.raw_value != 'lost'">
+                         t-if="record.mudon_is_funnel_stage.raw_value or record.mudon_stage_kind_current.raw_value == 'lost'">
                         <button type="object" name="action_mudon_kanban_back"
                                 class="btn btn-sm btn-light mudon_move_btn"
-                                t-if="record.mudon_stage_kind_current.raw_value != 'new_lead'"
-                                aria-label="Move to previous stage" title="Move to previous stage">
-                            <i class="fa fa-chevron-left me-1"/>Back
+                                t-if="(record.mudon_is_funnel_stage.raw_value and record.mudon_stage_kind_current.raw_value != 'new_lead') or record.mudon_stage_kind_current.raw_value == 'lost'"
+                                aria-label="Move back a stage" title="Move back a stage">
+                            <i class="fa fa-chevron-left me-1"/><t t-out="record.mudon_stage_kind_current.raw_value == 'lost' ? 'Reopen' : 'Back'"/>
                         </button>
                         <button type="object" name="action_mudon_kanban_advance"
                                 class="btn btn-sm btn-primary mudon_move_btn"
-                                t-if="record.mudon_stage_kind_current.raw_value != 'won'"
+                                t-if="record.mudon_is_funnel_stage.raw_value and record.mudon_stage_kind_current.raw_value != 'won'"
                                 aria-label="Advance to next stage" title="Advance to next stage">
                             Advance<i class="fa fa-chevron-right ms-1"/>
                         </button>
