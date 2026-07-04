@@ -38,19 +38,81 @@
                 <field name="company_currency" invisible="1"/>
 
                 <!--
-                    CURRENT-STAGE ACTION, ON TOP. Each stage's fields show
-                    in their own titled group when the lead is on that
-                    stage; the intake ("Lead details") is below. Everything
-                    the old "Stages 2-7" tab held now lives here.
+                    STAGE FIELDS: current stage on TOP, completed stages
+                    stacked BELOW (nothing vanishes). Blocks are laid out
+                    in reverse funnel order and each shows for its stage
+                    AND every later stage, so the current (highest) stage
+                    always renders first and earlier ones follow beneath.
                 -->
-                <group string="▶ Qualified — confirm an offer was sent to advance"
-                       invisible="mudon_stage_kind_current != 'qualified'">
-                    <field name="mudon_tick_offer_sent"
-                           string="Offer Sent → advance to Offer Sent"/>
+
+                <!-- Lost (current) -->
+                <group string="Lost" invisible="mudon_stage_kind_current != 'lost'">
+                    <field name="mudon_lost_reason_id" string="Lost Reason"
+                           options="{'no_create_edit': True}" readonly="1"/>
                 </group>
 
-                <group invisible="mudon_stage_kind_current != 'offer_sent'">
-                    <group string="▶ Offer Sent">
+                <!-- WON / SPA Signed -->
+                <group invisible="mudon_stage_kind_current != 'won'">
+                    <group string="WON — closing details">
+                        <field name="mudon_closing_amount"/>
+                        <field name="mudon_developer_id"
+                               options="{'no_create_edit': True}"/>
+                        <field name="mudon_project_id"
+                               domain="[('pipeline_kind', 'in', [mudon_pipeline_kind, 'any'])]"
+                               options="{'no_create_edit': True}"/>
+                        <field name="mudon_commission"/>
+                        <field name="mudon_handover_type"/>
+                        <field name="mudon_reason_to_win"/>
+                    </group>
+                    <group string="Funnel triggers">
+                        <field name="mudon_need_invoice"/>
+                        <field name="mudon_title_deed_required"/>
+                        <field name="mudon_citizenship_required"
+                               invisible="mudon_pipeline_kind != 'turkey'"/>
+                        <field name="mudon_residence_required"
+                               invisible="mudon_pipeline_kind != 'uae'"/>
+                        <field name="mudon_furniture_required"/>
+                    </group>
+                    <group string="Admin Funnel — auto-created tasks" colspan="2">
+                        <field name="mudon_admin_task_ids" nolabel="1" readonly="1">
+                            <list>
+                                <field name="name"/>
+                                <field name="state"/>
+                                <field name="assigned_user_id"/>
+                            </list>
+                        </field>
+                    </group>
+                    <group string="After-Sales Funnel — auto-created tasks" colspan="2">
+                        <field name="mudon_after_sales_task_ids" nolabel="1" readonly="1">
+                            <list>
+                                <field name="name"/>
+                                <field name="kind"/>
+                                <field name="state"/>
+                                <field name="assigned_user_id"/>
+                            </list>
+                        </field>
+                    </group>
+                </group>
+
+                <!-- EOI / Booking (this stage + later) -->
+                <group string="EOI / Booking"
+                       invisible="mudon_stage_kind_current not in ('eoi', 'won')">
+                    <field name="mudon_fully_paid"
+                           string="Fully Paid → advance to WON (SPA Signed)"/>
+                </group>
+
+                <!-- Meeting (this stage + later) -->
+                <group string="Meeting"
+                       invisible="mudon_stage_kind_current not in ('meeting', 'eoi', 'won')">
+                    <field name="mudon_client_type"/>
+                    <field name="mudon_property_requirements"/>
+                    <field name="mudon_paid_booking"
+                           string="Paid Booking → advance to EOI / Booking"/>
+                </group>
+
+                <!-- Offer Sent (this stage + later) -->
+                <group invisible="mudon_stage_kind_current not in ('offer_sent', 'meeting', 'eoi', 'won')">
+                    <group string="Offer Sent">
                         <label for="mudon_offer_counter" string="Offers sent"/>
                         <div class="o_row">
                             <field name="mudon_offer_counter" readonly="1" nolabel="1"
@@ -83,63 +145,14 @@
                     </group>
                 </group>
 
-                <group string="▶ Meeting"
-                       invisible="mudon_stage_kind_current != 'meeting'">
-                    <field name="mudon_client_type"/>
-                    <field name="mudon_property_requirements"/>
-                    <field name="mudon_paid_booking"
-                           string="Paid Booking → advance to EOI / Booking"/>
+                <!-- Qualified (this stage + later) -->
+                <group string="Qualified"
+                       invisible="mudon_stage_kind_current not in ('qualified', 'offer_sent', 'meeting', 'eoi', 'won')">
+                    <field name="mudon_tick_offer_sent"
+                           string="Offer Sent → advance to Offer Sent"/>
                 </group>
 
-                <group string="▶ EOI / Booking"
-                       invisible="mudon_stage_kind_current != 'eoi'">
-                    <field name="mudon_fully_paid"
-                           string="Fully Paid → advance to WON (SPA Signed)"/>
-                </group>
-
-                <group invisible="mudon_stage_kind_current != 'won'">
-                    <group string="▶ WON — closing details">
-                        <field name="mudon_closing_amount"/>
-                        <field name="mudon_developer_id"
-                               options="{'no_create_edit': True}"/>
-                        <field name="mudon_project_id"
-                               domain="[('pipeline_kind', 'in', [mudon_pipeline_kind, 'any'])]"
-                               options="{'no_create_edit': True}"/>
-                        <field name="mudon_commission"/>
-                        <field name="mudon_handover_type"/>
-                        <field name="mudon_reason_to_win"/>
-                    </group>
-                    <group string="Funnel triggers">
-                        <field name="mudon_need_invoice"/>
-                        <field name="mudon_title_deed_required"/>
-                        <field name="mudon_citizenship_required"
-                               invisible="mudon_pipeline_kind != 'turkey'"/>
-                        <field name="mudon_residence_required"
-                               invisible="mudon_pipeline_kind != 'uae'"/>
-                        <field name="mudon_furniture_required"/>
-                    </group>
-                    <group string="Spawned tasks" colspan="2">
-                        <field name="mudon_admin_task_ids" nolabel="1" readonly="1">
-                            <list>
-                                <field name="name"/>
-                                <field name="state"/>
-                                <field name="assigned_user_id"/>
-                            </list>
-                        </field>
-                        <field name="mudon_after_sales_task_ids" nolabel="1" readonly="1">
-                            <list>
-                                <field name="name"/>
-                                <field name="kind"/>
-                                <field name="state"/>
-                                <field name="assigned_user_id"/>
-                            </list>
-                        </field>
-                    </group>
-                </group>
-
-                <!-- Stage 1 intake — doubles as the New Lead action (top)
-                     and the "Lead details" reference once advanced. The
-                     heading flips per stage; the fields show once. -->
+                <!-- New Lead intake (always visible; the heading flips per stage) -->
                 <separator string="▶ New Lead — capture the enquiry, then drag the card to Qualified"
                            invisible="not mudon_pipeline_kind or mudon_stage_kind_current != 'new_lead'"/>
                 <separator string="Lead details"
@@ -187,11 +200,11 @@
                     </group>
                 </group>
 
+                <!-- Move to Lost (escape hatch from any funnel stage) -->
                 <group string="Move to Lost"
-                       invisible="not mudon_pipeline_kind or mudon_stage_kind_current == 'won'">
+                       invisible="not mudon_pipeline_kind or mudon_stage_kind_current in ('won', 'lost')">
                     <field name="mudon_lost_reason_id" string="Lost Reason"
-                           options="{'no_create_edit': True}"
-                           readonly="mudon_stage_kind_current == 'lost'"/>
+                           options="{'no_create_edit': True}"/>
                 </group>
 
                 <!-- Dev-only SLA / cron tracking; hidden via group_no_one. -->
