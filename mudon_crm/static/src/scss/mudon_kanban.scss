@@ -44,4 +44,35 @@
         display: inline;
         .badge { margin: 1px 2px 1px 0; }
     }
+
+    // ── Touch stage-move buttons (mobile/tablet can't drag cards) ──────
+    .mudon_stage_move {
+        display: flex;
+        gap: 6px;
+        padding: 6px 8px 8px;
+        .mudon_move_btn {
+            flex: 1 1 auto;
+            min-height: 34px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+        }
+    }
+}
+
+// ── Touch / small-screen sizing: bigger tap targets ───────────────────
+@media (max-width: 992px) {
+    .mudon_card_block {
+        .mudon_stage_move {
+            padding: 8px;
+            gap: 8px;
+            .mudon_move_btn { min-height: 44px; font-size: 14px; }
+        }
+        .mudon_band { font-size: 12px; padding: 5px 10px; }
+        .mudon_badges .badge,
+        .mudon_meta .badge { font-size: 12px; }
+    }
 }

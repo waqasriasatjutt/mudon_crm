@@ -804,6 +804,61 @@ class CrmLead(models.Model):
                 mudon_in_write=True,
             ).write({"stage_id": stage.id})
 
+    # ─── Touch stage-move (kanban buttons — mobile can't drag) ──────────
+    def _mudon_stage_of_kind(self, kind):
+        """The stage record of the given kind on THIS lead's team."""
+        self.ensure_one()
+        if not self.team_id:
+            return self.env["crm.stage"]
+        return self.env["crm.stage"].sudo().search([
+            ("team_ids", "=", self.team_id.id),
+            ("mudon_stage_kind", "=", kind),
+        ], limit=1)
+
+    def action_mudon_kanban_advance(self):
+        """One-step forward move for a kanban card on touch devices.
+
+        Writes the next funnel stage via the PUBLIC path, so it goes through
+        the exact same gate + quick-fill-wizard flow as a drag — just tappable.
+        """
+        self.ensure_one()
+        from odoo.exceptions import UserError
+        order = MUDON_STAGE_ORDER
+        ck = self.stage_id.mudon_stage_kind
+        if ck not in order:
+            raise UserError(_("This lead is not on a Mudon funnel stage."))
+        i = order.index(ck)
+        if i >= len(order) - 1:
+            raise UserError(_("“%s” is already at the final stage (WON).")
+                            % (self.name or _("This lead")))
+        stage = self._mudon_stage_of_kind(order[i + 1])
+        if not stage:
+            raise UserError(
+                _("No “%s” stage is configured for this pipeline.")
+                % order[i + 1])
+        self.write({"stage_id": stage.id})
+        return True
+
+    def action_mudon_kanban_back(self):
+        """One-step backward move for a kanban card (no gate on retreat)."""
+        self.ensure_one()
+        from odoo.exceptions import UserError
+        order = MUDON_STAGE_ORDER
+        ck = self.stage_id.mudon_stage_kind
+        if ck not in order:
+            raise UserError(_("This lead is not on a Mudon funnel stage."))
+        i = order.index(ck)
+        if i <= 0:
+            raise UserError(_("“%s” is already at the first stage.")
+                            % (self.name or _("This lead")))
+        stage = self._mudon_stage_of_kind(order[i - 1])
+        if not stage:
+            raise UserError(
+                _("No “%s” stage is configured for this pipeline.")
+                % order[i - 1])
+        self.write({"stage_id": stage.id})
+        return True
+
     # ─── Branch + country-code routing ──────────────────────────────
     def _mudon_auto_assign_agent(self):
         self.ensure_one()

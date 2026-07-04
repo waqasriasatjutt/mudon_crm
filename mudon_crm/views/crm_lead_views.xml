@@ -316,6 +316,23 @@
                             Offers: <t t-out="record.mudon_offer_counter.value"/>
                         </span>
                     </div>
+                    <!-- Touch stage-move (mobile/tablet can't drag) — same
+                         gate + quick-fill wizard as a drag. -->
+                    <div class="mudon_stage_move"
+                         t-if="record.mudon_stage_kind_current.raw_value != 'lost'">
+                        <button type="object" name="action_mudon_kanban_back"
+                                class="btn btn-sm btn-light mudon_move_btn"
+                                t-if="record.mudon_stage_kind_current.raw_value != 'new_lead'"
+                                aria-label="Move to previous stage" title="Move to previous stage">
+                            <i class="fa fa-chevron-left me-1"/>Back
+                        </button>
+                        <button type="object" name="action_mudon_kanban_advance"
+                                class="btn btn-sm btn-primary mudon_move_btn"
+                                t-if="record.mudon_stage_kind_current.raw_value != 'won'"
+                                aria-label="Advance to next stage" title="Advance to next stage">
+                            Advance<i class="fa fa-chevron-right ms-1"/>
+                        </button>
+                    </div>
                 </div>
             </xpath>
         </field>
