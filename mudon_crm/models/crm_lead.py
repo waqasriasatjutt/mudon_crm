@@ -5,6 +5,7 @@ from datetime import timedelta
 from markupsafe import Markup, escape
 
 from odoo import _, api, fields, models
+from odoo.tools import html2plaintext
 
 _logger = logging.getLogger(__name__)
 
@@ -946,13 +947,143 @@ class CrmLead(models.Model):
                 body=stub_body,
                 subject=_("WhatsApp (stub send)"),
             )
+            self._mudon_wa_log(normalized, body, status="stub",
+                               from_company=from_company)
             return True
+        if provider == "meta":
+            return self._mudon_send_whatsapp_meta(
+                phone, body, from_company=from_company)
         _logger.warning(
-            "mudon_crm: WA provider '%s' is configured but no concrete "
-            "sender exists yet — message NOT sent for lead %s.",
-            provider, self.id,
+            "mudon_crm: unknown WA provider '%s' — message NOT sent for "
+            "lead %s.", provider, self.id,
         )
         return False
+
+    # ─── Meta Cloud API send + delivery log + retry ─────────────────
+    def _mudon_wa_log(self, to_number, body, status="sent", wamid="",
+                      error="", from_company=False, direction="out"):
+        """Append one row to the WhatsApp message log (audit + retry
+        queue). Body is stored as plain text."""
+        try:
+            text = html2plaintext(body) if body else ""
+        except Exception:
+            text = str(body or "")
+        try:
+            return self.env["mudon.wa.message"].sudo().create({
+                "lead_id": self.id if self else False,
+                "direction": direction,
+                "to_number": to_number or "",
+                "from_company": from_company,
+                "body": text,
+                "status": status,
+                "wamid": wamid or False,
+                "error": error or False,
+            })
+        except Exception as exc:
+            _logger.warning("mudon_crm: WA log write failed: %s", exc)
+            return self.env["mudon.wa.message"]
+
+    def _mudon_wa_meta_post(self, to_digits, text, from_company=False):
+        """Low-level POST of one text message to the Meta Cloud API.
+        Returns (ok, wamid, error, permanent). No DB writes — callers
+        log the result."""
+        ICP = self.env["ir.config_parameter"].sudo()
+        token = ICP.get_param("mudon_crm.wa_access_token", "")
+        api_version = ICP.get_param("mudon_crm.wa_api_version", "v21.0") or "v21.0"
+        if from_company:
+            phone_number_id = (
+                ICP.get_param("mudon_crm.wa_company_phone_number_id", "")
+                or ICP.get_param("mudon_crm.wa_phone_number_id", "")
+            )
+        else:
+            phone_number_id = ICP.get_param("mudon_crm.wa_phone_number_id", "")
+        if not (token and phone_number_id and to_digits):
+            return (False, "", "Missing access token, phone-number id, or "
+                    "recipient number.", True)
+        try:
+            import requests
+        except ImportError:
+            return (False, "", "Python 'requests' library not available.", True)
+        url = "https://graph.facebook.com/%s/%s/messages" % (
+            api_version, phone_number_id)
+        payload = {
+            "messaging_product": "whatsapp",
+            "to": to_digits,
+            "type": "text",
+            "text": {"preview_url": True, "body": text or ""},
+        }
+        headers = {
+            "Authorization": "Bearer %s" % token,
+            "Content-Type": "application/json",
+        }
+        try:
+            resp = requests.post(url, json=payload, headers=headers, timeout=10)
+        except Exception as exc:
+            return (False, "", "Network error: %s" % exc, False)
+        if resp.status_code // 100 == 2:
+            try:
+                wamid = (resp.json().get("messages") or [{}])[0].get("id", "")
+            except Exception:
+                wamid = ""
+            return (True, wamid, "", False)
+        # 4xx = permanent (bad number / unapproved template / auth);
+        # 5xx + network = retryable
+        permanent = resp.status_code // 100 == 4
+        return (False, "", "HTTP %s: %s" % (resp.status_code, resp.text[:400]),
+                permanent)
+
+    def _mudon_send_whatsapp_meta(self, phone, body, from_company=False):
+        """Send via Meta Cloud API + log the result. Keeps a chatter copy
+        on success so the CRM card still shows what went out."""
+        self.ensure_one()
+        to_digits = (self._mudon_phone_normalize(phone) or "").lstrip("+")
+        try:
+            text = html2plaintext(body) if body else ""
+        except Exception:
+            text = str(body or "")
+        ok, wamid, error, permanent = self._mudon_wa_meta_post(
+            to_digits, text, from_company=from_company)
+        status = "sent" if ok else ("failed_permanent" if permanent else "failed")
+        self._mudon_wa_log(to_digits, body, status=status, wamid=wamid,
+                           error=error, from_company=from_company)
+        if ok:
+            self.with_context(mudon_skip_first_contact=True).message_post(
+                body=Markup("<p><b>[WhatsApp → %s]</b></p>%s")
+                % (escape(to_digits or "(no number)"), body),
+                subject=_("WhatsApp sent"))
+        else:
+            _logger.warning("mudon_crm: WA send failed for lead %s: %s",
+                            self.id, error)
+        return ok
+
+    @api.model
+    def _mudon_cron_wa_retry(self):
+        """Re-send outbound WA messages that failed with a transient error
+        (< 3 attempts). Permanent failures (bad number / unapproved
+        template) are left as-is."""
+        Msg = self.env["mudon.wa.message"].sudo()
+        for msg in Msg.search([
+            ("direction", "=", "out"),
+            ("status", "=", "failed"),
+            ("attempts", "<", 3),
+        ], limit=100):
+            lead = msg.lead_id
+            if not lead:
+                msg.status = "failed_permanent"
+                continue
+            to_digits = (lead._mudon_phone_normalize(msg.to_number)
+                         or "").lstrip("+")
+            ok, wamid, error, permanent = lead._mudon_wa_meta_post(
+                to_digits, msg.body or "", from_company=msg.from_company)
+            msg.attempts += 1
+            if ok:
+                msg.write({"status": "sent", "wamid": wamid or False,
+                           "error": False})
+            elif permanent or msg.attempts >= 3:
+                msg.write({"status": "failed_permanent",
+                           "error": error or msg.error})
+            else:
+                msg.write({"error": error or msg.error})
 
     def _mudon_send_client_greeting(self):
         self.ensure_one()

@@ -186,4 +186,23 @@
         <field name="key">mudon_crm.marketing_user_id</field>
         <field name="value">0</field>
     </record>
+
+    <!-- Meta Cloud API credentials — set live via Settings, never in repo.
+         noupdate=1 (file-level) so an upgrade never wipes the live token. -->
+    <record id="mudon_config_wa_access_token" model="ir.config_parameter">
+        <field name="key">mudon_crm.wa_access_token</field>
+        <field name="value"></field>
+    </record>
+    <record id="mudon_config_wa_phone_number_id" model="ir.config_parameter">
+        <field name="key">mudon_crm.wa_phone_number_id</field>
+        <field name="value"></field>
+    </record>
+    <record id="mudon_config_wa_company_phone_number_id" model="ir.config_parameter">
+        <field name="key">mudon_crm.wa_company_phone_number_id</field>
+        <field name="value"></field>
+    </record>
+    <record id="mudon_config_wa_api_version" model="ir.config_parameter">
+        <field name="key">mudon_crm.wa_api_version</field>
+        <field name="value">v21.0</field>
+    </record>
 </odoo>

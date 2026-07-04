@@ -27,3 +27,5 @@ access_mudon_project_user,mudon.project user,model_mudon_project,sales_team.grou
 access_mudon_project_manager,mudon.project manager,model_mudon_project,sales_team.group_sale_manager,1,1,1,1
 access_mudon_quick_fill_wizard_user,mudon.quick.fill.wizard user,model_mudon_quick_fill_wizard,sales_team.group_sale_salesman,1,1,1,1
 access_mudon_quick_fill_wizard_manager,mudon.quick.fill.wizard manager,model_mudon_quick_fill_wizard,sales_team.group_sale_manager,1,1,1,1
+access_mudon_wa_message_user,mudon.wa.message user,model_mudon_wa_message,sales_team.group_sale_salesman,1,0,0,0
+access_mudon_wa_message_manager,mudon.wa.message manager,model_mudon_wa_message,sales_team.group_sale_manager,1,1,1,1

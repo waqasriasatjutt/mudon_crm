@@ -108,4 +108,15 @@
         <field name="nextcall" eval="(DateTime.now().replace(hour=8, minute=30, second=0, microsecond=0))"/>
         <field name="active">True</field>
     </record>
+
+    <!-- WhatsApp: re-send transient send failures (no-op in stub mode) -->
+    <record id="mudon_cron_wa_retry" model="ir.cron">
+        <field name="name">Mudon — WhatsApp re-send failed messages</field>
+        <field name="model_id" ref="crm.model_crm_lead"/>
+        <field name="state">code</field>
+        <field name="code">model._mudon_cron_wa_retry()</field>
+        <field name="interval_number">15</field>
+        <field name="interval_type">minutes</field>
+        <field name="active">True</field>
+    </record>
 </odoo>

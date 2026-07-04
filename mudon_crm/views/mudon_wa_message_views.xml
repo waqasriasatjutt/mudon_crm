@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <record id="mudon_wa_message_view_list" model="ir.ui.view">
+        <field name="name">mudon.wa.message.list</field>
+        <field name="model">mudon.wa.message</field>
+        <field name="arch" type="xml">
+            <list string="WhatsApp Log" create="0" edit="0">
+                <field name="create_date" string="When"/>
+                <field name="direction"/>
+                <field name="lead_id"/>
+                <field name="to_number"/>
+                <field name="from_company" optional="hide"/>
+                <field name="body"/>
+                <field name="status" widget="badge"
+                       decoration-success="status in ('sent','delivered','read')"
+                       decoration-info="status == 'received'"
+                       decoration-warning="status == 'failed'"
+                       decoration-danger="status == 'failed_permanent'"
+                       decoration-muted="status == 'stub'"/>
+                <field name="attempts" optional="hide"/>
+                <field name="error" optional="hide"/>
+                <field name="wamid" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="mudon_wa_message_view_form" model="ir.ui.view">
+        <field name="name">mudon.wa.message.form</field>
+        <field name="model">mudon.wa.message</field>
+        <field name="arch" type="xml">
+            <form string="WhatsApp Message" create="false" edit="false">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="direction"/>
+                            <field name="lead_id"/>
+                            <field name="to_number"/>
+                            <field name="from_company"/>
+                        </group>
+                        <group>
+                            <field name="status"/>
+                            <field name="attempts"/>
+                            <field name="wamid"/>
+                            <field name="create_date"/>
+                        </group>
+                    </group>
+                    <group string="Message">
+                        <field name="body" nolabel="1"/>
+                    </group>
+                    <group string="Error" invisible="not error">
+                        <field name="error" nolabel="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="mudon_wa_message_view_search" model="ir.ui.view">
+        <field name="name">mudon.wa.message.search</field>
+        <field name="model">mudon.wa.message</field>
+        <field name="arch" type="xml">
+            <search string="WhatsApp Log">
+                <field name="to_number"/>
+                <field name="lead_id"/>
+                <field name="wamid"/>
+                <filter name="outbound" string="Outbound" domain="[('direction','=','out')]"/>
+                <filter name="inbound" string="Inbound" domain="[('direction','=','in')]"/>
+                <separator/>
+                <filter name="failed" string="Failed" domain="[('status','in',('failed','failed_permanent'))]"/>
+                <filter name="sent" string="Sent" domain="[('status','in',('sent','delivered','read'))]"/>
+                <group expand="0" string="Group By">
+                    <filter name="g_status" string="Status" context="{'group_by':'status'}"/>
+                    <filter name="g_direction" string="Direction" context="{'group_by':'direction'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="mudon_wa_message_action" model="ir.actions.act_window">
+        <field name="name">WhatsApp Log</field>
+        <field name="res_model">mudon.wa.message</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="mudon_wa_message_view_search"/>
+        <field name="context">{'search_default_outbound': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No WhatsApp messages yet</p>
+            <p>Every WhatsApp message the CRM sends or receives is logged here —
+               including stub (log-only) messages while WhatsApp is not yet live.</p>
+        </field>
+    </record>
+
+    <!-- Shortcut to the WhatsApp / Meta credentials panel -->
+    <record id="mudon_wa_settings_action" model="ir.actions.act_window">
+        <field name="name">WhatsApp Setup</field>
+        <field name="res_model">res.config.settings</field>
+        <field name="view_mode">form</field>
+        <field name="target">inline</field>
+        <field name="context">{'module': 'mudon_crm'}</field>
+    </record>
+
+    <menuitem id="mudon_menu_wa_settings"
+              name="WhatsApp Setup"
+              parent="mudon_menu_config_root"
+              action="mudon_wa_settings_action"
+              sequence="4"/>
+
+    <menuitem id="mudon_menu_wa_log"
+              name="WhatsApp Log"
+              parent="mudon_menu_config_root"
+              action="mudon_wa_message_action"
+              sequence="6"/>
+
+</odoo>
