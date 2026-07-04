@@ -13,9 +13,14 @@
                         By: <t t-esc="state.data.meta.basis_label"/>
                     </div>
                 </div>
-                <button class="btn btn-outline-secondary btn-sm" t-on-click="() => this.refresh()">
-                    <i class="fa fa-refresh me-1"/>Refresh
-                </button>
+                <div class="mudon_head_actions">
+                    <button class="btn btn-outline-secondary btn-sm" t-on-click="() => this.refresh()">
+                        <i class="fa fa-refresh me-1"/>Refresh
+                    </button>
+                    <button class="btn btn-primary btn-sm" t-on-click="() => this.downloadReport()">
+                        <i class="fa fa-download me-1"/>Download report
+                    </button>
+                </div>
             </div>
 
             <div class="mudon_dash_filters">
@@ -31,6 +36,44 @@
                     <option value="this_year" t-att-selected="state.period === 'this_year'">This Year</option>
                     <option value="last_year" t-att-selected="state.period === 'last_year'">Last Year</option>
                 </select>
+                <select class="form-select" t-on-change="(ev) => this.setFilter('agent_id', ev)">
+                    <option value="">All agents</option>
+                    <t t-foreach="state.options.agents" t-as="o" t-key="o.id">
+                        <option t-att-value="o.id" t-att-selected="String(state.agent_id) === String(o.id)"><t t-esc="o.name"/></option>
+                    </t>
+                </select>
+                <select class="form-select" t-on-change="(ev) => this.setFilter('source_id', ev)">
+                    <option value="">All sources</option>
+                    <t t-foreach="state.options.sources" t-as="o" t-key="o.id">
+                        <option t-att-value="o.id" t-att-selected="String(state.source_id) === String(o.id)"><t t-esc="o.name"/></option>
+                    </t>
+                </select>
+                <select class="form-select" t-on-change="(ev) => this.setFilter('nationality_id', ev)">
+                    <option value="">All nationalities</option>
+                    <t t-foreach="state.options.nationalities" t-as="o" t-key="o.id">
+                        <option t-att-value="o.id" t-att-selected="String(state.nationality_id) === String(o.id)"><t t-esc="o.name"/></option>
+                    </t>
+                </select>
+                <select class="form-select" t-on-change="(ev) => this.setFilter('country_prefix', ev)">
+                    <option value="">All client countries</option>
+                    <t t-foreach="state.options.countries" t-as="o" t-key="o.id">
+                        <option t-att-value="o.id" t-att-selected="state.country_prefix === o.id"><t t-esc="o.name"/></option>
+                    </t>
+                </select>
+                <select class="form-select" t-on-change="(ev) => this.setFilter('stage_kind', ev)">
+                    <option value="">All stages</option>
+                    <t t-foreach="state.options.stages" t-as="o" t-key="o.id">
+                        <option t-att-value="o.id" t-att-selected="state.stage_kind === o.id"><t t-esc="o.name"/></option>
+                    </t>
+                </select>
+                <div class="mudon_range">
+                    <span class="lab">Range:</span>
+                    <input type="date" class="form-control" t-att-value="state.date_from"
+                           t-on-change="(ev) => this.setDate('date_from', ev)"/>
+                    <span class="sep">→</span>
+                    <input type="date" class="form-control" t-att-value="state.date_to"
+                           t-on-change="(ev) => this.setDate('date_to', ev)"/>
+                </div>
                 <div class="mudon_basis">
                     <span class="lab">Filter by:</span>
                     <button t-attf-class="{{ state.basis === 'pipeline' ? 'active' : '' }}"
@@ -38,6 +81,9 @@
                     <button t-attf-class="{{ state.basis === 'close' ? 'active' : '' }}"
                             t-on-click="() => this.setBasis('close')">Close Date</button>
                 </div>
+                <button class="btn btn-outline-secondary btn-sm mudon_clear" t-on-click="() => this.clearFilters()">
+                    <i class="fa fa-times me-1"/>Clear
+                </button>
             </div>
 
             <div t-if="state.loading" class="mudon_dash_msg">Loading…</div>

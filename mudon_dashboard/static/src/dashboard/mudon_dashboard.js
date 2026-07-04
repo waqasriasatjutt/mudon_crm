@@ -3,6 +3,7 @@
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { loadJS } from "@web/core/assets";
+import { download } from "@web/core/network/download";
 import {
     Component, useState, onWillStart, onMounted, onWillUnmount, useRef, useEffect,
 } from "@odoo/owl";
@@ -25,6 +26,15 @@ class MudonManagementDashboard extends Component {
             pipeline: "all",
             period: "this_month",
             basis: "pipeline",
+            // extra filters
+            agent_id: "",
+            source_id: "",
+            nationality_id: "",
+            country_prefix: "",
+            stage_kind: "",
+            date_from: "",
+            date_to: "",
+            options: { agents: [], sources: [], nationalities: [], countries: [], stages: [] },
             renderKey: 0,
         });
 
@@ -34,11 +44,33 @@ class MudonManagementDashboard extends Component {
             } catch (e) {
                 // chart just won't render; KPIs + tables still work
             }
+            await this.loadOptions();
             await this.load();
         });
         useEffect(() => this.renderChart(), () => [this.state.renderKey]);
         onMounted(() => this.renderChart());
         onWillUnmount(() => this.destroyChart());
+    }
+
+    buildFilters() {
+        return {
+            agent_id: this.state.agent_id || null,
+            source_id: this.state.source_id || null,
+            nationality_id: this.state.nationality_id || null,
+            country_prefix: this.state.country_prefix || null,
+            stage_kind: this.state.stage_kind || null,
+            date_from: this.state.date_from || null,
+            date_to: this.state.date_to || null,
+        };
+    }
+
+    async loadOptions() {
+        try {
+            this.state.options = await this.orm.call(
+                "mudon.dashboard", "get_filter_options", [this.state.pipeline]);
+        } catch (e) {
+            // keep previous options
+        }
     }
 
     async load() {
@@ -47,7 +79,7 @@ class MudonManagementDashboard extends Component {
         try {
             const data = await this.orm.call(
                 "mudon.dashboard", "get_management_data",
-                [this.state.pipeline, this.state.period, this.state.basis]);
+                [this.state.pipeline, this.state.period, this.state.basis, this.buildFilters()]);
             this.state.data = data;
             this.state.renderKey++;
         } catch (e) {
@@ -57,10 +89,40 @@ class MudonManagementDashboard extends Component {
         }
     }
 
-    async setPipeline(ev) { this.state.pipeline = ev.target.value; await this.load(); }
+    async setPipeline(ev) { this.state.pipeline = ev.target.value; await this.loadOptions(); await this.load(); }
     async setPeriod(ev) { this.state.period = ev.target.value; await this.load(); }
     async setBasis(b) { this.state.basis = b; await this.load(); }
+    async setFilter(key, ev) { this.state[key] = ev.target.value; await this.load(); }
+    async setDate(key, ev) { this.state[key] = ev.target.value; await this.load(); }
+    async clearFilters() {
+        Object.assign(this.state, {
+            agent_id: "", source_id: "", nationality_id: "",
+            country_prefix: "", stage_kind: "", date_from: "", date_to: "",
+        });
+        await this.load();
+    }
     async refresh() { await this.load(); }
+
+    async downloadReport() {
+        try {
+            await download({
+                url: "/mudon/dashboard/export",
+                data: Object.assign(
+                    { kind: "management", pipeline: this.state.pipeline,
+                      period: this.state.period, basis: this.state.basis },
+                    this._filterParams()),
+            });
+        } catch (e) {
+            // download() surfaces server errors as a dialog; nothing to do
+        }
+    }
+
+    _filterParams() {
+        const f = this.buildFilters();
+        const out = {};
+        for (const k in f) { out[k] = f[k] == null ? "" : f[k]; }
+        return out;
+    }
 
     get pipelineLabel() {
         return { all: "All pipelines", uae: "UAE Dubai", turkey: "Turkey" }[this.state.pipeline];

@@ -13,9 +13,14 @@
                         Source: <t t-esc="state.data.meta.source_label"/>
                     </div>
                 </div>
-                <button class="btn btn-outline-secondary btn-sm" t-on-click="() => this.refresh()">
-                    <i class="fa fa-refresh me-1"/>Refresh
-                </button>
+                <div class="mudon_head_actions">
+                    <button class="btn btn-outline-secondary btn-sm" t-on-click="() => this.refresh()">
+                        <i class="fa fa-refresh me-1"/>Refresh
+                    </button>
+                    <button class="btn btn-primary btn-sm" t-on-click="() => this.downloadReport()">
+                        <i class="fa fa-download me-1"/>Download report
+                    </button>
+                </div>
             </div>
 
             <div class="mudon_dash_filters">
@@ -31,6 +36,38 @@
                     <option value="this_year" t-att-selected="state.period === 'this_year'">This Year</option>
                     <option value="last_year" t-att-selected="state.period === 'last_year'">Last Year</option>
                 </select>
+                <select class="form-select" t-on-change="(ev) => this.setFilter('agent_id', ev)">
+                    <option value="">All agents</option>
+                    <t t-foreach="state.options.agents" t-as="o" t-key="o.id">
+                        <option t-att-value="o.id" t-att-selected="String(state.agent_id) === String(o.id)"><t t-esc="o.name"/></option>
+                    </t>
+                </select>
+                <select class="form-select" t-on-change="(ev) => this.setFilter('source_id', ev)">
+                    <option value="">All sources</option>
+                    <t t-foreach="state.options.sources" t-as="o" t-key="o.id">
+                        <option t-att-value="o.id" t-att-selected="String(state.source_id) === String(o.id)"><t t-esc="o.name"/></option>
+                    </t>
+                </select>
+                <select class="form-select" t-on-change="(ev) => this.setFilter('nationality_id', ev)">
+                    <option value="">All nationalities</option>
+                    <t t-foreach="state.options.nationalities" t-as="o" t-key="o.id">
+                        <option t-att-value="o.id" t-att-selected="String(state.nationality_id) === String(o.id)"><t t-esc="o.name"/></option>
+                    </t>
+                </select>
+                <select class="form-select" t-on-change="(ev) => this.setFilter('country_prefix', ev)">
+                    <option value="">All client countries</option>
+                    <t t-foreach="state.options.countries" t-as="o" t-key="o.id">
+                        <option t-att-value="o.id" t-att-selected="state.country_prefix === o.id"><t t-esc="o.name"/></option>
+                    </t>
+                </select>
+                <div class="mudon_range">
+                    <span class="lab">Range:</span>
+                    <input type="date" class="form-control" t-att-value="state.date_from"
+                           t-on-change="(ev) => this.setDate('date_from', ev)"/>
+                    <span class="sep">→</span>
+                    <input type="date" class="form-control" t-att-value="state.date_to"
+                           t-on-change="(ev) => this.setDate('date_to', ev)"/>
+                </div>
                 <div class="mudon_basis">
                     <span class="lab">Basis:</span>
                     <button t-attf-class="{{ state.basis === 'won' ? 'active' : '' }}"
@@ -47,6 +84,9 @@
                     <button t-attf-class="{{ state.source === 'accounting' ? 'active' : '' }}"
                             t-on-click="() => this.setSource('accounting')">Accounting (live)</button>
                 </div>
+                <button class="btn btn-outline-secondary btn-sm mudon_clear" t-on-click="() => this.clearFilters()">
+                    <i class="fa fa-times me-1"/>Clear
+                </button>
             </div>
 
             <div t-if="state.loading" class="mudon_dash_msg">Loading…</div>
@@ -112,6 +152,54 @@
                     <h2>Won vs Invoiced vs Collected — monthly (<t t-esc="state.data.meta.year"/>)</h2>
                     <p class="hint">Commission booked on won deals, amount invoiced, and cash collected each month.</p>
                     <div class="mudon_chart_wrap"><canvas t-ref="revenue_trend"/></div>
+                </div>
+
+                <!-- Deal-level drill-down -->
+                <div class="mudon_card">
+                    <h2>Deals — won opportunities (<t t-esc="dealRows.length"/>)</h2>
+                    <p class="hint">
+                        Every won deal in the active window, placed by
+                        <t t-esc="state.data.meta.basis_label"/>. Click a column to sort.
+                    </p>
+                    <div class="scroll"><table class="mudon_table mudon_deals">
+                        <thead><tr>
+                            <th class="srt" t-on-click="() => this.sortDeals('name')">Deal</th>
+                            <th class="srt" t-on-click="() => this.sortDeals('agent')">Agent</th>
+                            <th class="srt" t-on-click="() => this.sortDeals('pipeline')">Pipeline</th>
+                            <th class="srt" t-on-click="() => this.sortDeals('country')">Country</th>
+                            <th class="srt" t-on-click="() => this.sortDeals('nationality')">Nationality</th>
+                            <th class="srt" t-on-click="() => this.sortDeals('source')">Source</th>
+                            <th class="srt" t-on-click="() => this.sortDeals('expected_revenue')">Expected</th>
+                            <th class="srt" t-on-click="() => this.sortDeals('commission')">Commission</th>
+                            <th class="srt" t-on-click="() => this.sortDeals('invoiced')">Invoiced</th>
+                            <th class="srt" t-on-click="() => this.sortDeals('invoiced_date')">Inv. date</th>
+                            <th class="srt" t-on-click="() => this.sortDeals('collected')">Collected</th>
+                            <th class="srt" t-on-click="() => this.sortDeals('collected_date')">Pay. date</th>
+                            <th class="srt" t-on-click="() => this.sortDeals('closed')">Closed</th>
+                        </tr></thead>
+                        <tbody>
+                            <tr t-foreach="dealRows" t-as="d" t-key="d.id">
+                                <td class="t"><t t-esc="d.name"/></td>
+                                <td class="t"><t t-esc="d.agent"/></td>
+                                <td class="t"><t t-esc="d.pipeline"/></td>
+                                <td class="t"><t t-esc="d.country"/></td>
+                                <td class="t"><t t-esc="d.nationality"/></td>
+                                <td class="t"><t t-esc="d.source"/></td>
+                                <td><t t-esc="fmtFull(d.expected_revenue)"/></td>
+                                <td><t t-esc="fmtFull(d.commission)"/></td>
+                                <td><t t-esc="fmtFull(d.invoiced)"/></td>
+                                <td><t t-esc="fmtDate(d.invoiced_date)"/></td>
+                                <td><t t-esc="fmtFull(d.collected)"/></td>
+                                <td><t t-esc="fmtDate(d.collected_date)"/></td>
+                                <td><t t-esc="fmtDate(d.closed)"/></td>
+                            </tr>
+                            <tr t-if="!dealRows.length">
+                                <td class="t" colspan="13" style="text-align:center;color:#8a939c;">
+                                    No won deals in this window.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table></div>
                 </div>
             </t>
         </div>

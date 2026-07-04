@@ -3,6 +3,7 @@
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { loadJS } from "@web/core/assets";
+import { download } from "@web/core/network/download";
 import {
     Component, useState, onWillStart, onMounted, onWillUnmount, useRef, useEffect,
 } from "@odoo/owl";
@@ -27,6 +28,17 @@ class MudonFinancialDashboard extends Component {
             period: "this_month",
             basis: "won",
             source: "crm",
+            // extra filters
+            agent_id: "",
+            source_id: "",
+            nationality_id: "",
+            country_prefix: "",
+            date_from: "",
+            date_to: "",
+            options: { agents: [], sources: [], nationalities: [], countries: [], stages: [] },
+            // deals table client-side sort
+            sortKey: "closed",
+            sortDir: "desc",
             renderKey: 0,
         });
 
@@ -36,11 +48,32 @@ class MudonFinancialDashboard extends Component {
             } catch (e) {
                 // chart just won't render; KPIs + tables still work
             }
+            await this.loadOptions();
             await this.load();
         });
         useEffect(() => this.renderChart(), () => [this.state.renderKey]);
         onMounted(() => this.renderChart());
         onWillUnmount(() => this.destroyChart());
+    }
+
+    buildFilters() {
+        return {
+            agent_id: this.state.agent_id || null,
+            source_id: this.state.source_id || null,
+            nationality_id: this.state.nationality_id || null,
+            country_prefix: this.state.country_prefix || null,
+            date_from: this.state.date_from || null,
+            date_to: this.state.date_to || null,
+        };
+    }
+
+    async loadOptions() {
+        try {
+            this.state.options = await this.orm.call(
+                "mudon.dashboard", "get_filter_options", [this.state.pipeline]);
+        } catch (e) {
+            // keep previous options
+        }
     }
 
     async load() {
@@ -49,7 +82,8 @@ class MudonFinancialDashboard extends Component {
         try {
             const data = await this.orm.call(
                 "mudon.dashboard", "get_financial_data",
-                [this.state.pipeline, this.state.period, this.state.basis, this.state.source]);
+                [this.state.pipeline, this.state.period, this.state.basis,
+                 this.state.source, this.buildFilters()]);
             this.state.data = data;
             this.state.renderKey++;
         } catch (e) {
@@ -59,11 +93,62 @@ class MudonFinancialDashboard extends Component {
         }
     }
 
-    async setPipeline(ev) { this.state.pipeline = ev.target.value; await this.load(); }
+    async setPipeline(ev) { this.state.pipeline = ev.target.value; await this.loadOptions(); await this.load(); }
     async setPeriod(ev) { this.state.period = ev.target.value; await this.load(); }
     async setBasis(b) { this.state.basis = b; await this.load(); }
     async setSource(s) { this.state.source = s; await this.load(); }
+    async setFilter(key, ev) { this.state[key] = ev.target.value; await this.load(); }
+    async setDate(key, ev) { this.state[key] = ev.target.value; await this.load(); }
+    async clearFilters() {
+        Object.assign(this.state, {
+            agent_id: "", source_id: "", nationality_id: "",
+            country_prefix: "", date_from: "", date_to: "",
+        });
+        await this.load();
+    }
     async refresh() { await this.load(); }
+
+    async downloadReport() {
+        try {
+            await download({
+                url: "/mudon/dashboard/export",
+                data: Object.assign(
+                    { kind: "financial", pipeline: this.state.pipeline,
+                      period: this.state.period, basis: this.state.basis,
+                      source: this.state.source },
+                    this._filterParams()),
+            });
+        } catch (e) {
+            // download() surfaces server errors as a dialog
+        }
+    }
+
+    _filterParams() {
+        const f = this.buildFilters();
+        const out = {};
+        for (const k in f) { out[k] = f[k] == null ? "" : f[k]; }
+        return out;
+    }
+
+    // ── deals detail: client-side sort ──────────────────────────────────
+    get dealRows() {
+        const d = this.state.data;
+        const deals = (d && d.tables && d.tables.deals && d.tables.deals.rows) || [];
+        const k = this.state.sortKey;
+        const dir = this.state.sortDir === "asc" ? 1 : -1;
+        const numeric = ["expected_revenue", "commission", "invoiced", "collected"].includes(k);
+        return [...deals].sort((a, b) => {
+            let x = a[k], y = b[k];
+            if (numeric) { return ((+x || 0) - (+y || 0)) * dir; }
+            return ((x || "").toString()).localeCompare((y || "").toString()) * dir;
+        });
+    }
+    sortDeals(key) {
+        if (this.state.sortKey === key) {
+            this.state.sortDir = this.state.sortDir === "asc" ? "desc" : "asc";
+        } else { this.state.sortKey = key; this.state.sortDir = "asc"; }
+    }
+    fmtDate(s) { return s || "—"; }
 
     fmtMoney(v) {
         if (v == null) { return "—"; }

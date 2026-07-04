@@ -62,14 +62,144 @@ class MudonDashboard(models.TransientModel):
         # default: this_month
         return date(y, m, 1), today
 
+    # ── filter helpers (shared by both boards + export) ─────────────────
+    @staticmethod
+    def _as_int(v):
+        try:
+            return int(v) if v not in (None, "", False) else None
+        except (TypeError, ValueError):
+            return None
+
+    @api.model
+    def _resolve_range(self, period, filters):
+        """A custom date_from/date_to on ``filters`` overrides the preset.
+
+        Either side may be supplied alone (the missing side stays open).
+        Swapped inputs are corrected.
+        """
+        filters = filters or {}
+        df, dt = filters.get("date_from"), filters.get("date_to")
+        if df or dt:
+            today = fields.Date.context_today(self)
+            d_from = fields.Date.to_date(df) if df else date(2000, 1, 1)
+            d_to = fields.Date.to_date(dt) if dt else today
+            if d_from and d_to:
+                if d_to < d_from:
+                    d_from, d_to = d_to, d_from
+                return d_from, d_to
+        return self._period_range(period)
+
+    @api.model
+    def _apply_filters(self, domain, filters):
+        """Fold agent / source / nationality / stage into a domain.
+
+        Returns ``(domain, country_prefix)``. Client-country is derived from
+        the phone number (not a stored field), so it is returned for the
+        caller to post-filter the searched recordset. Falsy keys are ignored
+        → fully backward compatible.
+        """
+        f = filters or {}
+        dom = list(domain)
+        aid = self._as_int(f.get("agent_id"))
+        sid = self._as_int(f.get("source_id"))
+        nid = self._as_int(f.get("nationality_id"))
+        if aid:
+            dom.append(("user_id", "=", aid))
+        if sid:
+            dom.append(("mudon_source_id", "=", sid))
+        if nid:
+            dom.append(("mudon_nationality_id", "=", nid))
+        if f.get("stage_kind"):
+            dom.append(("mudon_stage_kind_current", "=", f["stage_kind"]))
+        return dom, (f.get("country_prefix") or None)
+
+    @api.model
+    def _country_prefix_of(self, phone):
+        """Dialing prefix bucket for a phone, matching ``_country_label``."""
+        norm = self.env["crm.lead"]._mudon_phone_normalize(phone or "")
+        if norm.startswith("+"):
+            digits = norm[1:]
+            for prefix, _label in COUNTRY_BY_PREFIX:
+                if digits.startswith(prefix):
+                    return prefix
+        return "other"
+
+    @api.model
+    def _period_label(self, period, filters):
+        filters = filters or {}
+        if filters.get("date_from") or filters.get("date_to"):
+            d_from, d_to = self._resolve_range(period, filters)
+            return "%s → %s" % (d_from.strftime("%d %b %Y"),
+                                d_to.strftime("%d %b %Y"))
+        return {
+            "this_month": "This Month", "last_month": "Last Month",
+            "this_quarter": "This Quarter", "this_year": "This Year",
+            "last_year": "Last Year",
+        }.get(period, "This Month")
+
+    @api.model
+    def _range_meta(self, period, filters):
+        """Meta keys describing the active window (for the UI label)."""
+        d_from, d_to = self._resolve_range(period, filters)
+        filters = filters or {}
+        return {
+            "date_from": d_from.isoformat(),
+            "date_to": d_to.isoformat(),
+            "custom_range": bool(filters.get("date_from")
+                                 or filters.get("date_to")),
+        }
+
+    # ── option lists for the filter dropdowns ───────────────────────────
+    @api.model
+    def get_filter_options(self, pipeline="all"):
+        """Dropdown options scoped to Mudon opportunities that actually exist
+        (so a manager never picks an agent/source/country with zero rows)."""
+        Lead = self.env["crm.lead"].sudo()
+        domain = [("type", "=", "opportunity"),
+                  ("mudon_pipeline_kind", "!=", False)]
+        if pipeline in ("turkey", "uae"):
+            domain.append(("mudon_pipeline_kind", "=", pipeline))
+        agents, sources, nats, prefixes = {}, {}, {}, {}
+        for l in Lead.search(domain):
+            if l.user_id:
+                agents[l.user_id.id] = l.user_id.name
+            if l.mudon_source_id:
+                sources[l.mudon_source_id.id] = l.mudon_source_id.name
+            if l.mudon_nationality_id:
+                nats[l.mudon_nationality_id.id] = l.mudon_nationality_id.name
+            pref = self._country_prefix_of(l.phone)
+            if pref not in prefixes:
+                prefixes[pref] = self._country_label(l.phone)
+
+        def lst(d):
+            return sorted([{"id": k, "name": v} for k, v in d.items()],
+                          key=lambda r: (r["name"] or "").lower())
+        return {
+            "agents": lst(agents),
+            "sources": lst(sources),
+            "nationalities": lst(nats),
+            "countries": sorted(
+                [{"id": k, "name": v} for k, v in prefixes.items()],
+                key=lambda r: (r["name"] or "").lower()),
+            "stages": [
+                {"id": "new_lead", "name": "New"},
+                {"id": "qualified", "name": "Qualified"},
+                {"id": "offer_sent", "name": "Offer Sent"},
+                {"id": "meeting", "name": "Meeting"},
+                {"id": "eoi", "name": "EOI"},
+                {"id": "won", "name": "Won"},
+                {"id": "lost", "name": "Lost"},
+            ],
+        }
+
     # ── main entry point ────────────────────────────────────────────────
     @api.model
     def get_management_data(self, pipeline="all", period="this_month",
-                            basis="pipeline"):
+                            basis="pipeline", filters=None):
         Lead = self.env["crm.lead"].sudo()
         currency = self.env.company.currency_id
 
-        d_from, d_to = self._period_range(period)
+        d_from, d_to = self._resolve_range(period, filters)
         dt_from = datetime.combine(d_from, time.min)
         dt_to = datetime.combine(d_to, time.max)
         date_field = "create_date" if basis == "pipeline" else "date_closed"
@@ -78,23 +208,19 @@ class MudonDashboard(models.TransientModel):
                        ("mudon_pipeline_kind", "!=", False)]
         if pipeline in ("turkey", "uae"):
             base_domain.append(("mudon_pipeline_kind", "=", pipeline))
+        base_domain, country_prefix = self._apply_filters(base_domain, filters)
 
-        period_labels = {
-            "this_month": "This Month", "last_month": "Last Month",
-            "this_quarter": "This Quarter", "this_year": "This Year",
-            "last_year": "Last Year",
-        }
         data = {
-            "meta": {
+            "meta": dict({
                 "pipeline": pipeline,
                 "period": period,
-                "period_label": period_labels.get(period, "This Month"),
+                "period_label": self._period_label(period, filters),
                 "basis": basis,
                 "basis_label": "Pipeline Date" if basis == "pipeline" else "Close Date",
                 "currency": currency.symbol or currency.name or "",
                 "currency_position": currency.position or "before",
                 "generated": fields.Datetime.now().strftime("%Y-%m-%d %H:%M"),
-            },
+            }, **self._range_meta(period, filters)),
             "kpis": {}, "tables": {}, "charts": {}, "_errors": [],
         }
 
@@ -111,6 +237,9 @@ class MudonDashboard(models.TransientModel):
         # ===================== KPIs + AGENT TABLE =====================
         try:
             leads = Lead.search(period_domain)
+            if country_prefix:
+                leads = leads.filtered(
+                    lambda l: self._country_prefix_of(l.phone) == country_prefix)
             agents = {}   # user -> counters
 
             def bucket(u):
@@ -227,6 +356,8 @@ class MudonDashboard(models.TransientModel):
             last_year = [0.0] * 12
             trend_domain = base_domain + [("mudon_stage_kind_current", "=", "won")]
             for lead in Lead.search(trend_domain):
+                if country_prefix and self._country_prefix_of(lead.phone) != country_prefix:
+                    continue
                 dclose = lead.date_closed or lead.write_date
                 if not dclose:
                     continue
@@ -278,7 +409,7 @@ class MudonDashboard(models.TransientModel):
 
     @api.model
     def get_financial_data(self, pipeline="all", period="this_month",
-                           basis="won", source="crm"):
+                           basis="won", source="crm", filters=None):
         """Won / Invoiced / Collected / Unbilled + breakdowns + trend.
 
         source='crm'        -> Invoiced & Collected come from the CRM-native
@@ -286,6 +417,9 @@ class MudonDashboard(models.TransientModel):
         source='accounting' -> Invoiced & Collected headline + trend come from
                                live account.move / account.payment instead
                                (breakdowns stay CRM-tracked; a note explains).
+        filters : optional dict {agent_id, source_id, nationality_id,
+                  country_prefix, date_from, date_to}. stage_kind is ignored
+                  here (this board is won-only).
         """
         Lead = self.env["crm.lead"].sudo()
         currency = self.env.company.currency_id
@@ -293,7 +427,7 @@ class MudonDashboard(models.TransientModel):
             basis = "won"
         amount_field, date_field = self._FIN_BASIS[basis]
 
-        d_from, d_to = self._period_range(period)
+        d_from, d_to = self._resolve_range(period, filters)
         today = fields.Date.context_today(self)
         y = today.year
         ytd_from, ytd_to = date(y, 1, 1), today
@@ -304,19 +438,18 @@ class MudonDashboard(models.TransientModel):
                        ("mudon_stage_kind_current", "=", "won")]
         if pipeline in ("turkey", "uae"):
             base_domain.append(("mudon_pipeline_kind", "=", pipeline))
+        # never let a stray stage_kind override the won-only financial base
+        fin_filters = dict(filters or {})
+        fin_filters.pop("stage_kind", None)
+        base_domain, country_prefix = self._apply_filters(base_domain, fin_filters)
 
-        period_labels = {
-            "this_month": "This Month", "last_month": "Last Month",
-            "this_quarter": "This Quarter", "this_year": "This Year",
-            "last_year": "Last Year",
-        }
         basis_labels = {"won": "Won Date", "invoice": "Invoice Date",
                         "payment": "Payment Received"}
         data = {
-            "meta": {
+            "meta": dict({
                 "pipeline": pipeline,
                 "period": period,
-                "period_label": period_labels.get(period, "This Month"),
+                "period_label": self._period_label(period, filters),
                 "basis": basis,
                 "basis_label": basis_labels[basis],
                 "source": source,
@@ -326,11 +459,14 @@ class MudonDashboard(models.TransientModel):
                 "currency_position": currency.position or "before",
                 "year": y,
                 "generated": fields.Datetime.now().strftime("%Y-%m-%d %H:%M"),
-            },
+            }, **self._range_meta(period, filters)),
             "kpis": {}, "tables": {}, "charts": {}, "notes": [], "_errors": [],
         }
 
         won_leads = Lead.search(base_domain)
+        if country_prefix:
+            won_leads = won_leads.filtered(
+                lambda l: self._country_prefix_of(l.phone) == country_prefix)
         _d = self._as_date
 
         # ===================== HEADLINE KPIs =====================
@@ -460,6 +596,38 @@ class MudonDashboard(models.TransientModel):
         except Exception as e:
             data["_errors"].append("trend: %s" % e)
 
+        # ===================== DEAL DETAIL (drill-down) =====================
+        try:
+            pipe_lbl = {"turkey": "Turkey", "uae": "UAE Dubai"}
+            rows = []
+            for lead in won_leads:
+                bdate = _d(lead[date_field])   # place the deal by the active basis
+                if not bdate or not (d_from <= bdate <= d_to):
+                    continue
+                rows.append({
+                    "id": lead.id,
+                    "name": lead.name or "—",
+                    "agent": lead.user_id.name or "Unassigned",
+                    "pipeline": pipe_lbl.get(lead.mudon_pipeline_kind, "—"),
+                    "country": self._country_label(lead.phone),
+                    "nationality": lead.mudon_nationality_id.name or "Unknown",
+                    "source": lead.mudon_source_id.name or "Manual / None",
+                    "expected_revenue": round(lead.expected_revenue or 0.0, 2),
+                    "commission": round(lead.mudon_commission or 0.0, 2),
+                    "invoiced": round(lead.mudon_invoiced_amount or 0.0, 2),
+                    "invoiced_date": (_d(lead.mudon_invoiced_date).isoformat()
+                                      if lead.mudon_invoiced_date else ""),
+                    "collected": round(lead.mudon_collected_amount or 0.0, 2),
+                    "collected_date": (_d(lead.mudon_collected_date).isoformat()
+                                       if lead.mudon_collected_date else ""),
+                    "closed": (_d(lead.date_closed).isoformat()
+                               if lead.date_closed else ""),
+                })
+            rows.sort(key=lambda r: r["closed"] or "", reverse=True)
+            data["tables"]["deals"] = {"rows": rows[:500], "count": len(rows)}
+        except Exception as e:
+            data["_errors"].append("deals: %s" % e)
+
         return data
 
     @api.model
@@ -505,6 +673,52 @@ class MudonDashboard(models.TransientModel):
             }
         except Exception:
             return None
+
+    # ── full deal register (used by the export controller) ──────────────
+    @api.model
+    def get_deal_register(self, pipeline="all", won_only=False, filters=None,
+                          limit=5000):
+        """Flat per-deal rows honoring pipeline + all extra filters, for the
+        downloadable report's ``Deals`` sheet. Not date-bound → a complete
+        register."""
+        Lead = self.env["crm.lead"].sudo()
+        domain = [("type", "=", "opportunity"),
+                  ("mudon_pipeline_kind", "!=", False)]
+        if pipeline in ("turkey", "uae"):
+            domain.append(("mudon_pipeline_kind", "=", pipeline))
+        if won_only:
+            domain.append(("mudon_stage_kind_current", "=", "won"))
+        ff = dict(filters or {})
+        if won_only:
+            ff.pop("stage_kind", None)
+        domain, country_prefix = self._apply_filters(domain, ff)
+        _d = self._as_date
+        pipe_lbl = {"turkey": "Turkey", "uae": "UAE Dubai"}
+        rows = []
+        for l in Lead.search(domain, order="create_date desc", limit=limit):
+            if country_prefix and self._country_prefix_of(l.phone) != country_prefix:
+                continue
+            rows.append({
+                "name": l.name or "",
+                "agent": l.user_id.name or "Unassigned",
+                "pipeline": pipe_lbl.get(l.mudon_pipeline_kind,
+                                         l.mudon_pipeline_kind or ""),
+                "stage": (l.mudon_stage_kind_current or "").replace("_", " ").title(),
+                "country": self._country_label(l.phone),
+                "nationality": l.mudon_nationality_id.name or "",
+                "source": l.mudon_source_id.name or "",
+                "expected_revenue": round(l.expected_revenue or 0.0, 2),
+                "commission": round(l.mudon_commission or 0.0, 2),
+                "invoiced": round(l.mudon_invoiced_amount or 0.0, 2),
+                "invoiced_date": (_d(l.mudon_invoiced_date).isoformat()
+                                  if l.mudon_invoiced_date else ""),
+                "collected": round(l.mudon_collected_amount or 0.0, 2),
+                "collected_date": (_d(l.mudon_collected_date).isoformat()
+                                   if l.mudon_collected_date else ""),
+                "created": (_d(l.create_date).isoformat() if l.create_date else ""),
+                "closed": (_d(l.date_closed).isoformat() if l.date_closed else ""),
+            })
+        return rows
 
     # ── helpers ─────────────────────────────────────────────────────────
     @api.model

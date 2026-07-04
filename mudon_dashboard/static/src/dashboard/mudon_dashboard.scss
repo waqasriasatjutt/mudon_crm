@@ -11,11 +11,27 @@
     --mlow: #b4432e;
     --mlowbg: #f6e7e2;
 
-    padding: 18px 22px 60px;
+    // Tunables reused across breakpoints
+    --mpad-x: 22px;
+    --mpad-y: 18px;
+    --mgap: 12px;
+    --mchart-h: 320px;
+
+    padding: var(--mpad-y) var(--mpad-x) 60px;
     background: #f4f5f2;
     min-height: 100%;
     color: var(--mink);
     font-size: 14px;
+
+    // Global overflow guard: no child may scroll the whole page body.
+    // Anything that must scroll (tables) opts in via .scroll { overflow-x:auto }.
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
+    *, *::before, *::after { box-sizing: border-box; }
+
+    // Ultrawide cap so tables/KPIs don't stretch to unreadable widths.
+    > * { max-width: 1600px; margin-left: auto; margin-right: auto; }
 
     // ── header ──────────────────────────────────────────────
     .mudon_dash_head {
@@ -27,9 +43,18 @@
         color: #eef1f5;
         border-radius: 12px;
         padding: 18px 22px;
-        h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: .2px; }
-        .sub { margin-top: 4px; font-size: 13px; color: #aab6c6; }
-        .btn { --bs-btn-color: #dfe4ea; --bs-btn-border-color: #45566f; }
+        > div { min-width: 0; }                 // allow title block to shrink
+        h1 {
+            margin: 0; font-size: 22px; font-weight: 700; letter-spacing: .2px;
+            overflow-wrap: anywhere;
+        }
+        .sub { margin-top: 4px; font-size: 13px; color: #aab6c6; overflow-wrap: anywhere; }
+        .mudon_head_actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+        .btn {
+            --bs-btn-color: #dfe4ea; --bs-btn-border-color: #45566f;
+            flex: 0 0 auto; white-space: nowrap;
+        }
+        .btn.btn-primary { --bs-btn-color: #fff; }
     }
 
     // ── filters ─────────────────────────────────────────────
@@ -39,10 +64,18 @@
         align-items: center;
         gap: 10px;
         margin: 14px 0 6px;
-        .form-select { max-width: 220px; }
+        .form-select { max-width: 210px; flex: 0 1 200px; min-width: 150px; }
+        .mudon_range {
+            display: inline-flex; align-items: center; gap: 6px;
+            .lab { font-size: 12px; color: var(--mmuted); }
+            .sep { color: var(--mmuted); }
+            .form-control { max-width: 150px; min-width: 130px; }
+        }
+        .mudon_clear { flex: 0 0 auto; }
         .mudon_basis {
             display: inline-flex;
             align-items: center;
+            flex-wrap: wrap;
             gap: 6px;
             .lab { font-size: 12px; color: var(--mmuted); margin-right: 2px; }
             button {
@@ -52,7 +85,9 @@
                 border-radius: 8px;
                 padding: 6px 13px;
                 font-size: 13px;
+                line-height: 1.2;
                 cursor: pointer;
+                white-space: nowrap;
                 &.active { background: var(--mnavy); color: #fff; border-color: var(--mnavy); }
             }
         }
@@ -74,31 +109,39 @@
             border-radius: 8px;
             padding: 8px 12px;
             font-size: 12.5px;
+            overflow-wrap: anywhere;
         }
     }
 
     // ── KPI strip ───────────────────────────────────────────
     .mudon_kpis {
         display: grid;
-        grid-template-columns: repeat(6, 1fr);
-        gap: 12px;
+        grid-template-columns: repeat(6, minmax(0, 1fr));   // minmax(0,..) = no track blow-out
+        gap: var(--mgap);
         margin: 14px 0 4px;
-        @media (max-width: 1100px) { grid-template-columns: repeat(3, 1fr); }
-        @media (max-width: 620px) { grid-template-columns: repeat(2, 1fr); }
+        @media (max-width: 1280px) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        @media (max-width: 768px)  { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        @media (max-width: 360px)  { grid-template-columns: 1fr; }
         .mudon_kpi {
+            min-width: 0;
             background: var(--mcream);
             border: 1px solid #eae7db;
             border-radius: 12px;
             padding: 15px 16px 14px;
-            .k { font-size: 12px; color: var(--mmuted); font-weight: 600; }
+            .k { font-size: 12px; color: var(--mmuted); font-weight: 600; overflow-wrap: anywhere; }
             .v {
                 font-size: 27px; font-weight: 700; margin-top: 6px;
                 line-height: 1.05; font-variant-numeric: tabular-nums;
                 color: var(--mnavy);
+                overflow-wrap: anywhere;
             }
-            &.mudon_kpi_gold .v { color: #9a6b1f; }
+            &.mudon_kpi_gold  .v { color: #9a6b1f; }
             &.mudon_kpi_green .v { color: var(--mgood); }
             &.mudon_kpi_amber .v { color: var(--mok); }
+            &.mudon_kpi_navy  .v { color: var(--mnavy); }
+            &.mudon_kpi_blue  .v { color: #1f4e79; }
+            &.mudon_kpi_teal  .v { color: #16706b; }
+            &.mudon_kpi_grey  .v { color: #7b848c; }
         }
     }
 
@@ -109,19 +152,24 @@
         border-radius: 12px;
         padding: 16px 18px 18px;
         margin-top: 14px;
-        h2 { margin: 0; font-size: 16px; font-weight: 700; }
-        .hint { margin: 3px 0 10px; font-size: 12.5px; color: var(--mmuted); }
+        min-width: 0;
+        h2 { margin: 0; font-size: 16px; font-weight: 700; overflow-wrap: anywhere; }
+        .hint { margin: 3px 0 10px; font-size: 12.5px; color: var(--mmuted); overflow-wrap: anywhere; }
     }
     .mudon_two {
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
         gap: 14px;
-        @media (max-width: 900px) { grid-template-columns: 1fr; }
-        .mudon_card { margin-top: 14px; }
+        @media (max-width: 900px) { grid-template-columns: minmax(0, 1fr); }
+        .mudon_card { margin-top: 14px; min-width: 0; }
     }
 
     // ── tables ──────────────────────────────────────────────
-    .scroll { overflow-x: auto; }
+    .scroll {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        max-width: 100%;
+    }
     .mudon_table {
         width: 100%;
         border-collapse: collapse;
@@ -138,6 +186,8 @@
             border-bottom: 1px solid var(--mline);
             white-space: nowrap;
             &:first-child { text-align: left; }
+            &.srt { cursor: pointer; user-select: none; }
+            &.srt:hover { color: var(--mnavy); }
         }
         td {
             text-align: right;
@@ -161,10 +211,11 @@
             font-weight: 600;
             font-size: 12px;
             &.good { color: var(--mgood); background: var(--mgoodbg); }
-            &.ok { color: var(--mok); background: var(--mokbg); }
-            &.low { color: var(--mlow); background: var(--mlowbg); }
+            &.ok   { color: var(--mok);   background: var(--mokbg); }
+            &.low  { color: var(--mlow);  background: var(--mlowbg); }
         }
     }
+    .mudon_deals { min-width: 1200px; }
 
     // ── trend chart ─────────────────────────────────────────
     .mudon_trend_kpis {
@@ -172,14 +223,98 @@
         flex-wrap: wrap;
         gap: 26px;
         margin: 6px 0 14px;
-        div { display: flex; flex-direction: column; }
+        div { display: flex; flex-direction: column; min-width: 0; }
         .lab { font-size: 11px; color: var(--mmuted); text-transform: uppercase; letter-spacing: .04em; }
         .val {
             font-size: 20px; font-weight: 700; color: var(--mnavy);
             font-variant-numeric: tabular-nums;
+            overflow-wrap: anywhere;
             &.pos { color: var(--mgood); }
             &.neg { color: var(--mlow); }
         }
     }
-    .mudon_chart_wrap { position: relative; height: 320px; }
+    // Chart height is fluid (JS uses maintainAspectRatio:false → fills this box).
+    .mudon_chart_wrap {
+        position: relative;
+        height: var(--mchart-h);
+        width: 100%;
+        min-width: 0;
+    }
+
+    // ════════════════════════════════════════════════════════
+    //  RESPONSIVE TIERS
+    // ════════════════════════════════════════════════════════
+
+    @media (max-width: 1280px) {
+        --mpad-x: 18px;
+        --mchart-h: 300px;
+    }
+
+    @media (max-width: 768px) {
+        --mpad-x: 14px;
+        --mpad-y: 14px;
+        --mgap: 10px;
+        --mchart-h: 260px;
+        font-size: 13.5px;
+
+        .mudon_dash_head {
+            padding: 14px 16px;
+            h1 { font-size: 19px; }
+        }
+        .mudon_dash_filters .mudon_basis .lab { flex-basis: 100%; margin-bottom: 2px; }
+    }
+
+    @media (max-width: 600px) {
+        --mchart-h: 240px;
+
+        .mudon_dash_head {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 10px;
+            h1 { font-size: 18px; }
+            .mudon_head_actions { width: 100%; .btn { flex: 1 1 auto; } }
+        }
+
+        .mudon_dash_filters {
+            gap: 8px;
+            .form-select { max-width: none; flex: 1 1 100%; width: 100%; }
+            .mudon_range { width: 100%; .form-control { flex: 1 1 auto; max-width: none; } }
+            .mudon_clear { width: 100%; }
+            .mudon_basis {
+                width: 100%;
+                button { flex: 1 1 auto; }
+            }
+        }
+
+        .mudon_dash_filters .form-select,
+        .mudon_dash_filters .mudon_range .form-control,
+        .mudon_dash_filters .mudon_basis button,
+        .mudon_dash_head .btn {
+            min-height: 44px;
+            padding-top: 10px; padding-bottom: 10px;
+        }
+
+        .mudon_card { padding: 14px 14px 16px; }
+        .mudon_kpi .v { font-size: 23px; }
+        .mudon_trend_kpis { gap: 16px; .val { font-size: 18px; } }
+    }
+
+    @media (max-width: 430px) {
+        --mpad-x: 12px;
+        --mchart-h: 220px;
+        .mudon_dash_head h1 { font-size: 17px; }
+        .mudon_kpi .v { font-size: 21px; }
+    }
+
+    @media (max-width: 360px) {
+        --mpad-x: 10px;
+        font-size: 13px;
+        .mudon_dash_head h1 { font-size: 16px; }
+        .mudon_kpi { padding: 12px 12px 11px; .v { font-size: 20px; } }
+    }
+
+    @media (min-width: 1600px) {
+        --mpad-x: 28px;
+        > * { max-width: 1680px; }
+    }
 }
