@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <record id="action_mudon_management_dashboard" model="ir.actions.client">
+        <field name="name">Mudon Dashboard</field>
+        <field name="tag">mudon_management_dashboard</field>
+    </record>
+
+    <!-- Under the existing Mudon CRM app, managers only. -->
+    <menuitem id="menu_mudon_management_dashboard"
+              name="Dashboard"
+              parent="mudon_crm.mudon_menu_app_root"
+              action="action_mudon_management_dashboard"
+              groups="sales_team.group_sale_manager"
+              sequence="1"/>
+
+</odoo>

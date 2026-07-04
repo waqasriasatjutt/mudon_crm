@@ -1,0 +1,169 @@
+.mudon_dash {
+    --mnavy: #1b2b44;
+    --mink: #17222e;
+    --mmuted: #667079;
+    --mline: #e7e5dd;
+    --mcream: #f5f3ea;
+    --mgood: #1e7a46;
+    --mgoodbg: #e6f2ea;
+    --mok: #b4761a;
+    --mokbg: #f7eedd;
+    --mlow: #b4432e;
+    --mlowbg: #f6e7e2;
+
+    padding: 18px 22px 60px;
+    background: #f4f5f2;
+    min-height: 100%;
+    color: var(--mink);
+    font-size: 14px;
+
+    // ── header ──────────────────────────────────────────────
+    .mudon_dash_head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        background: var(--mnavy);
+        color: #eef1f5;
+        border-radius: 12px;
+        padding: 18px 22px;
+        h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: .2px; }
+        .sub { margin-top: 4px; font-size: 13px; color: #aab6c6; }
+        .btn { --bs-btn-color: #dfe4ea; --bs-btn-border-color: #45566f; }
+    }
+
+    // ── filters ─────────────────────────────────────────────
+    .mudon_dash_filters {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+        margin: 14px 0 6px;
+        .form-select { max-width: 220px; }
+        .mudon_basis {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            .lab { font-size: 12px; color: var(--mmuted); margin-right: 2px; }
+            button {
+                border: 1px solid var(--mline);
+                background: #fff;
+                color: var(--mmuted);
+                border-radius: 8px;
+                padding: 6px 13px;
+                font-size: 13px;
+                cursor: pointer;
+                &.active { background: var(--mnavy); color: #fff; border-color: var(--mnavy); }
+            }
+        }
+    }
+
+    .mudon_dash_msg { padding: 14px 4px; color: var(--mmuted); font-size: 14px; }
+    .mudon_err { color: var(--mlow); }
+
+    // ── KPI strip ───────────────────────────────────────────
+    .mudon_kpis {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 12px;
+        margin: 14px 0 4px;
+        @media (max-width: 1100px) { grid-template-columns: repeat(3, 1fr); }
+        @media (max-width: 620px) { grid-template-columns: repeat(2, 1fr); }
+        .mudon_kpi {
+            background: var(--mcream);
+            border: 1px solid #eae7db;
+            border-radius: 12px;
+            padding: 15px 16px 14px;
+            .k { font-size: 12px; color: var(--mmuted); font-weight: 600; }
+            .v {
+                font-size: 27px; font-weight: 700; margin-top: 6px;
+                line-height: 1.05; font-variant-numeric: tabular-nums;
+                color: var(--mnavy);
+            }
+            &.mudon_kpi_gold .v { color: #9a6b1f; }
+            &.mudon_kpi_green .v { color: var(--mgood); }
+            &.mudon_kpi_amber .v { color: var(--mok); }
+        }
+    }
+
+    // ── section cards ───────────────────────────────────────
+    .mudon_card {
+        background: #fff;
+        border: 1px solid var(--mline);
+        border-radius: 12px;
+        padding: 16px 18px 18px;
+        margin-top: 14px;
+        h2 { margin: 0; font-size: 16px; font-weight: 700; }
+        .hint { margin: 3px 0 10px; font-size: 12.5px; color: var(--mmuted); }
+    }
+    .mudon_two {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        @media (max-width: 900px) { grid-template-columns: 1fr; }
+        .mudon_card { margin-top: 14px; }
+    }
+
+    // ── tables ──────────────────────────────────────────────
+    .scroll { overflow-x: auto; }
+    .mudon_table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13.5px;
+        min-width: 520px;
+        th {
+            text-align: right;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            color: var(--mmuted);
+            font-weight: 600;
+            padding: 9px 12px;
+            border-bottom: 1px solid var(--mline);
+            white-space: nowrap;
+            &:first-child { text-align: left; }
+        }
+        td {
+            text-align: right;
+            padding: 9px 12px;
+            border-bottom: 1px solid #f0eee7;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+            &.t { text-align: left; font-weight: 600; color: var(--mink); }
+        }
+        tbody tr:hover { background: #00000004; }
+        tr.total td {
+            border-top: 2px solid var(--mline);
+            border-bottom: none;
+            font-weight: 700;
+            background: #faf9f5;
+        }
+        .conv {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 12px;
+            &.good { color: var(--mgood); background: var(--mgoodbg); }
+            &.ok { color: var(--mok); background: var(--mokbg); }
+            &.low { color: var(--mlow); background: var(--mlowbg); }
+        }
+    }
+
+    // ── trend chart ─────────────────────────────────────────
+    .mudon_trend_kpis {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 26px;
+        margin: 6px 0 14px;
+        div { display: flex; flex-direction: column; }
+        .lab { font-size: 11px; color: var(--mmuted); text-transform: uppercase; letter-spacing: .04em; }
+        .val {
+            font-size: 20px; font-weight: 700; color: var(--mnavy);
+            font-variant-numeric: tabular-nums;
+            &.pos { color: var(--mgood); }
+            &.neg { color: var(--mlow); }
+        }
+    }
+    .mudon_chart_wrap { position: relative; height: 320px; }
+}

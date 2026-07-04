@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mudon_dashboard.ManagementDashboard">
+        <div class="mudon_dash">
+
+            <div class="mudon_dash_head">
+                <div>
+                    <h1>Mudon Management Dashboard</h1>
+                    <div class="sub" t-if="state.data">
+                        Period: <t t-esc="state.data.meta.period_label"/> ·
+                        <t t-esc="pipelineLabel"/> ·
+                        By: <t t-esc="state.data.meta.basis_label"/>
+                    </div>
+                </div>
+                <button class="btn btn-outline-secondary btn-sm" t-on-click="() => this.refresh()">
+                    <i class="fa fa-refresh me-1"/>Refresh
+                </button>
+            </div>
+
+            <div class="mudon_dash_filters">
+                <select class="form-select" t-on-change="(ev) => this.setPipeline(ev)">
+                    <option value="all" t-att-selected="state.pipeline === 'all'">All pipelines</option>
+                    <option value="uae" t-att-selected="state.pipeline === 'uae'">UAE Dubai</option>
+                    <option value="turkey" t-att-selected="state.pipeline === 'turkey'">Turkey</option>
+                </select>
+                <select class="form-select" t-on-change="(ev) => this.setPeriod(ev)">
+                    <option value="this_month" t-att-selected="state.period === 'this_month'">This Month</option>
+                    <option value="last_month" t-att-selected="state.period === 'last_month'">Last Month</option>
+                    <option value="this_quarter" t-att-selected="state.period === 'this_quarter'">This Quarter</option>
+                    <option value="this_year" t-att-selected="state.period === 'this_year'">This Year</option>
+                    <option value="last_year" t-att-selected="state.period === 'last_year'">Last Year</option>
+                </select>
+                <div class="mudon_basis">
+                    <span class="lab">Filter by:</span>
+                    <button t-attf-class="{{ state.basis === 'pipeline' ? 'active' : '' }}"
+                            t-on-click="() => this.setBasis('pipeline')">Pipeline Date</button>
+                    <button t-attf-class="{{ state.basis === 'close' ? 'active' : '' }}"
+                            t-on-click="() => this.setBasis('close')">Close Date</button>
+                </div>
+            </div>
+
+            <div t-if="state.loading" class="mudon_dash_msg">Loading…</div>
+            <div t-if="state.error" class="mudon_dash_msg mudon_err"><t t-esc="state.error"/></div>
+
+            <t t-if="state.data">
+                <!-- KPI strip -->
+                <div class="mudon_kpis">
+                    <t t-foreach="kpiCards" t-as="card" t-key="card.label">
+                        <div t-attf-class="mudon_kpi mudon_kpi_{{ card.color }}">
+                            <div class="k"><t t-esc="card.label"/></div>
+                            <div class="v"><t t-esc="card.value"/></div>
+                        </div>
+                    </t>
+                </div>
+
+                <!-- Agent performance -->
+                <div class="mudon_card">
+                    <h2>Agent performance</h2>
+                    <p class="hint">Leads assigned per agent this period and their journey through the funnel.</p>
+                    <div class="scroll">
+                        <table class="mudon_table">
+                            <thead><tr>
+                                <th>Agent</th><th>Assigned</th><th>Not actioned</th><th>Lost</th>
+                                <th>Qualified</th><th>Offers</th><th>Meetings</th><th>Won</th>
+                                <th>Win rate</th><th>Revenue</th><th>Commission</th>
+                            </tr></thead>
+                            <tbody>
+                                <tr t-foreach="state.data.tables.agents" t-as="a" t-key="a.agent">
+                                    <td class="t"><t t-esc="a.agent"/></td>
+                                    <td><t t-esc="a.assigned"/></td>
+                                    <td><t t-esc="a.not_actioned"/></td>
+                                    <td><t t-esc="a.lost"/></td>
+                                    <td><t t-esc="a.qualified"/></td>
+                                    <td><t t-esc="a.offers"/></td>
+                                    <td><t t-esc="a.meetings"/></td>
+                                    <td><t t-esc="a.won"/></td>
+                                    <td><span t-attf-class="conv {{ convClass(a.win_rate) }}"><t t-esc="a.win_rate"/>%</span></td>
+                                    <td><t t-esc="fmtMoney(a.revenue)"/></td>
+                                    <td><t t-esc="fmtMoney(a.commission)"/></td>
+                                </tr>
+                                <tr class="total" t-if="state.data.tables.agents_total">
+                                    <td class="t">TOTAL</td>
+                                    <td><t t-esc="state.data.tables.agents_total.assigned"/></td>
+                                    <td><t t-esc="state.data.tables.agents_total.not_actioned"/></td>
+                                    <td><t t-esc="state.data.tables.agents_total.lost"/></td>
+                                    <td><t t-esc="state.data.tables.agents_total.qualified"/></td>
+                                    <td><t t-esc="state.data.tables.agents_total.offers"/></td>
+                                    <td><t t-esc="state.data.tables.agents_total.meetings"/></td>
+                                    <td><t t-esc="state.data.tables.agents_total.won"/></td>
+                                    <td><t t-esc="state.data.tables.agents_total.win_rate"/>%</td>
+                                    <td><t t-esc="fmtMoney(state.data.tables.agents_total.revenue)"/></td>
+                                    <td><t t-esc="fmtMoney(state.data.tables.agents_total.commission)"/></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Country + Source -->
+                <div class="mudon_two">
+                    <div class="mudon_card">
+                        <h2>Leads by client country</h2>
+                        <p class="hint">Which market is inquiring — useful for marketing targeting.</p>
+                        <div class="scroll"><table class="mudon_table">
+                            <thead><tr><th>Country</th><th>Leads</th><th>Won</th><th>Conv.</th><th>Revenue</th></tr></thead>
+                            <tbody>
+                                <tr t-foreach="state.data.tables.countries" t-as="c" t-key="c.country">
+                                    <td class="t"><t t-esc="c.country"/></td>
+                                    <td><t t-esc="c.leads"/></td>
+                                    <td><t t-esc="c.won"/></td>
+                                    <td><span t-attf-class="conv {{ convClass(c.conv) }}"><t t-esc="c.conv"/>%</span></td>
+                                    <td><t t-esc="fmtMoney(c.revenue)"/></td>
+                                </tr>
+                            </tbody>
+                        </table></div>
+                    </div>
+                    <div class="mudon_card">
+                        <h2>Leads by source</h2>
+                        <p class="hint">Channel volume — where the leads come from.</p>
+                        <div class="scroll"><table class="mudon_table">
+                            <thead><tr><th>Source</th><th>Leads</th><th>Won</th><th>Conv.</th><th>Commission</th></tr></thead>
+                            <tbody>
+                                <tr t-foreach="state.data.tables.sources" t-as="s" t-key="s.source">
+                                    <td class="t"><t t-esc="s.source"/></td>
+                                    <td><t t-esc="s.leads"/></td>
+                                    <td><t t-esc="s.won"/></td>
+                                    <td><span t-attf-class="conv {{ convClass(s.conv) }}"><t t-esc="s.conv"/>%</span></td>
+                                    <td><t t-esc="fmtMoney(s.commission)"/></td>
+                                </tr>
+                            </tbody>
+                        </table></div>
+                    </div>
+                </div>
+
+                <!-- Commission trend -->
+                <div class="mudon_card">
+                    <h2>Company revenue — monthly commission trend</h2>
+                    <p class="hint">Commission from deals closed each month, this year vs last year.</p>
+                    <div class="mudon_trend_kpis" t-if="state.data.kpis">
+                        <div><span class="lab">YTD commission</span><span class="val"><t t-esc="fmtMoney(state.data.kpis.ytd_commission)"/></span></div>
+                        <div t-if="state.data.kpis.best_month"><span class="lab">Best month</span><span class="val"><t t-esc="fmtMoney(state.data.kpis.best_month.value)"/> (<t t-esc="state.data.kpis.best_month.label"/>)</span></div>
+                        <div><span class="lab">Avg / month</span><span class="val"><t t-esc="fmtMoney(state.data.kpis.avg_month)"/></span></div>
+                        <div t-if="state.data.kpis.vs_last_year !== null and state.data.kpis.vs_last_year !== undefined">
+                            <span class="lab">vs last year</span>
+                            <span t-attf-class="val {{ state.data.kpis.vs_last_year >= 0 ? 'pos' : 'neg' }}">
+                                <t t-esc="(state.data.kpis.vs_last_year >= 0 ? '+' : '') + state.data.kpis.vs_last_year"/>%
+                            </span>
+                        </div>
+                    </div>
+                    <div class="mudon_chart_wrap"><canvas t-ref="commission_trend"/></div>
+                </div>
+            </t>
+        </div>
+    </t>
+
+</templates>
