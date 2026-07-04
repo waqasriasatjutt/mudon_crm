@@ -124,12 +124,17 @@
                        invisible="mudon_stage_kind_current != 'won'"/>
 
                 <!--
-                    Lead intake details (Stage 1) — always visible. These
-                    carry forward to every later stage; the agent can
-                    review / correct them at any point.
+                    Stage 1 intake — the SAME fields double as the New
+                    Lead "current stage" action (prominent header, on top
+                    to fill) and, once the lead advances, a plain "Lead
+                    details" reference the agent can still review / edit.
+                    Two complementary separators swap the heading by
+                    stage; the fields below are shown once (no dup).
                 -->
+                <separator string="▶ New Lead — capture the enquiry, then drag the card to Qualified"
+                           invisible="not mudon_pipeline_kind or mudon_stage_kind_current != 'new_lead'"/>
                 <separator string="Lead details"
-                           invisible="not mudon_pipeline_kind"/>
+                           invisible="not mudon_pipeline_kind or mudon_stage_kind_current == 'new_lead'"/>
                 <field name="mudon_service_id"
                        options="{'no_create_edit': True}"
                        domain="[('pipeline_kind', 'in', [mudon_pipeline_kind, 'any'])]"
