@@ -48,7 +48,7 @@
                 <separator string="▶ Next step — complete to advance this lead"
                            invisible="not mudon_pipeline_kind or mudon_stage_kind_current in ('new_lead', 'won', 'lost') or not mudon_stage_kind_current"/>
                 <field name="mudon_tick_offer_sent"
-                       string="MTick: Offer Sent → Offer Sent stage"
+                       string="Offer Sent → Offer Sent stage"
                        invisible="mudon_stage_kind_current != 'qualified'"/>
                 <!-- Offer Sent stage controls: counter + button.
                      "+ Mark New Offer Sent" is the agent-facing action
@@ -73,7 +73,7 @@
                        invisible="mudon_stage_kind_current != 'offer_sent'"/>
                 <field name="mudon_visit_confirmed"
                        widget="boolean_toggle"
-                       string="MVisit Confirmed → Meeting stage"
+                       string="Visit Confirmed → Meeting stage"
                        invisible="mudon_stage_kind_current != 'offer_sent'"/>
                 <!-- Meeting stage controls -->
                 <field name="mudon_client_type"
@@ -81,10 +81,10 @@
                 <field name="mudon_property_requirements"
                        invisible="mudon_stage_kind_current != 'meeting'"/>
                 <field name="mudon_paid_booking"
-                       string="MPaid Booking → EOI / Booking stage"
+                       string="Paid Booking → EOI / Booking stage"
                        invisible="mudon_stage_kind_current != 'meeting'"/>
                 <field name="mudon_fully_paid"
-                       string="MFully Paid → WON (SPA Signed)"
+                       string="Fully Paid → WON (SPA Signed)"
                        invisible="mudon_stage_kind_current != 'eoi'"/>
 
                 <!--

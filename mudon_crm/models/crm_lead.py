@@ -121,7 +121,7 @@ class CrmLead(models.Model):
     # (see comment block at top of file). Field rename adds the _id /
     # _ids suffix so the schema type is obvious at sight.
     mudon_service_id = fields.Many2one(
-        "mudon.service", string="MService", ondelete="restrict",
+        "mudon.service", string="Service", ondelete="restrict",
     )
     # Stored mirror of the service `code` so the kanban template can do
     # code-based identity checks (a Many2one's raw_value is the id, not
@@ -131,7 +131,7 @@ class CrmLead(models.Model):
     )
     mudon_city_id = fields.Many2one(
         "mudon.city",
-        string="MCity",
+        string="City",
     )
     mudon_city_other = fields.Char(string="Other City")
     mudon_show_city_other = fields.Boolean(
@@ -140,10 +140,10 @@ class CrmLead(models.Model):
              "drives visibility of the free-text city field on the form.",
     )
     mudon_priority = fields.Selection(
-        PRIORITY_SELECTION, string="MPriority", default="normal",
+        PRIORITY_SELECTION, string="Priority", default="normal",
     )
     mudon_budget = fields.Monetary(
-        string="MBudget", currency_field="mudon_budget_currency_id",
+        string="Budget", currency_field="mudon_budget_currency_id",
     )
     mudon_budget_currency_id = fields.Many2one(
         "res.currency",
@@ -229,7 +229,7 @@ class CrmLead(models.Model):
         SERIOUSNESS_SELECTION, string="Seriousness",
     )
     mudon_visit_confirmed = fields.Boolean(
-        string="MVisit Confirmed",
+        string="Visit Confirmed",
         copy=False,
         help="Tick to advance to Stage 4 — Meeting.",
     )
@@ -269,7 +269,7 @@ class CrmLead(models.Model):
         PROPERTY_REQ_SELECTION, string="Property Requirements",
     )
     mudon_paid_booking = fields.Boolean(
-        string="MPaid Booking",
+        string="Paid Booking",
         copy=False,
         help="Tick to advance to Stage 5 — EOI / Booking.",
     )
@@ -279,7 +279,7 @@ class CrmLead(models.Model):
 
     # ─── STAGE 5: EOI / Booking ─────────────────────────────────────
     mudon_fully_paid = fields.Boolean(
-        string="MFully Paid",
+        string="Fully Paid",
         copy=False,
         help="Tick to advance to Stage 6 — WON (SPA Signed).",
     )
@@ -468,10 +468,10 @@ class CrmLead(models.Model):
             return
         from odoo.exceptions import RedirectWarning
         labels = {
-            "mudon_service_id": "MService",
-            "mudon_city_id": "MCity",
-            "mudon_priority": "MPriority",
-            "mudon_budget": "MBudget",
+            "mudon_service_id": "Service",
+            "mudon_city_id": "City",
+            "mudon_priority": "Priority",
+            "mudon_budget": "Budget",
         }
         for rec in self:
             if rec.mudon_stage_kind_current != "new_lead":

@@ -7,15 +7,10 @@
         <field name="arch" type="xml">
             <form string="Fill Required Fields">
                 <sheet>
-                    <div class="alert alert-info" role="alert">
-                        <field name="lead_id" invisible="1"/>
-                        <field name="target_stage_kind" invisible="1"/>
-                        <field name="pipeline_kind" invisible="1"/>
-                        Fill the fields below to move
-                        <field name="lead_id" readonly="1" nolabel="1" class="oe_inline"/>
-                        forward to
-                        <field name="target_stage_id" readonly="1" nolabel="1" class="oe_inline"/>.
-                    </div>
+                    <field name="lead_id" invisible="1"/>
+                    <field name="target_stage_id" invisible="1"/>
+                    <field name="target_stage_kind" invisible="1"/>
+                    <field name="pipeline_kind" invisible="1"/>
                     <group>
                         <!-- Required-to-qualify fields (moving out of New Lead) -->
                         <field name="mudon_service_id"

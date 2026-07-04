@@ -38,17 +38,17 @@ class MudonQuickFillWizard(models.TransientModel):
     # Fields that may need to be filled — visibility driven by
     # target_stage_kind in the form view.
     mudon_service_id = fields.Many2one(
-        "mudon.service", string="MService",
+        "mudon.service", string="Service",
     )
     mudon_city_id = fields.Many2one(
-        "mudon.city", string="MCity",
+        "mudon.city", string="City",
     )
     mudon_priority = fields.Selection(
         [("urgent", "Urgent"), ("normal", "Normal")],
-        string="MPriority",
+        string="Priority",
     )
     mudon_budget = fields.Monetary(
-        string="MBudget", currency_field="mudon_budget_currency_id",
+        string="Budget", currency_field="mudon_budget_currency_id",
     )
     mudon_budget_currency_id = fields.Many2one(
         "res.currency", related="lead_id.mudon_budget_currency_id",
@@ -96,10 +96,10 @@ class MudonQuickFillWizard(models.TransientModel):
             if self.lead_id.mudon_stage_kind_current == "new_lead":
                 missing = []
                 required_map = {
-                    "mudon_service_id": ("MService", self.mudon_service_id),
-                    "mudon_city_id": ("MCity", self.mudon_city_id),
-                    "mudon_priority": ("MPriority", self.mudon_priority),
-                    "mudon_budget": ("MBudget", self.mudon_budget),
+                    "mudon_service_id": ("Service", self.mudon_service_id),
+                    "mudon_city_id": ("City", self.mudon_city_id),
+                    "mudon_priority": ("Priority", self.mudon_priority),
+                    "mudon_budget": ("Budget", self.mudon_budget),
                 }
                 for fname, (label, value) in required_map.items():
                     if not value:
