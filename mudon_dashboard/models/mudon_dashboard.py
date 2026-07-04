@@ -257,6 +257,255 @@ class MudonDashboard(models.TransientModel):
 
         return data
 
+    # ══════════════════════════════════════════════════════════════════════
+    #  FINANCIAL & REVENUE DASHBOARD
+    # ══════════════════════════════════════════════════════════════════════
+    # Each basis picks the (amount, date) pair the breakdown tables measure:
+    #   won      -> commission booked, placed by the deal-won date
+    #   invoice  -> amount invoiced,   placed by the invoice date
+    #   payment  -> amount collected,  placed by the payment-received date
+    _FIN_BASIS = {
+        "won":     ("mudon_commission",       "date_closed"),
+        "invoice": ("mudon_invoiced_amount",  "mudon_invoiced_date"),
+        "payment": ("mudon_collected_amount", "mudon_collected_date"),
+    }
+
+    @staticmethod
+    def _as_date(value):
+        if not value:
+            return None
+        return value.date() if hasattr(value, "date") else value
+
+    @api.model
+    def get_financial_data(self, pipeline="all", period="this_month",
+                           basis="won", source="crm"):
+        """Won / Invoiced / Collected / Unbilled + breakdowns + trend.
+
+        source='crm'        -> Invoiced & Collected come from the CRM-native
+                               fields the admin fills on each won deal.
+        source='accounting' -> Invoiced & Collected headline + trend come from
+                               live account.move / account.payment instead
+                               (breakdowns stay CRM-tracked; a note explains).
+        """
+        Lead = self.env["crm.lead"].sudo()
+        currency = self.env.company.currency_id
+        if basis not in self._FIN_BASIS:
+            basis = "won"
+        amount_field, date_field = self._FIN_BASIS[basis]
+
+        d_from, d_to = self._period_range(period)
+        today = fields.Date.context_today(self)
+        y = today.year
+        ytd_from, ytd_to = date(y, 1, 1), today
+        ly_from, ly_to = date(y - 1, 1, 1), date(y - 1, 12, 31)
+
+        base_domain = [("type", "=", "opportunity"),
+                       ("mudon_pipeline_kind", "!=", False),
+                       ("mudon_stage_kind_current", "=", "won")]
+        if pipeline in ("turkey", "uae"):
+            base_domain.append(("mudon_pipeline_kind", "=", pipeline))
+
+        period_labels = {
+            "this_month": "This Month", "last_month": "Last Month",
+            "this_quarter": "This Quarter", "this_year": "This Year",
+            "last_year": "Last Year",
+        }
+        basis_labels = {"won": "Won Date", "invoice": "Invoice Date",
+                        "payment": "Payment Received"}
+        data = {
+            "meta": {
+                "pipeline": pipeline,
+                "period": period,
+                "period_label": period_labels.get(period, "This Month"),
+                "basis": basis,
+                "basis_label": basis_labels[basis],
+                "source": source,
+                "source_label": ("Accounting (live)" if source == "accounting"
+                                 else "CRM (admin-tracked)"),
+                "currency": currency.symbol or currency.name or "",
+                "currency_position": currency.position or "before",
+                "year": y,
+                "generated": fields.Datetime.now().strftime("%Y-%m-%d %H:%M"),
+            },
+            "kpis": {}, "tables": {}, "charts": {}, "notes": [], "_errors": [],
+        }
+
+        won_leads = Lead.search(base_domain)
+        _d = self._as_date
+
+        # ===================== HEADLINE KPIs =====================
+        try:
+            won_period = inv_crm = col_crm = 0.0
+            unbilled = collect_gap = 0.0
+            for lead in won_leads:
+                comm = lead.mudon_commission or 0.0
+                inv = lead.mudon_invoiced_amount or 0.0
+                col = lead.mudon_collected_amount or 0.0
+                dcl = _d(lead.date_closed)
+                idt = _d(lead.mudon_invoiced_date)
+                cdt = _d(lead.mudon_collected_date)
+                if dcl and d_from <= dcl <= d_to:
+                    won_period += comm
+                if idt and d_from <= idt <= d_to:
+                    inv_crm += inv
+                if cdt and d_from <= cdt <= d_to:
+                    col_crm += col
+                # backlog stocks (all-time), independent of the period filter
+                if comm > inv:
+                    unbilled += comm - inv
+                if inv > col:
+                    collect_gap += inv - col
+
+            invoiced_period, collected_period = inv_crm, col_crm
+            if source == "accounting":
+                acc = self._fin_accounting(d_from, d_to, y)
+                if acc is None:
+                    data["notes"].append(
+                        "Accounting app not installed — showing CRM-tracked "
+                        "figures instead.")
+                    data["meta"]["source"] = "crm"
+                    data["meta"]["source_label"] = "CRM (admin-tracked)"
+                    source = "crm"
+                else:
+                    invoiced_period = acc["invoiced_period"]
+                    collected_period = acc["collected_period"]
+                    data["notes"].append(
+                        "Invoiced & Collected are live Accounting figures "
+                        "(company-wide). Won, Unbilled and the breakdown "
+                        "tables below stay CRM-tracked.")
+
+            data["kpis"] = {
+                "won": round(won_period, 2),
+                "invoiced": round(invoiced_period, 2),
+                "collected": round(collected_period, 2),
+                "unbilled": round(unbilled, 2),
+                "to_collect": round(collect_gap, 2),
+                "collection_rate": (round(100.0 * collected_period / invoiced_period, 1)
+                                    if invoiced_period else None),
+            }
+        except Exception as e:
+            data["_errors"].append("kpis: %s" % e)
+
+        # ===================== BREAKDOWN TABLES (always CRM) =====================
+        def _agg(keyfn):
+            buckets = {}
+            for lead in won_leads:
+                amt = lead[amount_field] or 0.0
+                if not amt:
+                    continue
+                dd = _d(lead[date_field])
+                if not dd:
+                    continue
+                key = keyfn(lead) or "—"
+                row = buckets.setdefault(key, {
+                    "label": key, "this": 0.0, "ytd": 0.0, "last": 0.0})
+                if d_from <= dd <= d_to:
+                    row["this"] += amt
+                if ytd_from <= dd <= ytd_to:
+                    row["ytd"] += amt
+                if ly_from <= dd <= ly_to:
+                    row["last"] += amt
+            rows, tot = [], {"label": "TOTAL", "this": 0.0, "ytd": 0.0, "last": 0.0}
+            for r in buckets.values():
+                for k in ("this", "ytd", "last"):
+                    tot[k] += r[k]
+                    r[k] = round(r[k], 2)
+                rows.append(r)
+            rows.sort(key=lambda r: r["ytd"], reverse=True)
+            for k in ("this", "ytd", "last"):
+                tot[k] = round(tot[k], 2)
+            return {"rows": rows, "total": tot}
+
+        try:
+            data["tables"]["agents"] = _agg(
+                lambda l: l.user_id.name or "Unassigned")
+            data["tables"]["countries"] = _agg(
+                lambda l: self._country_label(l.phone))
+            data["tables"]["nationalities"] = _agg(
+                lambda l: l.mudon_nationality_id.name or "Unknown")
+            data["tables"]["sources"] = _agg(
+                lambda l: l.mudon_source_id.name or "Manual / None")
+        except Exception as e:
+            data["_errors"].append("tables: %s" % e)
+
+        # ===================== TREND (won vs invoiced vs collected) =====================
+        try:
+            won_m = [0.0] * 12
+            inv_m = [0.0] * 12
+            col_m = [0.0] * 12
+            for lead in won_leads:
+                dcl = _d(lead.date_closed)
+                if dcl and dcl.year == y:
+                    won_m[dcl.month - 1] += lead.mudon_commission or 0.0
+                idt = _d(lead.mudon_invoiced_date)
+                if idt and idt.year == y:
+                    inv_m[idt.month - 1] += lead.mudon_invoiced_amount or 0.0
+                cdt = _d(lead.mudon_collected_date)
+                if cdt and cdt.year == y:
+                    col_m[cdt.month - 1] += lead.mudon_collected_amount or 0.0
+            if source == "accounting":
+                acc = self._fin_accounting(d_from, d_to, y)
+                if acc is not None:
+                    inv_m = acc["inv_m"]
+                    col_m = acc["col_m"]
+            months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+            data["charts"]["revenue_trend"] = {
+                "labels": months,
+                "won": [round(v, 2) for v in won_m],
+                "invoiced": [round(v, 2) for v in inv_m],
+                "collected": [round(v, 2) for v in col_m],
+                "year": y,
+            }
+        except Exception as e:
+            data["_errors"].append("trend: %s" % e)
+
+        return data
+
+    @api.model
+    def _fin_accounting(self, d_from, d_to, year):
+        """Live Invoiced/Collected from Accounting, or None if not installed."""
+        if "account.move" not in self.env or "account.payment" not in self.env:
+            return None
+        try:
+            AM = self.env["account.move"].sudo()
+            AP = self.env["account.payment"].sudo()
+            inv_moves = AM.search([
+                ("move_type", "=", "out_invoice"), ("state", "=", "posted"),
+                ("invoice_date", ">=", date(year, 1, 1)),
+                ("invoice_date", "<=", date(year, 12, 31))])
+            pays = AP.search([
+                ("payment_type", "=", "inbound"),
+                ("partner_type", "=", "customer"),
+                ("state", "not in", ("draft", "canceled", "cancel", "rejected")),
+                ("date", ">=", date(year, 1, 1)),
+                ("date", "<=", date(year, 12, 31))])
+            inv_m = [0.0] * 12
+            col_m = [0.0] * 12
+            inv_period = col_period = 0.0
+            for m in inv_moves:
+                idt = self._as_date(m.invoice_date)
+                if not idt:
+                    continue
+                inv_m[idt.month - 1] += m.amount_total
+                if d_from <= idt <= d_to:
+                    inv_period += m.amount_total
+            for p in pays:
+                pdt = self._as_date(p.date)
+                if not pdt:
+                    continue
+                col_m[pdt.month - 1] += p.amount
+                if d_from <= pdt <= d_to:
+                    col_period += p.amount
+            return {
+                "inv_m": [round(v, 2) for v in inv_m],
+                "col_m": [round(v, 2) for v in col_m],
+                "invoiced_period": round(inv_period, 2),
+                "collected_period": round(col_period, 2),
+            }
+        except Exception:
+            return None
+
     # ── helpers ─────────────────────────────────────────────────────────
     @api.model
     def _country_label(self, phone):

@@ -61,6 +61,22 @@
     .mudon_dash_msg { padding: 14px 4px; color: var(--mmuted); font-size: 14px; }
     .mudon_err { color: var(--mlow); }
 
+    // ── inline note (e.g. accounting-source caveats) ────────────
+    .mudon_note {
+        margin: 12px 0 2px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        div {
+            background: var(--mokbg);
+            color: #7a5312;
+            border: 1px solid #ecd8ac;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 12.5px;
+        }
+    }
+
     // ── KPI strip ───────────────────────────────────────────
     .mudon_kpis {
         display: grid;

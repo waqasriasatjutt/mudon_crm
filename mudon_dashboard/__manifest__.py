@@ -1,6 +1,6 @@
 {
     "name": "Mudon CRM — Dashboards",
-    "version": "19.0.1.0.0",
+    "version": "19.0.1.1.0",
     "summary": "Management & Financial reporting dashboards for Mudon CRM "
                "(OWL + Chart.js) — funnel, agent performance, revenue & "
                "commission, per client spec.",
@@ -22,6 +22,8 @@
             "mudon_dashboard/static/src/dashboard/mudon_dashboard.scss",
             "mudon_dashboard/static/src/dashboard/mudon_dashboard.js",
             "mudon_dashboard/static/src/dashboard/mudon_dashboard.xml",
+            "mudon_dashboard/static/src/dashboard/financial_dashboard.js",
+            "mudon_dashboard/static/src/dashboard/financial_dashboard.xml",
         ],
     },
     "installable": True,

@@ -64,6 +64,12 @@
                         <field name="mudon_handover_type"/>
                         <field name="mudon_reason_to_win"/>
                     </group>
+                    <group string="Billing &amp; collection">
+                        <field name="mudon_invoiced_amount"/>
+                        <field name="mudon_invoiced_date"/>
+                        <field name="mudon_collected_amount"/>
+                        <field name="mudon_collected_date"/>
+                    </group>
                     <group string="Funnel triggers">
                         <field name="mudon_need_invoice"/>
                         <field name="mudon_title_deed_required"/>

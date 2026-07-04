@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mudon_dashboard.FinancialDashboard">
+        <div class="mudon_dash">
+
+            <div class="mudon_dash_head">
+                <div>
+                    <h1>Mudon Financial &amp; Revenue Dashboard</h1>
+                    <div class="sub" t-if="state.data">
+                        Period: <t t-esc="state.data.meta.period_label"/> ·
+                        By: <t t-esc="state.data.meta.basis_label"/> ·
+                        Source: <t t-esc="state.data.meta.source_label"/>
+                    </div>
+                </div>
+                <button class="btn btn-outline-secondary btn-sm" t-on-click="() => this.refresh()">
+                    <i class="fa fa-refresh me-1"/>Refresh
+                </button>
+            </div>
+
+            <div class="mudon_dash_filters">
+                <select class="form-select" t-on-change="(ev) => this.setPipeline(ev)">
+                    <option value="all" t-att-selected="state.pipeline === 'all'">All pipelines</option>
+                    <option value="uae" t-att-selected="state.pipeline === 'uae'">UAE Dubai</option>
+                    <option value="turkey" t-att-selected="state.pipeline === 'turkey'">Turkey</option>
+                </select>
+                <select class="form-select" t-on-change="(ev) => this.setPeriod(ev)">
+                    <option value="this_month" t-att-selected="state.period === 'this_month'">This Month</option>
+                    <option value="last_month" t-att-selected="state.period === 'last_month'">Last Month</option>
+                    <option value="this_quarter" t-att-selected="state.period === 'this_quarter'">This Quarter</option>
+                    <option value="this_year" t-att-selected="state.period === 'this_year'">This Year</option>
+                    <option value="last_year" t-att-selected="state.period === 'last_year'">Last Year</option>
+                </select>
+                <div class="mudon_basis">
+                    <span class="lab">Basis:</span>
+                    <button t-attf-class="{{ state.basis === 'won' ? 'active' : '' }}"
+                            t-on-click="() => this.setBasis('won')">Won Date</button>
+                    <button t-attf-class="{{ state.basis === 'invoice' ? 'active' : '' }}"
+                            t-on-click="() => this.setBasis('invoice')">Invoice Date</button>
+                    <button t-attf-class="{{ state.basis === 'payment' ? 'active' : '' }}"
+                            t-on-click="() => this.setBasis('payment')">Payment Received</button>
+                </div>
+                <div class="mudon_basis">
+                    <span class="lab">Data source:</span>
+                    <button t-attf-class="{{ state.source === 'crm' ? 'active' : '' }}"
+                            t-on-click="() => this.setSource('crm')">CRM</button>
+                    <button t-attf-class="{{ state.source === 'accounting' ? 'active' : '' }}"
+                            t-on-click="() => this.setSource('accounting')">Accounting (live)</button>
+                </div>
+            </div>
+
+            <div t-if="state.loading" class="mudon_dash_msg">Loading…</div>
+            <div t-if="state.error" class="mudon_dash_msg mudon_err"><t t-esc="state.error"/></div>
+
+            <t t-if="state.data">
+                <div class="mudon_note" t-if="state.data.notes and state.data.notes.length">
+                    <t t-foreach="state.data.notes" t-as="n" t-key="n_index">
+                        <div><i class="fa fa-info-circle me-1"/><t t-esc="n"/></div>
+                    </t>
+                </div>
+
+                <!-- KPI strip -->
+                <div class="mudon_kpis">
+                    <t t-foreach="kpiCards" t-as="card" t-key="card.label">
+                        <div t-attf-class="mudon_kpi mudon_kpi_{{ card.color }}">
+                            <div class="k"><t t-esc="card.label"/></div>
+                            <div class="v"><t t-esc="card.value"/></div>
+                        </div>
+                    </t>
+                </div>
+
+                <!-- Breakdown tables: agent / country / nationality / source -->
+                <div class="mudon_two">
+                    <t t-foreach="tables" t-as="tbl" t-key="tbl.key">
+                        <div class="mudon_card">
+                            <h2><t t-esc="tbl.title"/></h2>
+                            <p class="hint">
+                                <t t-esc="state.data.meta.basis_label"/> amounts —
+                                <t t-esc="state.data.meta.period_label"/>, year-to-date and last year.
+                            </p>
+                            <div class="scroll"><table class="mudon_table">
+                                <thead><tr>
+                                    <th><t t-esc="tbl.head"/></th>
+                                    <th><t t-esc="state.data.meta.period_label"/></th>
+                                    <th>YTD <t t-esc="state.data.meta.year"/></th>
+                                    <th><t t-esc="state.data.meta.year - 1"/></th>
+                                </tr></thead>
+                                <tbody>
+                                    <tr t-foreach="tbl.data.rows" t-as="r" t-key="r.label">
+                                        <td class="t"><t t-esc="r.label"/></td>
+                                        <td><t t-esc="fmtFull(r.this)"/></td>
+                                        <td><t t-esc="fmtFull(r.ytd)"/></td>
+                                        <td><t t-esc="fmtFull(r.last)"/></td>
+                                    </tr>
+                                    <tr t-if="!tbl.data.rows.length">
+                                        <td class="t" colspan="4" style="text-align:center;color:#8a939c;">No data for this basis / period.</td>
+                                    </tr>
+                                    <tr class="total" t-if="tbl.data.rows.length">
+                                        <td class="t">TOTAL</td>
+                                        <td><t t-esc="fmtFull(tbl.data.total.this)"/></td>
+                                        <td><t t-esc="fmtFull(tbl.data.total.ytd)"/></td>
+                                        <td><t t-esc="fmtFull(tbl.data.total.last)"/></td>
+                                    </tr>
+                                </tbody>
+                            </table></div>
+                        </div>
+                    </t>
+                </div>
+
+                <!-- Won vs Invoiced vs Collected trend -->
+                <div class="mudon_card">
+                    <h2>Won vs Invoiced vs Collected — monthly (<t t-esc="state.data.meta.year"/>)</h2>
+                    <p class="hint">Commission booked on won deals, amount invoiced, and cash collected each month.</p>
+                    <div class="mudon_chart_wrap"><canvas t-ref="revenue_trend"/></div>
+                </div>
+            </t>
+        </div>
+    </t>
+
+</templates>

@@ -328,6 +328,23 @@ class CrmLead(models.Model):
     mudon_commission = fields.Monetary(
         string="Commission", currency_field="mudon_budget_currency_id",
     )
+    # Billing / collection tracking (CRM-native) — filled by admin as
+    # invoices go out and money comes in. Powers the Financial dashboard's
+    # Won / Invoiced / Collected / Unbilled figures without needing the
+    # Accounting module. (An "Accounting" source on the dashboard can pull
+    # real account.move data instead.)
+    mudon_invoiced_amount = fields.Monetary(
+        string="Invoiced (commission billed)",
+        currency_field="mudon_budget_currency_id",
+        help="Commission amount invoiced to date for this deal.",
+    )
+    mudon_invoiced_date = fields.Date(string="Invoice Date")
+    mudon_collected_amount = fields.Monetary(
+        string="Collected (cash in)",
+        currency_field="mudon_budget_currency_id",
+        help="Commission amount actually collected for this deal.",
+    )
+    mudon_collected_date = fields.Date(string="Payment Received Date")
     mudon_handover_type = fields.Selection(
         HANDOVER_TYPE_SELECTION, string="Handover Type",
     )
