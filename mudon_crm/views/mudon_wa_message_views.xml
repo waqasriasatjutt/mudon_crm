@@ -94,7 +94,7 @@
         <field name="name">WhatsApp Setup</field>
         <field name="res_model">res.config.settings</field>
         <field name="view_mode">form</field>
-        <field name="target">inline</field>
+        <field name="target">current</field>
         <field name="context">{'module': 'mudon_crm'}</field>
     </record>
 
