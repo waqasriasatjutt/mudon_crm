@@ -335,9 +335,6 @@
             <xpath expr="//field[@name='expected_revenue'][@class='o_input_13ch']" position="attributes">
                 <attribute name="invisible">1</attribute>
             </xpath>
-            <xpath expr="//field[@name='expected_revenue'][@class='oe_inline me-5 o_field_highlight mb-0']" position="attributes">
-                <attribute name="invisible">1</attribute>
-            </xpath>
         </field>
     </record>
 
