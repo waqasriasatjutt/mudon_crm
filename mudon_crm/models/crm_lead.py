@@ -40,7 +40,7 @@ MUDON_STAGE_ORDER = (
     "new_lead", "qualified", "offer_sent", "meeting", "eoi", "won",
 )
 MUDON_QUALIFY_DATA = (
-    "mudon_service_id", "mudon_city_id", "mudon_priority", "mudon_budget",
+    "mudon_service_id", "mudon_city_id", "mudon_priority", "expected_revenue",
 )
 MUDON_STAGE_REQUIRED = {
     "qualified": MUDON_QUALIFY_DATA,
@@ -53,7 +53,7 @@ MUDON_STAGE_FIELD_LABELS = {
     "mudon_service_id": "Service",
     "mudon_city_id": "City",
     "mudon_priority": "Priority",
-    "mudon_budget": "Budget",
+    "expected_revenue": "Expected Revenue",
     "mudon_tick_offer_sent": "Offer Sent",
     "mudon_visit_confirmed": "Visit Confirmed",
     "mudon_paid_booking": "Paid Booking",

@@ -186,7 +186,12 @@
                 <field name="mudon_priority"
                        invisible="not mudon_pipeline_kind"
                        required="mudon_pipeline_kind and mudon_stage_kind_current != 'new_lead'"/>
-                <field name="mudon_budget"
+                <!-- Odoo-native Expected Revenue is the money field of
+                     record (used across Odoo reports); shown here with the
+                     other qualify fields. The old custom "Budget" is gone. -->
+                <field name="company_currency" invisible="1"/>
+                <field name="expected_revenue"
+                       options="{'currency_field': 'company_currency'}"
                        invisible="not mudon_pipeline_kind"
                        required="mudon_pipeline_kind and mudon_stage_kind_current != 'new_lead'"/>
                 <field name="mudon_status_id"
@@ -298,7 +303,7 @@
                 <field name="mudon_kanban_priority_rank"/>
                 <field name="mudon_stage_kind_current"/>
                 <field name="mudon_offer_counter"/>
-                <field name="mudon_budget"/>
+                <field name="expected_revenue"/>
                 <field name="mudon_visit_date"/>
                 <field name="stage_id"/>
             </xpath>
@@ -336,10 +341,10 @@
                         <field name="mudon_property_type_ids" widget="many2many_tags"
                                options="{'color_field': 'color'}"/>
                     </div>
-                    <!-- Budget + offers -->
+                    <!-- Expected revenue + offers -->
                     <div class="mudon_meta mt-1 small text-muted">
-                        <span t-if="record.mudon_budget.raw_value" class="me-2">
-                            💰 <t t-out="record.mudon_budget.value"/>
+                        <span t-if="record.expected_revenue.raw_value" class="me-2">
+                            💰 <t t-out="record.expected_revenue.value"/>
                         </span>
                         <span t-if="record.mudon_offer_counter.raw_value"
                               class="badge text-bg-secondary">

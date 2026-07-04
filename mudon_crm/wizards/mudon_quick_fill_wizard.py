@@ -47,11 +47,11 @@ class MudonQuickFillWizard(models.TransientModel):
         [("urgent", "Urgent"), ("normal", "Normal")],
         string="Priority",
     )
-    mudon_budget = fields.Monetary(
-        string="Budget", currency_field="mudon_budget_currency_id",
+    expected_revenue = fields.Monetary(
+        string="Expected Revenue", currency_field="company_currency",
     )
-    mudon_budget_currency_id = fields.Many2one(
-        "res.currency", related="lead_id.mudon_budget_currency_id",
+    company_currency = fields.Many2one(
+        "res.currency", related="lead_id.company_currency",
     )
     mudon_lost_reason_id = fields.Many2one(
         "mudon.lost.reason", string="Lost Reason",
@@ -102,7 +102,7 @@ class MudonQuickFillWizard(models.TransientModel):
                 "mudon_service_id",
                 "mudon_city_id",
                 "mudon_priority",
-                "mudon_budget",
+                "expected_revenue",
                 "mudon_lost_reason_id",
             ):
                 if fname in fields_list and not res.get(fname):
@@ -141,7 +141,7 @@ class MudonQuickFillWizard(models.TransientModel):
                 "mudon_service_id": _("Service"),
                 "mudon_city_id": _("City"),
                 "mudon_priority": _("Priority"),
-                "mudon_budget": _("Budget"),
+                "expected_revenue": _("Expected Revenue"),
             }
             tick_labels = {
                 "mudon_tick_offer_sent": _("Offer Sent"),
