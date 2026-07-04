@@ -11,25 +11,47 @@
                     <field name="target_stage_id" invisible="1"/>
                     <field name="target_stage_kind" invisible="1"/>
                     <field name="pipeline_kind" invisible="1"/>
+                    <field name="mudon_need_qualify" invisible="1"/>
+                    <field name="mudon_need_offer" invisible="1"/>
+                    <field name="mudon_need_visit" invisible="1"/>
+                    <field name="mudon_need_booking" invisible="1"/>
+                    <field name="mudon_need_paid" invisible="1"/>
                     <group>
-                        <!-- Required-to-qualify fields (moving out of New Lead) -->
+                        <!-- Qualified — the 4 mandatory intake fields -->
                         <field name="mudon_service_id"
                                options="{'no_create_edit': True}"
                                domain="[('pipeline_kind', 'in', [pipeline_kind, 'any'])]"
-                               invisible="target_stage_kind in ('new_lead', 'lost') or not pipeline_kind"/>
+                               required="mudon_need_qualify"
+                               invisible="not mudon_need_qualify"/>
                         <field name="mudon_city_id"
                                options="{'no_create_edit': True}"
                                domain="[('pipeline_kind', 'in', [pipeline_kind, 'any'])]"
-                               invisible="target_stage_kind in ('new_lead', 'lost') or not pipeline_kind"/>
+                               required="mudon_need_qualify"
+                               invisible="not mudon_need_qualify"/>
                         <field name="mudon_priority"
-                               invisible="target_stage_kind in ('new_lead', 'lost')"/>
+                               required="mudon_need_qualify"
+                               invisible="not mudon_need_qualify"/>
                         <field name="mudon_budget_currency_id" invisible="1"/>
                         <field name="mudon_budget"
-                               invisible="target_stage_kind in ('new_lead', 'lost')"/>
+                               required="mudon_need_qualify"
+                               invisible="not mudon_need_qualify"/>
+
+                        <!-- Confirm each SKIPPED milestone -->
+                        <separator string="Confirm the steps being skipped"
+                                   invisible="not (mudon_need_offer or mudon_need_visit or mudon_need_booking or mudon_need_paid)"/>
+                        <field name="mudon_tick_offer_sent" widget="boolean_toggle"
+                               invisible="not mudon_need_offer"/>
+                        <field name="mudon_visit_confirmed" widget="boolean_toggle"
+                               invisible="not mudon_need_visit"/>
+                        <field name="mudon_paid_booking" widget="boolean_toggle"
+                               invisible="not mudon_need_booking"/>
+                        <field name="mudon_fully_paid" widget="boolean_toggle"
+                               invisible="not mudon_need_paid"/>
 
                         <!-- Lost-only field -->
                         <field name="mudon_lost_reason_id"
                                options="{'no_create_edit': True}"
+                               required="target_stage_kind == 'lost'"
                                invisible="target_stage_kind != 'lost'"/>
                     </group>
                 </sheet>

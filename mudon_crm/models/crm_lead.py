@@ -30,6 +30,36 @@ PRIORITY_SELECTION = [
     ("normal", "Normal"),
 ]
 
+# v19.0.1.5.0 — funnel order + each stage's MANDATORY field(s). Moving a
+# lead forward requires every crossed stage's mandatory field(s); when a
+# card is dragged PAST one or more stages the quick-fill wizard collects /
+# confirms them all (client: "New → Meeting must ask for Qualified +
+# Offer Sent + Meeting, not only the first stage"). Lost is out-of-band
+# (see _mudon_check_stage_transitions).
+MUDON_STAGE_ORDER = (
+    "new_lead", "qualified", "offer_sent", "meeting", "eoi", "won",
+)
+MUDON_QUALIFY_DATA = (
+    "mudon_service_id", "mudon_city_id", "mudon_priority", "mudon_budget",
+)
+MUDON_STAGE_REQUIRED = {
+    "qualified": MUDON_QUALIFY_DATA,
+    "offer_sent": ("mudon_tick_offer_sent",),
+    "meeting": ("mudon_visit_confirmed",),
+    "eoi": ("mudon_paid_booking",),
+    "won": ("mudon_fully_paid",),
+}
+MUDON_STAGE_FIELD_LABELS = {
+    "mudon_service_id": "Service",
+    "mudon_city_id": "City",
+    "mudon_priority": "Priority",
+    "mudon_budget": "Budget",
+    "mudon_tick_offer_sent": "Offer Sent",
+    "mudon_visit_confirmed": "Visit Confirmed",
+    "mudon_paid_booking": "Paid Booking",
+    "mudon_fully_paid": "Fully Paid",
+}
+
 # Stage 3
 SERIOUSNESS_SELECTION = [
     ("serious", "Serious"),
@@ -446,42 +476,62 @@ class CrmLead(models.Model):
         "mudon_budget",
     )
 
-    def _mudon_check_required_to_qualify(self, new_stage, vals=None):
-        """Route stage-out-of-new-lead with missing fields to the
-        quick-fill wizard instead of raising a raw UserError.
+    def _mudon_crossed_required(self, current_kind, target_kind):
+        """Ordered mandatory field names for every funnel stage strictly
+        after `current_kind` up to and including `target_kind`. Empty for
+        a backward / same-stage move or a Lost target."""
+        order = MUDON_STAGE_ORDER
+        if target_kind not in order:
+            return []
+        ti = order.index(target_kind)
+        ci = order.index(current_kind) if current_kind in order else -1
+        req = []
+        for kind in order[ci + 1:ti + 1]:
+            req.extend(MUDON_STAGE_REQUIRED.get(kind, ()))
+        return req
 
-        Called from write() before super(). If any of the 4
-        qualification fields are unset, we throw a RedirectWarning that
-        Odoo renders with a "Fill Required Fields" button — the button
-        opens the wizard pre-linked to this lead + target stage. The
-        wizard collects the missing values and issues its own write
-        with stage_id set, so the after-write side effects still fire
-        exactly once.
+    def _mudon_check_stage_requirements(self, new_stage, vals=None):
+        """Gate a forward funnel move on EVERY crossed stage's mandatory
+        field(s) and route the user to the quick-fill wizard if any are
+        missing.
+
+        - Single-step advance: only the qualify DATA fields (Service /
+          City / Priority / Budget) are hard-gated — a lone stage tick is
+          auto-confirmed by the drag itself (see write()).
+        - Skipping stages: the user must fill / confirm every crossed
+          stage's mandatory field, so a card dragged New → Meeting is
+          asked for Qualified + Offer Sent + Meeting in one wizard.
+
+        Lost is handled separately by _mudon_check_stage_transitions.
         """
+        vals = vals or {}
         if not new_stage or not new_stage.mudon_stage_kind:
             return
-        if new_stage.mudon_stage_kind == "new_lead":
-            return
-        # Marking a lead Lost abandons it — don't force the 4
-        # qualification fields (the Lost wizard can't collect them).
-        if new_stage.mudon_stage_kind == "lost":
+        target_kind = new_stage.mudon_stage_kind
+        if target_kind not in MUDON_STAGE_ORDER:
             return
         from odoo.exceptions import RedirectWarning
-        labels = {
-            "mudon_service_id": "Service",
-            "mudon_city_id": "City",
-            "mudon_priority": "Priority",
-            "mudon_budget": "Budget",
-        }
+        ti = MUDON_STAGE_ORDER.index(target_kind)
         for rec in self:
-            if rec.mudon_stage_kind_current != "new_lead":
+            if not rec.mudon_pipeline_kind:
                 continue
-            missing = [
-                labels.get(fname, fname)
-                for fname in self.MUDON_REQUIRED_TO_QUALIFY
-                if not (rec[fname] or (vals or {}).get(fname))
-            ]
-            if not missing:
+            ck = rec.mudon_stage_kind_current
+            ci = MUDON_STAGE_ORDER.index(ck) if ck in MUDON_STAGE_ORDER else -1
+            if ti <= ci:
+                continue  # backward / same stage → no gate
+            crossed = rec._mudon_crossed_required(ck, target_kind)
+            if (ti - ci) > 1:
+                # skipping stages → confirm the full crossed set
+                required = [
+                    f for f in crossed if not (rec[f] or vals.get(f))
+                ]
+            else:
+                # single-step advance → only the qualify DATA is hard-gated
+                required = [
+                    f for f in crossed
+                    if f in MUDON_QUALIFY_DATA and not (rec[f] or vals.get(f))
+                ]
+            if not required:
                 continue
             action = self.env["ir.actions.act_window"]._for_xml_id(
                 "mudon_crm.action_mudon_quick_fill_wizard",
@@ -491,10 +541,12 @@ class CrmLead(models.Model):
                 "default_target_stage_id": new_stage.id,
             }
             raise RedirectWarning(
-                _(
-                    "Missing: %s. Click below to fill them in and move "
-                    "%s forward."
-                ) % (", ".join(missing), rec.name or rec.contact_name or _("this lead")),
+                _("Missing: %s. Fill them to move %s forward.") % (
+                    ", ".join(
+                        MUDON_STAGE_FIELD_LABELS.get(f, f) for f in required
+                    ),
+                    rec.name or rec.contact_name or _("this lead"),
+                ),
                 action,
                 _("Fill Required Fields"),
             )
@@ -571,20 +623,27 @@ class CrmLead(models.Model):
             return super().write(vals)
         if "stage_id" in vals and vals["stage_id"]:
             new_stage = self.env["crm.stage"].sudo().browse(vals["stage_id"])
-            self._mudon_check_required_to_qualify(new_stage, vals)
+            self._mudon_check_stage_requirements(new_stage, vals)
             self._mudon_check_stage_transitions(new_stage, vals)
-            # Auto-tick the transition field when the user drags a card
-            # into offer_sent / meeting / eoi / won and the field isn't
-            # already ticked. The stage change IS the semantic
-            # confirmation, so we set the tick as part of this same
-            # write. The after-write hook then detects the flip and
-            # fires the normal side-effects (agent notifications,
-            # offer counter bumps, etc.) exactly once.
+            # Auto-tick the transition field ONLY for a single-step
+            # forward drag into offer_sent / meeting / eoi / won — the
+            # drag IS the confirmation. A multi-stage SKIP does NOT
+            # auto-tick: the quick-fill wizard collects every crossed
+            # stage's confirmation instead. The after-write hook then
+            # detects the flip and fires the side-effects exactly once.
             kind = new_stage.mudon_stage_kind
             tick_field = self.MUDON_AUTOTICK_GATES.get(kind)
             if tick_field and tick_field not in vals:
+                ti = (MUDON_STAGE_ORDER.index(kind)
+                      if kind in MUDON_STAGE_ORDER else -1)
                 needs_tick = any(
                     rec.mudon_pipeline_kind and not rec[tick_field]
+                    and ti >= 0
+                    and ti - (
+                        MUDON_STAGE_ORDER.index(rec.mudon_stage_kind_current)
+                        if rec.mudon_stage_kind_current in MUDON_STAGE_ORDER
+                        else -1
+                    ) == 1
                     for rec in self
                 )
                 if needs_tick:
@@ -694,6 +753,15 @@ class CrmLead(models.Model):
         """
         self.ensure_one()
         if not self.team_id:
+            return
+        # Forward-only: never let an after-write tick advance pull the
+        # lead BACK to an earlier funnel stage (a skip-drag can set
+        # several ticks at once). Compare against the live stage_id, not
+        # the stored-computed kind, which may not be recomputed yet.
+        current_kind = self.stage_id.mudon_stage_kind
+        if (kind in MUDON_STAGE_ORDER and current_kind in MUDON_STAGE_ORDER
+                and MUDON_STAGE_ORDER.index(kind)
+                <= MUDON_STAGE_ORDER.index(current_kind)):
             return
         stage = self.env["crm.stage"].sudo().search([
             ("team_ids", "=", self.team_id.id),

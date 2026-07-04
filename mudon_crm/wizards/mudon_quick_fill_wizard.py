@@ -1,17 +1,17 @@
 """Quick-fill wizard for stage transitions that need missing data.
 
-Opened via a RedirectWarning button when the user drags a lead card into
-a stage whose gate is not the "self-explanatory" auto-tick type. Two
-scenarios:
+Opened via a RedirectWarning button when a drag needs data the target
+stage requires. It shows the mandatory field(s) for EVERY funnel stage
+crossed by the drag (only those, driven by the mudon_need_* flags):
 
-  1. Moving OUT of New Lead with any of MService / MCity / MPriority /
-     MBudget unset — the wizard shows only those 4 fields.
-  2. Moving to Lost without a Lost Reason — the wizard shows only Lost
-     Reason.
+  1. Moving OUT of New Lead — Service / City / Priority / Budget.
+  2. Skipping stages (e.g. New → Meeting) — the above PLUS a confirm
+     checkbox for each crossed milestone (Offer Sent, Visit Confirmed…).
+  3. Moving to Lost — only the Lost Reason.
 
-The wizard's Confirm button writes the collected values on the lead AND
-sets stage_id to the target in a single write, so the after-write hook
-runs once and side-effects (notifications, counter bumps) fire normally.
+The Confirm button writes the collected values on the lead AND sets
+stage_id to the target in a single write, so the after-write hook runs
+once and side-effects (notifications, counter bumps) fire normally.
 """
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
@@ -57,6 +57,36 @@ class MudonQuickFillWizard(models.TransientModel):
         "mudon.lost.reason", string="Lost Reason",
     )
 
+    # Per-stage confirmations — shown when the drag SKIPS the stage they
+    # belong to, so the user confirms each crossed milestone.
+    mudon_tick_offer_sent = fields.Boolean(string="Offer Sent")
+    mudon_visit_confirmed = fields.Boolean(string="Visit Confirmed")
+    mudon_paid_booking = fields.Boolean(string="Paid Booking")
+    mudon_fully_paid = fields.Boolean(string="Fully Paid")
+
+    # Which crossed stages this transition needs — drives form
+    # visibility so only the relevant fields show.
+    mudon_need_qualify = fields.Boolean(compute="_compute_mudon_needs")
+    mudon_need_offer = fields.Boolean(compute="_compute_mudon_needs")
+    mudon_need_visit = fields.Boolean(compute="_compute_mudon_needs")
+    mudon_need_booking = fields.Boolean(compute="_compute_mudon_needs")
+    mudon_need_paid = fields.Boolean(compute="_compute_mudon_needs")
+
+    @api.depends("lead_id", "target_stage_id")
+    def _compute_mudon_needs(self):
+        for wiz in self:
+            crossed = []
+            if wiz.lead_id and wiz.target_stage_id:
+                crossed = wiz.lead_id._mudon_crossed_required(
+                    wiz.lead_id.mudon_stage_kind_current,
+                    wiz.target_stage_id.mudon_stage_kind,
+                )
+            wiz.mudon_need_qualify = "mudon_service_id" in crossed
+            wiz.mudon_need_offer = "mudon_tick_offer_sent" in crossed
+            wiz.mudon_need_visit = "mudon_visit_confirmed" in crossed
+            wiz.mudon_need_booking = "mudon_paid_booking" in crossed
+            wiz.mudon_need_paid = "mudon_fully_paid" in crossed
+
     @api.model
     def default_get(self, fields_list):
         """Pre-fill from the lead so partially-filled values aren't
@@ -65,6 +95,9 @@ class MudonQuickFillWizard(models.TransientModel):
         res = super().default_get(fields_list)
         lead = self.env["crm.lead"].browse(res.get("lead_id"))
         if lead.exists():
+            # Pre-fill DATA fields only (don't re-type a Budget already
+            # set). The milestone ticks are deliberately NOT pre-filled —
+            # each skipped step must be freshly confirmed by the user.
             for fname in (
                 "mudon_service_id",
                 "mudon_city_id",
@@ -78,48 +111,64 @@ class MudonQuickFillWizard(models.TransientModel):
         return res
 
     def action_confirm(self):
-        """Write filled values + target stage on the lead in one write.
+        """Write every crossed stage's mandatory field + the target stage
+        on the lead in ONE write.
 
-        Missing-required-field validation still runs — if the user opens
-        the wizard for a New Lead exit and confirms with a field still
-        blank, they get a plain UserError (no wizard-inside-wizard).
+        Validates each required field is filled / confirmed first, so the
+        user gets a plain message (no wizard-inside-wizard). For a skip
+        (e.g. New → Meeting) this collects Qualified + Offer Sent +
+        Meeting together; for Lost it collects only the Lost Reason.
         """
         self.ensure_one()
-        if not self.lead_id or not self.target_stage_id:
+        lead = self.lead_id
+        if not lead or not self.target_stage_id:
             raise UserError(_("Lead or target stage missing on the wizard."))
 
-        kind = self.target_stage_id.mudon_stage_kind
+        target_kind = self.target_stage_id.mudon_stage_kind
         vals = {}
+        missing = []
 
-        if kind and kind not in ("new_lead", "lost"):
-            # If moving out of New Lead, enforce the 4 required fields.
-            if self.lead_id.mudon_stage_kind_current == "new_lead":
-                missing = []
-                required_map = {
-                    "mudon_service_id": ("Service", self.mudon_service_id),
-                    "mudon_city_id": ("City", self.mudon_city_id),
-                    "mudon_priority": ("Priority", self.mudon_priority),
-                    "mudon_budget": ("Budget", self.mudon_budget),
-                }
-                for fname, (label, value) in required_map.items():
+        if target_kind == "lost":
+            if not self.mudon_lost_reason_id:
+                missing.append(_("Lost Reason"))
+            else:
+                vals["mudon_lost_reason_id"] = self.mudon_lost_reason_id.id
+        else:
+            crossed = lead._mudon_crossed_required(
+                lead.mudon_stage_kind_current, target_kind,
+            )
+            input_labels = {
+                "mudon_service_id": _("Service"),
+                "mudon_city_id": _("City"),
+                "mudon_priority": _("Priority"),
+                "mudon_budget": _("Budget"),
+            }
+            tick_labels = {
+                "mudon_tick_offer_sent": _("Offer Sent"),
+                "mudon_visit_confirmed": _("Visit Confirmed"),
+                "mudon_paid_booking": _("Paid Booking"),
+                "mudon_fully_paid": _("Fully Paid"),
+            }
+            for fname in crossed:
+                value = self[fname]
+                if fname in input_labels:
                     if not value:
-                        missing.append(label)
+                        missing.append(input_labels[fname])
                     else:
                         vals[fname] = value.id if hasattr(value, "id") else value
-                if missing:
-                    raise UserError(_(
-                        "Still missing: %s. Fill them to move the lead forward."
-                    ) % ", ".join(missing))
+                elif fname in tick_labels:
+                    if not value:
+                        missing.append(tick_labels[fname])
+                    else:
+                        vals[fname] = True
 
-        if kind == "lost":
-            if not self.mudon_lost_reason_id:
-                raise UserError(_(
-                    "Pick a Lost Reason before marking this lead Lost."
-                ))
-            vals["mudon_lost_reason_id"] = self.mudon_lost_reason_id.id
+        if missing:
+            raise UserError(
+                _("Please complete / confirm: %s") % ", ".join(missing)
+            )
 
         vals["stage_id"] = self.target_stage_id.id
-        self.lead_id.write(vals)
+        lead.write(vals)
         # Soft-reload the calling view (kanban) so the card visually
         # moves to its new stage without a full browser refresh.
         return {"type": "ir.actions.client", "tag": "soft_reload"}
