@@ -124,6 +124,9 @@ class MudonManagementDashboard extends Component {
         return out;
     }
 
+    // QWeb has no String() global; compare option ids as strings via a method
+    optSel(a, b) { return "" + a === "" + b; }
+
     get pipelineLabel() {
         return { all: "All pipelines", uae: "UAE Dubai", turkey: "Turkey" }[this.state.pipeline];
     }

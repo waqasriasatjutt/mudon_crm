@@ -130,6 +130,9 @@ class MudonFinancialDashboard extends Component {
         return out;
     }
 
+    // QWeb has no String() global; compare option ids as strings via a method
+    optSel(a, b) { return "" + a === "" + b; }
+
     // ── deals detail: client-side sort ──────────────────────────────────
     get dealRows() {
         const d = this.state.data;

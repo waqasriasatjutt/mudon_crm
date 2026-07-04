@@ -39,19 +39,19 @@
                 <select class="form-select" t-on-change="(ev) => this.setFilter('agent_id', ev)">
                     <option value="">All agents</option>
                     <t t-foreach="state.options.agents" t-as="o" t-key="o.id">
-                        <option t-att-value="o.id" t-att-selected="String(state.agent_id) === String(o.id)"><t t-esc="o.name"/></option>
+                        <option t-att-value="o.id" t-att-selected="optSel(state.agent_id, o.id)"><t t-esc="o.name"/></option>
                     </t>
                 </select>
                 <select class="form-select" t-on-change="(ev) => this.setFilter('source_id', ev)">
                     <option value="">All sources</option>
                     <t t-foreach="state.options.sources" t-as="o" t-key="o.id">
-                        <option t-att-value="o.id" t-att-selected="String(state.source_id) === String(o.id)"><t t-esc="o.name"/></option>
+                        <option t-att-value="o.id" t-att-selected="optSel(state.source_id, o.id)"><t t-esc="o.name"/></option>
                     </t>
                 </select>
                 <select class="form-select" t-on-change="(ev) => this.setFilter('nationality_id', ev)">
                     <option value="">All nationalities</option>
                     <t t-foreach="state.options.nationalities" t-as="o" t-key="o.id">
-                        <option t-att-value="o.id" t-att-selected="String(state.nationality_id) === String(o.id)"><t t-esc="o.name"/></option>
+                        <option t-att-value="o.id" t-att-selected="optSel(state.nationality_id, o.id)"><t t-esc="o.name"/></option>
                     </t>
                 </select>
                 <select class="form-select" t-on-change="(ev) => this.setFilter('country_prefix', ev)">
