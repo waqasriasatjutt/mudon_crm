@@ -1,12 +1,15 @@
 // v19.0.1.2.0 — Mudon pipeline kanban card styling.
 // Each lead card carries a stage-coloured band header and a
 // priority-coloured left accent so reps read stage + urgency at a glance.
+// v19.0.1.10.1 — overflow guards (long Arabic names / many tags never widen
+// the card) + capability-aware COMPACT touch buttons (were full-width bars).
 
 .mudon_card_block {
     border-radius: 6px;
     overflow: hidden;          // keep the band's rounded top corners
     border: 1px solid rgba(0, 0, 0, 0.08);
     margin-top: 6px;
+    min-width: 0;              // let the card shrink inside its column
 
     // Priority left accent — coloured edge spanning the block.
     &.mudon_prio_urgent { border-left: 4px solid #dc3545; }   // red
@@ -20,6 +23,10 @@
         text-transform: uppercase;
         color: #fff;
         background: #6c757d;    // fallback (unknown stage)
+        min-width: 0;
+        white-space: normal;
+        word-break: break-word;
+        overflow-wrap: anywhere;
     }
 
     // Per-stage-kind band colours (keys = crm.stage.mudon_stage_kind).
@@ -35,24 +42,37 @@
     .mudon_tags,
     .mudon_meta {
         padding: 0 8px;
+        min-width: 0;
+        overflow-wrap: anywhere;
     }
 
     .mudon_meta { padding-bottom: 6px; }
 
-    // Tighten the two many2many_tags widgets stacked in the card.
-    .mudon_tags .o_field_many2many_tags {
-        display: inline;
-        .badge { margin: 1px 2px 1px 0; }
+    // Tags wrap instead of forcing the card wider; the bare city field
+    // (rendered without a widget) must also be allowed to shrink/wrap.
+    .mudon_tags {
+        .o_field_many2many_tags {
+            display: flex;
+            flex-wrap: wrap;
+            min-width: 0;
+            .badge { margin: 1px 2px 1px 0; }
+        }
+        > .o_field_widget { min-width: 0; overflow-wrap: anywhere; }
     }
 
     // ── Touch stage-move buttons (mobile/tablet can't drag cards) ──────
+    // Default: COMPACT pills that hug their label, bottom-right — reads as
+    // an enterprise card, not a prototype. Enlarged to 44px thumb targets
+    // only on genuine touch devices / phones (media query further down).
     .mudon_stage_move {
         display: flex;
         gap: 6px;
         padding: 6px 8px 8px;
+        justify-content: flex-end;
+        flex-wrap: wrap;
         .mudon_move_btn {
-            flex: 1 1 auto;
-            min-height: 34px;
+            flex: 0 0 auto;
+            min-height: 28px;
             font-size: 12px;
             font-weight: 600;
             display: inline-flex;
@@ -72,16 +92,24 @@
     }
 }
 
-// ── Touch / small-screen sizing: bigger tap targets ───────────────────
+// ── Readability bump for card text on small screens ───────────────────
 @media (max-width: 992px) {
     .mudon_card_block {
-        .mudon_stage_move {
-            padding: 8px;
-            gap: 8px;
-            .mudon_move_btn { min-height: 44px; font-size: 14px; }
-        }
         .mudon_band { font-size: 12px; padding: 5px 10px; }
         .mudon_badges .badge,
         .mudon_meta .badge { font-size: 12px; }
+    }
+}
+
+// ── Genuine touch devices / phones: full-width 44px thumb targets ──────
+// Gated on `pointer: coarse` so a desktop mouse keeps the compact pills
+// even when the window is narrow (the old width-only 992px rule made the
+// buttons look oversized on laptops).
+@media (pointer: coarse), (max-width: 575.98px) {
+    .mudon_card_block .mudon_stage_move {
+        padding: 8px;
+        gap: 8px;
+        justify-content: stretch;
+        .mudon_move_btn { flex: 1 1 auto; min-height: 44px; font-size: 14px; }
     }
 }

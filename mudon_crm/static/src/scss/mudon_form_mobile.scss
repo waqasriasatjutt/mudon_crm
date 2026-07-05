@@ -1,0 +1,24 @@
+// Mudon CRM — mobile polish for the lead FORM + 7-stage statusbar.
+// Shipped by mudon_crm itself (previously lived only in the optional
+// mudon_pwa module) so the core pipeline is usable on a phone regardless
+// of which add-ons are installed. Width-gated: desktop is untouched.
+
+@media (max-width: 767.98px) {
+    // Comfortable 44px tap targets on the controls staff use most.
+    .o_action_manager {
+        .o_control_panel .btn,
+        .o_form_view .o_statusbar_buttons .btn,
+        .o_form_view .oe_button_box .btn { min-height: 44px; }
+    }
+
+    // 7-stage statusbar: keep every stage reachable by scrolling
+    // horizontally instead of crushing the pills on a narrow screen.
+    .o_form_statusbar .o_statusbar_status {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        flex-wrap: nowrap;
+    }
+
+    // Momentum scrolling in the main content area.
+    .o_content { -webkit-overflow-scrolling: touch; }
+}

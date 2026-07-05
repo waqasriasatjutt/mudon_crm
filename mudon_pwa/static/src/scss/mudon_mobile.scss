@@ -1,22 +1,4 @@
-// Mudon — mobile / enterprise polish for the Odoo backend on small screens.
-// Everything is width-gated so the desktop experience is untouched.
-
-@media (max-width: 767.98px) {
-    // Comfortable minimum tap height for the buttons staff use most.
-    .o_action_manager {
-        .o_control_panel .btn,
-        .o_form_view .o_statusbar_buttons .btn,
-        .o_form_view .oe_button_box .btn { min-height: 40px; }
-    }
-
-    // Stage status bar: let every stage stay reachable by scrolling
-    // horizontally instead of being crushed on a narrow screen.
-    .o_form_statusbar .o_statusbar_status {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        flex-wrap: nowrap;
-    }
-
-    // Momentum scrolling in the main content area.
-    .o_content { -webkit-overflow-scrolling: touch; }
-}
+// Mudon PWA — backend form/statusbar mobile responsiveness has MOVED to
+// mudon_crm (static/src/scss/mudon_form_mobile.scss) so it ships with the
+// CRM brain regardless of whether this PWA shell module is installed.
+// Intentionally left with no rules; kept in the asset list to avoid churn.
