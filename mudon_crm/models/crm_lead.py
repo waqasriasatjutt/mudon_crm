@@ -402,10 +402,10 @@ class CrmLead(models.Model):
         compute="_compute_mudon_wa_phone", string="WhatsApp digits",
     )
 
-    @api.depends("phone", "mobile")
+    @api.depends("phone")
     def _compute_mudon_wa_phone(self):
         for rec in self:
-            raw = rec.phone or rec.mobile or ""
+            raw = rec.phone or ""
             rec.mudon_wa_phone = "".join(ch for ch in raw if ch.isdigit())
 
     # ─── STAGE 7: Lost ──────────────────────────────────────────────
