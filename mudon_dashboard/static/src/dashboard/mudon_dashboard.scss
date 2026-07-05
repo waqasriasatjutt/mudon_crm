@@ -173,6 +173,16 @@
         -webkit-overflow-scrolling: touch;
         max-width: 100%;
     }
+    // Drill-through affordance: clickable KPI cards + table rows.
+    .mudon_kpi.mudon_clickable {
+        cursor: pointer;
+        transition: transform .08s ease, box-shadow .08s ease;
+    }
+    .mudon_kpi.mudon_clickable:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 14px rgba(27, 43, 68, .16);
+    }
+
     .mudon_table {
         width: 100%;
         border-collapse: collapse;
@@ -202,6 +212,8 @@
             &.t { text-align: left; font-weight: 600; color: var(--mink); }
         }
         tbody tr:hover { background: #00000004; }
+        tr.mudon_clickable { cursor: pointer; }
+        tr.mudon_clickable:hover { background: rgba(27, 43, 68, 0.07); }
         tr.total td {
             border-top: 2px solid var(--mline);
             border-bottom: none;

@@ -205,6 +205,85 @@ class MudonDashboard(models.TransientModel):
             ],
         }
 
+    # ── drill-through: turn a clicked figure into a crm.lead domain ─────
+    @api.model
+    def get_drill_domain(self, block, key=None, pipeline="all",
+                         period="this_month", basis="pipeline", filters=None):
+        """Return ``{'domain', 'name', 'team_id'}`` for a clicked dashboard
+        element, built from the SAME base + period logic as the data methods
+        so the opened list reconciles 1:1 with the headline number.
+
+        ``block`` selects the metric; ``key`` identifies a table row (agent
+        id / source id / nationality id / stage kind / phone-prefix)."""
+        date_by_basis = {
+            "pipeline": "create_date", "close": "date_closed",
+            "won": "date_closed", "invoice": "mudon_invoiced_date",
+            "payment": "mudon_collected_date",
+        }
+        d_from, d_to = self._resolve_range(period, filters)
+        dt_from = datetime.combine(d_from, time.min)
+        dt_to = datetime.combine(d_to, time.max)
+        date_field = date_by_basis.get(basis, "create_date")
+
+        base = [("type", "=", "opportunity"),
+                ("mudon_pipeline_kind", "!=", False)]
+        if pipeline in ("turkey", "uae"):
+            base.append(("mudon_pipeline_kind", "=", pipeline))
+        base, country_prefix = self._apply_filters(base, filters)
+        dom = base + [(date_field, ">=", dt_from), (date_field, "<=", dt_to)]
+
+        WON = ("mudon_stage_kind_current", "=", "won")
+        labels = {
+            "assigned": "Assigned leads", "not_actioned": "Not actioned",
+            "qualified": "Qualified (reached)", "meetings": "Meetings (reached)",
+            "won": "Won", "commission": "Won — commission",
+            "agent": "Agent leads", "source": "Leads by source",
+            "nationality": "Leads by nationality", "country": "Leads by country",
+            "stage": "Leads by stage", "fin_won": "Won deals",
+            "fin_invoiced": "Invoiced deals", "fin_collected": "Collected deals",
+            "fin_unbilled": "Won deals (unbilled backlog)",
+            "fin_to_collect": "Won deals (yet to collect)",
+        }
+        if block == "not_actioned":
+            dom.append(("mudon_first_contact_logged", "=", False))
+        elif block == "qualified":
+            dom.append(("mudon_stage_kind_current", "in",
+                        ["qualified", "offer_sent", "meeting", "eoi", "won"]))
+        elif block == "meetings":
+            dom.append(("mudon_stage_kind_current", "in",
+                        ["meeting", "eoi", "won"]))
+        elif block in ("won", "commission", "fin_won",
+                       "fin_unbilled", "fin_to_collect"):
+            dom.append(WON)
+        elif block == "fin_invoiced":
+            dom += [WON, ("mudon_invoiced_amount", ">", 0)]
+        elif block == "fin_collected":
+            dom += [WON, ("mudon_collected_amount", ">", 0)]
+        elif block == "agent":
+            dom.append(("user_id", "=", self._as_int(key) or False))
+        elif block == "source":
+            dom.append(("mudon_source_id", "=", self._as_int(key) or False))
+        elif block == "nationality":
+            dom.append(("mudon_nationality_id", "=", self._as_int(key) or False))
+        elif block == "stage":
+            dom.append(("mudon_stage_kind_current", "=", key))
+
+        # Client country is phone-derived (no stored field) — resolve to ids.
+        pref = key if block == "country" else country_prefix
+        if pref:
+            leads = self.env["crm.lead"].sudo().search(dom)
+            ids = leads.filtered(
+                lambda l: self._country_prefix_of(l.phone) == pref).ids
+            dom = [("id", "in", ids)]
+
+        team_id = False
+        if pipeline in ("turkey", "uae"):
+            team = self.env.ref("mudon_crm.mudon_team_%s" % pipeline,
+                                raise_if_not_found=False)
+            team_id = team.id if team else False
+        return {"domain": dom, "name": labels.get(block, "Leads"),
+                "team_id": team_id}
+
     # ── main entry point ────────────────────────────────────────────────
     @api.model
     def get_management_data(self, pipeline="all", period="this_month",
@@ -258,6 +337,7 @@ class MudonDashboard(models.TransientModel):
             def bucket(u):
                 return agents.setdefault(u.id if u else 0, {
                     "agent": u.name if u else "Unassigned",
+                    "agent_id": u.id if u else False,
                     "assigned": 0, "not_actioned": 0, "lost": 0,
                     "qualified": 0, "offers": 0, "meetings": 0, "won": 0,
                     "revenue": 0.0, "commission": 0.0,
@@ -325,7 +405,9 @@ class MudonDashboard(models.TransientModel):
             for lead in leads:
                 label = self._country_label(lead.phone)
                 c = countries.setdefault(label, {
-                    "country": label, "leads": 0, "won": 0, "revenue": 0.0})
+                    "country": label,
+                    "prefix": self._country_prefix_of(lead.phone),
+                    "leads": 0, "won": 0, "revenue": 0.0})
                 c["leads"] += 1
                 if lead.mudon_stage_kind_current == "won":
                     c["won"] += 1
@@ -346,7 +428,9 @@ class MudonDashboard(models.TransientModel):
             for lead in leads:
                 label = lead.mudon_source_id.name or "Manual / None"
                 s = sources.setdefault(label, {
-                    "source": label, "leads": 0, "won": 0, "commission": 0.0})
+                    "source": label,
+                    "source_id": lead.mudon_source_id.id or False,
+                    "leads": 0, "won": 0, "commission": 0.0})
                 s["leads"] += 1
                 if lead.mudon_stage_kind_current == "won":
                     s["won"] += 1

@@ -17,6 +17,7 @@ class MudonManagementDashboard extends Component {
 
     setup() {
         this.orm = useService("orm");
+        this.action = useService("action");
         this.chart = null;
         this.trendRef = useRef("commission_trend");
         this.state = useState({
@@ -103,6 +104,35 @@ class MudonManagementDashboard extends Component {
     }
     async refresh() { await this.load(); }
 
+    // ── drill-through: click a KPI / table row → the leads behind it ─────
+    openLeads(res) {
+        if (!res) { return; }
+        const ctx = { create: false };
+        if (res.team_id) { ctx.default_team_id = res.team_id; }
+        this.action.doAction({
+            type: "ir.actions.act_window",
+            name: res.name || "Leads",
+            res_model: "crm.lead",
+            domain: res.domain || [],
+            views: [[false, "list"], [false, "form"]],
+            target: "current",
+            context: ctx,
+        });
+    }
+
+    async openDrill(block, key = null) {
+        if (!block) { return; }
+        try {
+            const res = await this.orm.call(
+                "mudon.dashboard", "get_drill_domain",
+                [block, key, this.state.pipeline, this.state.period,
+                 this.state.basis, this.buildFilters()]);
+            this.openLeads(res);
+        } catch (e) {
+            // drill is best-effort; leave the dashboard as-is on error
+        }
+    }
+
     async downloadReport() {
         try {
             await download({
@@ -156,12 +186,12 @@ class MudonManagementDashboard extends Component {
         if (!d) { return []; }
         const k = d.kpis || {};
         return [
-            { label: "Assigned leads", value: this.fmtNum(k.assigned), color: "navy" },
-            { label: "Not actioned", value: this.fmtNum(k.not_actioned), color: (k.not_actioned ? "amber" : "grey") },
-            { label: "Qualified", value: this.fmtNum(k.qualified), color: "blue" },
-            { label: "Meetings", value: this.fmtNum(k.meetings), color: "teal" },
-            { label: "Won", value: this.fmtNum(k.won), color: "green" },
-            { label: "Commission", value: this.fmtMoney(k.commission), color: "gold" },
+            { label: "Assigned leads", value: this.fmtNum(k.assigned), color: "navy", block: "assigned" },
+            { label: "Not actioned", value: this.fmtNum(k.not_actioned), color: (k.not_actioned ? "amber" : "grey"), block: "not_actioned" },
+            { label: "Qualified", value: this.fmtNum(k.qualified), color: "blue", block: "qualified" },
+            { label: "Meetings", value: this.fmtNum(k.meetings), color: "teal", block: "meetings" },
+            { label: "Won", value: this.fmtNum(k.won), color: "green", block: "won" },
+            { label: "Commission", value: this.fmtMoney(k.commission), color: "gold", block: "commission" },
         ];
     }
 

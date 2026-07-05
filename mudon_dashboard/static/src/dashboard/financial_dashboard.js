@@ -18,6 +18,7 @@ class MudonFinancialDashboard extends Component {
 
     setup() {
         this.orm = useService("orm");
+        this.action = useService("action");
         this.chart = null;
         this.trendRef = useRef("revenue_trend");
         this.state = useState({
@@ -108,6 +109,46 @@ class MudonFinancialDashboard extends Component {
     }
     async refresh() { await this.load(); }
 
+    // ── drill-through: KPI → the won deals behind it; deal row → its lead ─
+    openLeads(res) {
+        if (!res) { return; }
+        const ctx = { create: false };
+        if (res.team_id) { ctx.default_team_id = res.team_id; }
+        this.action.doAction({
+            type: "ir.actions.act_window",
+            name: res.name || "Deals",
+            res_model: "crm.lead",
+            domain: res.domain || [],
+            views: [[false, "list"], [false, "form"]],
+            target: "current",
+            context: ctx,
+        });
+    }
+
+    async openDrill(block, key = null) {
+        if (!block) { return; }
+        try {
+            const res = await this.orm.call(
+                "mudon.dashboard", "get_drill_domain",
+                [block, key, this.state.pipeline, this.state.period,
+                 this.state.basis, this.buildFilters()]);
+            this.openLeads(res);
+        } catch (e) {
+            // best-effort
+        }
+    }
+
+    openDeal(id) {
+        if (!id) { return; }
+        this.action.doAction({
+            type: "ir.actions.act_window",
+            res_model: "crm.lead",
+            res_id: id,
+            views: [[false, "form"]],
+            target: "current",
+        });
+    }
+
     async downloadReport() {
         try {
             await download({
@@ -182,15 +223,15 @@ class MudonFinancialDashboard extends Component {
         if (!d) { return []; }
         const k = d.kpis || {};
         return [
-            { label: "Won (commission)", value: this.fmtMoney(k.won), color: "navy" },
-            { label: "Invoiced", value: this.fmtMoney(k.invoiced), color: "gold" },
-            { label: "Collected", value: this.fmtMoney(k.collected), color: "green" },
-            { label: "Unbilled (backlog)", value: this.fmtMoney(k.unbilled), color: (k.unbilled ? "amber" : "grey") },
-            { label: "Yet to collect", value: this.fmtMoney(k.to_collect), color: (k.to_collect ? "amber" : "grey") },
+            { label: "Won (commission)", value: this.fmtMoney(k.won), color: "navy", block: "fin_won" },
+            { label: "Invoiced", value: this.fmtMoney(k.invoiced), color: "gold", block: "fin_invoiced" },
+            { label: "Collected", value: this.fmtMoney(k.collected), color: "green", block: "fin_collected" },
+            { label: "Unbilled (backlog)", value: this.fmtMoney(k.unbilled), color: (k.unbilled ? "amber" : "grey"), block: "fin_unbilled" },
+            { label: "Yet to collect", value: this.fmtMoney(k.to_collect), color: (k.to_collect ? "amber" : "grey"), block: "fin_to_collect" },
             {
                 label: "Collection rate",
                 value: (k.collection_rate == null ? "—" : k.collection_rate + "%"),
-                color: "blue",
+                color: "blue", block: "fin_collected",
             },
         ];
     }

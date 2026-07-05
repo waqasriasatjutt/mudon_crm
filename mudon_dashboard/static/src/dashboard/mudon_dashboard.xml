@@ -93,7 +93,8 @@
                 <!-- KPI strip -->
                 <div class="mudon_kpis">
                     <t t-foreach="kpiCards" t-as="card" t-key="card.label">
-                        <div t-attf-class="mudon_kpi mudon_kpi_{{ card.color }}">
+                        <div t-attf-class="mudon_kpi mudon_kpi_{{ card.color }} mudon_clickable"
+                             t-on-click="() => this.openDrill(card.block)" title="Click to see these leads">
                             <div class="k"><t t-esc="card.label"/></div>
                             <div class="v"><t t-esc="card.value"/></div>
                         </div>
@@ -112,7 +113,9 @@
                                 <th>Win rate</th><th>Revenue</th><th>Commission</th>
                             </tr></thead>
                             <tbody>
-                                <tr t-foreach="state.data.tables.agents" t-as="a" t-key="a.agent">
+                                <tr t-foreach="state.data.tables.agents" t-as="a" t-key="a.agent"
+                                    class="mudon_clickable" t-on-click="() => this.openDrill('agent', a.agent_id)"
+                                    title="Click to see this agent's leads">
                                     <td class="t"><t t-esc="a.agent"/></td>
                                     <td><t t-esc="a.assigned"/></td>
                                     <td><t t-esc="a.not_actioned"/></td>
@@ -151,7 +154,9 @@
                         <div class="scroll"><table class="mudon_table">
                             <thead><tr><th>Country</th><th>Leads</th><th>Won</th><th>Conv.</th><th>Revenue</th></tr></thead>
                             <tbody>
-                                <tr t-foreach="state.data.tables.countries" t-as="c" t-key="c.country">
+                                <tr t-foreach="state.data.tables.countries" t-as="c" t-key="c.country"
+                                    class="mudon_clickable" t-on-click="() => this.openDrill('country', c.prefix)"
+                                    title="Click to see this country's leads">
                                     <td class="t"><t t-esc="c.country"/></td>
                                     <td><t t-esc="c.leads"/></td>
                                     <td><t t-esc="c.won"/></td>
@@ -167,7 +172,9 @@
                         <div class="scroll"><table class="mudon_table">
                             <thead><tr><th>Source</th><th>Leads</th><th>Won</th><th>Conv.</th><th>Commission</th></tr></thead>
                             <tbody>
-                                <tr t-foreach="state.data.tables.sources" t-as="s" t-key="s.source">
+                                <tr t-foreach="state.data.tables.sources" t-as="s" t-key="s.source"
+                                    class="mudon_clickable" t-on-click="() => this.openDrill('source', s.source_id)"
+                                    title="Click to see this source's leads">
                                     <td class="t"><t t-esc="s.source"/></td>
                                     <td><t t-esc="s.leads"/></td>
                                     <td><t t-esc="s.won"/></td>

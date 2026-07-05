@@ -102,7 +102,8 @@
                 <!-- KPI strip -->
                 <div class="mudon_kpis">
                     <t t-foreach="kpiCards" t-as="card" t-key="card.label">
-                        <div t-attf-class="mudon_kpi mudon_kpi_{{ card.color }}">
+                        <div t-attf-class="mudon_kpi mudon_kpi_{{ card.color }} mudon_clickable"
+                             t-on-click="() => this.openDrill(card.block)" title="Click to see the deals behind this figure">
                             <div class="k"><t t-esc="card.label"/></div>
                             <div class="v"><t t-esc="card.value"/></div>
                         </div>
@@ -178,7 +179,9 @@
                             <th t-attf-class="srt {{ state.sortKey === 'closed' ? 'active' : '' }}" t-on-click="() => this.sortDeals('closed')">Closed<t t-esc="sortCaret('closed')"/></th>
                         </tr></thead>
                         <tbody>
-                            <tr t-foreach="dealRows" t-as="d" t-key="d.id">
+                            <tr t-foreach="dealRows" t-as="d" t-key="d.id"
+                                class="mudon_clickable" t-on-click="() => this.openDeal(d.id)"
+                                title="Open this deal">
                                 <td class="t"><t t-esc="d.name"/></td>
                                 <td class="t"><t t-esc="d.agent"/></td>
                                 <td class="t"><t t-esc="d.pipeline"/></td>
