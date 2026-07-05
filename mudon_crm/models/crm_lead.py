@@ -395,6 +395,19 @@ class CrmLead(models.Model):
             rec.mudon_admin_task_count = len(rec.mudon_admin_task_ids)
             rec.mudon_after_sales_task_count = len(rec.mudon_after_sales_task_ids)
 
+    # Digits-only phone for the one-tap WhatsApp link on the kanban card.
+    # Computed server-side because the QWeb kanban expression compiler can't
+    # handle a JS regex literal (it mistakes the /.../g flag for a variable).
+    mudon_wa_phone = fields.Char(
+        compute="_compute_mudon_wa_phone", string="WhatsApp digits",
+    )
+
+    @api.depends("phone", "mobile")
+    def _compute_mudon_wa_phone(self):
+        for rec in self:
+            raw = rec.phone or rec.mobile or ""
+            rec.mudon_wa_phone = "".join(ch for ch in raw if ch.isdigit())
+
     # ─── STAGE 7: Lost ──────────────────────────────────────────────
     mudon_lost_reason_id = fields.Many2one(
         "mudon.lost.reason",

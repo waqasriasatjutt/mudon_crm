@@ -324,6 +324,7 @@
                 <field name="stage_id"/>
                 <field name="user_id"/>
                 <field name="phone"/>
+                <field name="mudon_wa_phone"/>
                 <field name="mudon_first_contact_logged"/>
             </xpath>
             <!--
@@ -379,8 +380,8 @@
                             <span t-if="!record.mudon_first_contact_logged.raw_value"
                                   class="badge text-bg-danger">Not contacted</span>
                         </div>
-                        <a t-if="record.phone.raw_value"
-                           t-attf-href="https://wa.me/#{record.phone.raw_value.replace(/[^0-9]/g,'')}"
+                        <a t-if="record.mudon_wa_phone.raw_value"
+                           t-attf-href="https://wa.me/#{record.mudon_wa_phone.raw_value}"
                            target="_blank" class="btn btn-sm btn-success mudon_wa_btn"
                            title="Chat on WhatsApp">
                             <i class="fa fa-whatsapp"/>
