@@ -401,6 +401,31 @@ class CrmLead(models.Model):
                 rec.mudon_city_id and rec.mudon_city_id.code == "other_tr"
             )
 
+    @api.depends("user_id", "type")
+    def _compute_team_id(self):
+        """Keep the pipeline (Sales Team) STICKY across salesperson changes.
+
+        Odoo core computes ``team_id`` from the salesperson
+        (team-follows-user). Because Mudon binds every stage to a specific
+        team via ``crm.stage.team_ids``, that stock behaviour rips a lead
+        out of its Turkey/UAE pipeline the moment its agent is reassigned:
+        ``team_id`` detaches, then ``stage_id`` and ``mudon_pipeline_kind``
+        (both team-derived) reset — so the statusbar, the kanban columns
+        AND the whole custom card (gated on ``mudon_pipeline_kind``) vanish.
+
+        A lead's pipeline is a routing decision taken at creation, not a
+        side-effect of who works it. So we let core assign a team only when
+        none is set yet (new leads / imports / country-code routing); an
+        existing team is left untouched on a ``user_id`` change. A manager
+        can still deliberately move a lead to another pipeline by editing
+        the Sales Team field directly.
+        """
+        without_team = self.filtered(lambda lead: not lead.team_id)
+        if without_team:
+            super(CrmLead, without_team)._compute_team_id()
+        # Leads already in a pipeline keep their team → no stage_id /
+        # mudon_pipeline_kind cascade, the board stays intact.
+
     @api.depends("team_id")
     def _compute_mudon_pipeline_kind(self):
         turkey = self.env.ref(
