@@ -381,6 +381,19 @@ class CrmLead(models.Model):
     mudon_after_sales_task_ids = fields.One2many(
         "mudon.after.sales.task", "lead_id", string="After-Sales Tasks",
     )
+    # Stat-button counters (non-stored — cheap, always fresh).
+    mudon_admin_task_count = fields.Integer(
+        compute="_compute_mudon_task_counts", string="Admin Task Count",
+    )
+    mudon_after_sales_task_count = fields.Integer(
+        compute="_compute_mudon_task_counts", string="After-Sales Task Count",
+    )
+
+    @api.depends("mudon_admin_task_ids", "mudon_after_sales_task_ids")
+    def _compute_mudon_task_counts(self):
+        for rec in self:
+            rec.mudon_admin_task_count = len(rec.mudon_admin_task_ids)
+            rec.mudon_after_sales_task_count = len(rec.mudon_after_sales_task_ids)
 
     # ─── STAGE 7: Lost ──────────────────────────────────────────────
     mudon_lost_reason_id = fields.Many2one(
@@ -907,6 +920,53 @@ class CrmLead(models.Model):
                 % order[i - 1])
         self.write({"stage_id": stage.id})
         return True
+
+    # ─── Header actions: Mark Lost / Restore / open task lists ──────
+    def action_mudon_mark_lost(self):
+        """Header **Mark Lost** — route to THIS pipeline's Lost stage via the
+        public write path so the lost-reason gate fires: a lead with no
+        reason set opens the quick-fill wizard (asks for the reason, then
+        writes the Lost stage), one that already has a reason goes straight
+        to Lost. Identical behaviour to dragging the card to Lost — no
+        bypass, so the mandatory-reason data rule holds everywhere."""
+        self.ensure_one()
+        from odoo.exceptions import UserError
+        stage = self._mudon_stage_of_kind("lost")
+        if not stage:
+            raise UserError(
+                _("No Lost stage is configured for this pipeline."))
+        return self.write({"stage_id": stage.id})
+
+    def action_mudon_reopen(self):
+        """Header **Restore** — bring a Lost lead back to New Lead
+        (reuses the kanban back-move, which special-cases lost→new_lead)."""
+        return self.action_mudon_kanban_back()
+
+    def action_mudon_open_admin_tasks(self):
+        """Stat button → the Admin Funnel tasks spawned by this deal."""
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Admin Funnel Tasks"),
+            "res_model": "mudon.admin.task",
+            "domain": [("id", "in", self.mudon_admin_task_ids.ids)],
+            "views": [[False, "list"], [False, "form"]],
+            "target": "current",
+            "context": {"default_lead_id": self.id},
+        }
+
+    def action_mudon_open_after_sales_tasks(self):
+        """Stat button → the After-Sales Funnel tasks for this deal."""
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("After-Sales Tasks"),
+            "res_model": "mudon.after.sales.task",
+            "domain": [("id", "in", self.mudon_after_sales_task_ids.ids)],
+            "views": [[False, "list"], [False, "form"]],
+            "target": "current",
+            "context": {"default_lead_id": self.id},
+        }
 
     # ─── Branch + country-code routing ──────────────────────────────
     def _mudon_auto_assign_agent(self):

@@ -33,6 +33,7 @@
                 <field name="mudon_card_color_hint" invisible="1"/>
                 <field name="mudon_kanban_priority_rank" invisible="1"/>
                 <field name="mudon_stage_kind_current" invisible="1"/>
+                <field name="mudon_is_funnel_stage" invisible="1"/>
                 <field name="mudon_show_city_other" invisible="1"/>
                 <field name="mudon_budget_currency_id" invisible="1"/>
                 <field name="company_currency" invisible="1"/>
@@ -176,7 +177,7 @@
                         <field name="mudon_priority"
                                required="mudon_pipeline_kind and mudon_stage_kind_current != 'new_lead'"/>
                         <field name="expected_revenue"
-                               options="{'currency_field': 'company_currency'}"
+                               options="{'currency_field': 'mudon_budget_currency_id'}"
                                required="mudon_pipeline_kind and mudon_stage_kind_current != 'new_lead'"/>
                         <field name="mudon_status_id" options="{'no_create_edit': True}"/>
                         <field name="mudon_source_id" options="{'no_create_edit': True}"/>
@@ -244,6 +245,54 @@
             <xpath expr="//field[@name='expected_revenue'][@class='o_input_13ch']" position="attributes">
                 <attribute name="invisible">1</attribute>
             </xpath>
+
+            <!--
+                HEADER — enterprise stage controls. The stock CRM "Won" and
+                "Lost" header buttons bypass Mudon's stage gates (Won) or
+                ARCHIVE the lead (Lost → active=False, so it vanishes from
+                the pipeline). Hide them for Mudon leads and provide our own
+                Advance / Mark Lost / Restore that route through the gated
+                stage flow (quick-fill wizard when a gate field is missing).
+            -->
+            <xpath expr="//header/button[@data-hotkey='w']" position="attributes">
+                <attribute name="invisible">mudon_pipeline_kind or won_status == 'won' or type == 'lead' or not active</attribute>
+            </xpath>
+            <xpath expr="//header/button[@data-hotkey='l']" position="attributes">
+                <attribute name="invisible">mudon_pipeline_kind or won_status != 'pending' or not active</attribute>
+            </xpath>
+            <xpath expr="//header/field[@name='stage_id']" position="before">
+                <button name="action_mudon_kanban_advance" type="object"
+                        string="Advance" class="btn-primary" data-hotkey="n"
+                        invisible="not mudon_pipeline_kind or not mudon_is_funnel_stage or mudon_stage_kind_current in ('won', 'lost')"/>
+                <button name="action_mudon_mark_lost" type="object"
+                        string="Mark Lost" class="btn-secondary"
+                        invisible="not mudon_pipeline_kind or mudon_stage_kind_current in ('won', 'lost')"/>
+                <button name="action_mudon_reopen" type="object"
+                        string="Restore" class="btn-secondary"
+                        invisible="mudon_stage_kind_current != 'lost'"/>
+            </xpath>
+
+            <!-- WON / LOST ribbons (Mudon uses its own stages, not won_status). -->
+            <xpath expr="//div[@name='button_box']" position="after">
+                <widget name="web_ribbon" title="WON" bg_color="text-bg-success"
+                        invisible="mudon_stage_kind_current != 'won'"/>
+                <widget name="web_ribbon" title="LOST" bg_color="text-bg-danger"
+                        invisible="mudon_stage_kind_current != 'lost'"/>
+            </xpath>
+
+            <!-- Stat buttons: drill into the funnel tasks this deal spawned. -->
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button type="object" name="action_mudon_open_admin_tasks"
+                        class="oe_stat_button" icon="fa-tasks"
+                        invisible="mudon_admin_task_count == 0">
+                    <field name="mudon_admin_task_count" widget="statinfo" string="Admin Tasks"/>
+                </button>
+                <button type="object" name="action_mudon_open_after_sales_tasks"
+                        class="oe_stat_button" icon="fa-handshake-o"
+                        invisible="mudon_after_sales_task_count == 0">
+                    <field name="mudon_after_sales_task_count" widget="statinfo" string="After-Sales"/>
+                </button>
+            </xpath>
         </field>
     </record>
 
@@ -270,6 +319,7 @@
                 <field name="mudon_is_funnel_stage"/>
                 <field name="mudon_offer_counter"/>
                 <field name="expected_revenue"/>
+                <field name="mudon_budget_currency_id"/>
                 <field name="mudon_visit_date"/>
                 <field name="stage_id"/>
             </xpath>
@@ -310,7 +360,8 @@
                     <!-- Expected revenue + offers -->
                     <div class="mudon_meta mt-1 small text-muted">
                         <span t-if="record.expected_revenue.raw_value" class="me-2">
-                            💰 <t t-out="record.expected_revenue.value"/>
+                            💰 <field name="expected_revenue" widget="monetary"
+                                      options="{'currency_field': 'mudon_budget_currency_id'}"/>
                         </span>
                         <span t-if="record.mudon_offer_counter.raw_value"
                               class="badge text-bg-secondary">
