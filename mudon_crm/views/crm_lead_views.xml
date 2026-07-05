@@ -382,7 +382,7 @@
                         <a t-if="record.phone.raw_value"
                            t-attf-href="https://wa.me/#{record.phone.raw_value.replace(/[^0-9]/g,'')}"
                            target="_blank" class="btn btn-sm btn-success mudon_wa_btn"
-                           title="Chat on WhatsApp" t-on-click.stop="() => {}">
+                           title="Chat on WhatsApp">
                             <i class="fa fa-whatsapp"/>
                         </a>
                     </div>
