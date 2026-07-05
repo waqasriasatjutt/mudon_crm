@@ -322,6 +322,9 @@
                 <field name="mudon_budget_currency_id"/>
                 <field name="mudon_visit_date"/>
                 <field name="stage_id"/>
+                <field name="user_id"/>
+                <field name="phone"/>
+                <field name="mudon_first_contact_logged"/>
             </xpath>
             <!--
                 v19.0.1.2.0 — styled Mudon card block: a stage-coloured
@@ -368,6 +371,21 @@
                             Offers: <t t-out="record.mudon_offer_counter.value"/>
                         </span>
                     </div>
+                    <!-- Card footer: agent avatar + SLA chip + one-tap WhatsApp
+                         (the Gulf real-estate team lives in WhatsApp). -->
+                    <div class="mudon_cardfoot d-flex align-items-center justify-content-between mt-1 px-2 pb-1">
+                        <div class="d-flex align-items-center gap-1">
+                            <field name="user_id" widget="many2one_avatar_user"/>
+                            <span t-if="!record.mudon_first_contact_logged.raw_value"
+                                  class="badge text-bg-danger">Not contacted</span>
+                        </div>
+                        <a t-if="record.phone.raw_value"
+                           t-attf-href="https://wa.me/#{record.phone.raw_value.replace(/[^0-9]/g,'')}"
+                           target="_blank" class="btn btn-sm btn-success mudon_wa_btn"
+                           title="Chat on WhatsApp" t-on-click.stop="() => {}">
+                            <i class="fa fa-whatsapp"/>
+                        </a>
+                    </div>
                     <!-- Touch stage-move (mobile/tablet can't drag) — same
                          gate + quick-fill wizard as a drag. Only rendered on
                          real funnel stages (+ Lost, for reopen). -->
@@ -403,6 +421,17 @@
                 <filter name="mudon_uae" string="Mudon UAE Dubai"
                         domain="[('mudon_pipeline_kind', '=', 'uae')]"/>
                 <separator/>
+                <filter name="mudon_my" string="My Pipeline"
+                        domain="[('user_id', '=', uid)]"/>
+                <filter name="mudon_overdue_sla" string="Overdue SLA"
+                        domain="[('mudon_pipeline_kind', 'in', ('turkey', 'uae')),
+                                 ('mudon_first_contact_logged', '=', False),
+                                 '|', ('mudon_sla_1hour_fired', '=', True),
+                                      ('mudon_sla_2hour_fired', '=', True)]"/>
+                <filter name="mudon_won_month" string="Won this month"
+                        domain="[('mudon_stage_kind_current', '=', 'won'),
+                                 ('date_closed', '>=', context_today().replace(day=1).strftime('%Y-%m-%d 00:00:00'))]"/>
+                <separator/>
                 <filter name="mudon_urgent" string="Urgent"
                         domain="[('mudon_priority', '=', 'urgent')]"/>
                 <filter name="mudon_p1" string="P1 — Urgent + Citizenship/GV"
@@ -434,6 +463,8 @@
                         context="{'group_by': 'mudon_source_id'}"/>
                 <filter name="mudon_group_agent" string="Agent"
                         context="{'group_by': 'user_id'}"/>
+                <filter name="mudon_group_nationality" string="Nationality"
+                        context="{'group_by': 'mudon_nationality_id'}"/>
             </xpath>
         </field>
     </record>

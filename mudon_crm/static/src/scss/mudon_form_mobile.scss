@@ -1,24 +1,62 @@
-// Mudon CRM — mobile polish for the lead FORM + 7-stage statusbar.
-// Shipped by mudon_crm itself (previously lived only in the optional
-// mudon_pwa module) so the core pipeline is usable on a phone regardless
-// of which add-ons are installed. Width-gated: desktop is untouched.
+// Mudon CRM — comprehensive RESPONSIVE layer for the backend (form, kanban,
+// list, statusbar, filters) across phone / tablet / laptop. Everything is
+// width-gated, so the desktop experience is untouched. Shipped by mudon_crm
+// itself so the pipeline is usable on any device regardless of add-ons.
 
+// ══ Tablet + phone (≤ 991px) — the iPad-in-the-field band ═══════════════════
+@media (max-width: 991.98px) {
+    .o_form_view {
+        // Mudon injects several two-column <group> blocks; on tablets they
+        // cramp and truncate. Stack every inner group to a single column so
+        // labels + inputs get full width.
+        .o_inner_group { grid-template-columns: 1fr !important; }
+
+        // Header controls wrap instead of overflowing off-screen.
+        .o_statusbar_buttons { flex-wrap: wrap; }
+    }
+
+    // Kanban columns stay readable (never squeezed to a sliver).
+    .o_kanban_renderer .o_kanban_group { min-width: 250px; }
+}
+
+// ══ Phone (≤ 767px) ═════════════════════════════════════════════════════════
 @media (max-width: 767.98px) {
-    // Comfortable 44px tap targets on the controls staff use most.
+    // 44px tap targets on the controls staff touch most.
     .o_action_manager {
         .o_control_panel .btn,
         .o_form_view .o_statusbar_buttons .btn,
         .o_form_view .oe_button_box .btn { min-height: 44px; }
     }
 
-    // 7-stage statusbar: keep every stage reachable by scrolling
-    // horizontally instead of crushing the pills on a narrow screen.
+    // 7-stage statusbar: scroll horizontally instead of crushing the pills.
     .o_form_statusbar .o_statusbar_status {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
         flex-wrap: nowrap;
     }
-
-    // Momentum scrolling in the main content area.
     .o_content { -webkit-overflow-scrolling: touch; }
+
+    // Control panel (search + buttons + breadcrumb) wraps to full width.
+    .o_control_panel .o_cp_top,
+    .o_control_panel .o_cp_bottom,
+    .o_control_panel .o_cp_action_menus,
+    .o_control_panel .o_breadcrumb { flex-wrap: wrap; }
+    .o_control_panel .o_searchview { min-width: 0; width: 100%; }
+
+    // Form sheet: trim the side padding so fields use the whole width.
+    .o_form_view .o_form_sheet { padding: 12px !important; }
+    // Smart-button box wraps instead of overflowing.
+    .o_form_view .oe_button_box { display: flex; flex-wrap: wrap; }
+
+    // List view: keep the wide table scrollable with momentum on a phone.
+    .o_list_renderer { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+    // Kanban: one comfortable full-width column per row on phones.
+    .o_kanban_renderer .o_kanban_group { min-width: 100%; }
+}
+
+// ══ Small phone (≤ 480px) — tighten card chrome a touch ═════════════════════
+@media (max-width: 480px) {
+    .mudon_card_block { font-size: 13px; }
+    .mudon_card_block .mudon_band { font-size: 11px; }
 }
