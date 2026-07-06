@@ -17,7 +17,14 @@
     --mgap: 12px;
     --mchart-h: 320px;
 
-    padding: var(--mpad-y) var(--mpad-x) 48px;
+    // Container padding grows on wide viewports so the content group sits
+    // inside a 1400px band centred horizontally. Per Abdul 07-06 (item 3) —
+    // this is a stronger centring than `> * max-width + margin auto`
+    // because it doesn't require every row to be a direct child.
+    padding-top: var(--mpad-y);
+    padding-bottom: 48px;
+    padding-left: max(var(--mpad-x), calc((100% - 1400px) / 2));
+    padding-right: max(var(--mpad-x), calc((100% - 1400px) / 2));
     background: #f4f5f2;
     color: var(--mink);
     font-size: 14px;
@@ -33,9 +40,7 @@
     box-sizing: border-box;
     *, *::before, *::after { box-sizing: border-box; }
 
-    // Per Abdul 07-06 (item 3): centre the content group so it doesn't
-    // stretch edge-to-edge on wide monitors. Cap dropped from 1600 →
-    // 1400 so 4K screens still see a visibly centred board.
+    // Belt-and-braces: any legacy child using max-width still centres.
     > * { max-width: 1400px; margin-left: auto; margin-right: auto; }
 
     // ── header ──────────────────────────────────────────────
