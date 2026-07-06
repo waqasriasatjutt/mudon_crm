@@ -33,8 +33,10 @@
     box-sizing: border-box;
     *, *::before, *::after { box-sizing: border-box; }
 
-    // Ultrawide cap so tables/KPIs don't stretch to unreadable widths.
-    > * { max-width: 1600px; margin-left: auto; margin-right: auto; }
+    // Per Abdul 07-06 (item 3): centre the content group so it doesn't
+    // stretch edge-to-edge on wide monitors. Cap dropped from 1600 →
+    // 1400 so 4K screens still see a visibly centred board.
+    > * { max-width: 1400px; margin-left: auto; margin-right: auto; }
 
     // ── header ──────────────────────────────────────────────
     .mudon_dash_head {
@@ -43,21 +45,35 @@
         justify-content: space-between;
         gap: 16px;
         background: var(--mnavy);
-        color: #eef1f5;
+        color: #ffffff;                         // explicit white per Abdul 07-06 item 2
         border-radius: 12px;
         padding: 18px 22px;
         > div { min-width: 0; }                 // allow title block to shrink
+        // Explicit white on h1 + subtitle — bypass any theme h1 rules
+        // that were flipping the header text back to dark.
         h1 {
             margin: 0; font-size: 22px; font-weight: 700; letter-spacing: .2px;
             overflow-wrap: anywhere;
+            color: #ffffff;
         }
-        .sub { margin-top: 4px; font-size: 13px; color: #aab6c6; overflow-wrap: anywhere; }
+        .sub {
+            margin-top: 4px; font-size: 13px; overflow-wrap: anywhere;
+            color: #c9d2e0;                     // muted-white on navy
+        }
         .mudon_head_actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
         .btn {
             --bs-btn-color: #dfe4ea; --bs-btn-border-color: #45566f;
             flex: 0 0 auto; white-space: nowrap;
         }
         .btn.btn-primary { --bs-btn-color: #fff; }
+        // Currency toggle group (Abdul 07-06 item 1b)
+        .mudon_ccy_toggle .btn {
+            --bs-btn-color: #dfe4ea; --bs-btn-border-color: #45566f;
+        }
+        .mudon_ccy_toggle .btn.active {
+            --bs-btn-color: #17222e; --bs-btn-bg: #ffffff; --bs-btn-border-color: #ffffff;
+            background: #ffffff; color: #17222e;
+        }
     }
 
     // ── filters ─────────────────────────────────────────────

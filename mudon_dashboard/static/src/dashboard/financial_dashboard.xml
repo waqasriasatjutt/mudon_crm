@@ -14,6 +14,24 @@
                     </div>
                 </div>
                 <div class="mudon_head_actions">
+                    <!--
+                        Currency toggle (Abdul 07-06 item 1b): default shows the
+                        pipeline's native currency (AED for UAE, USD elsewhere);
+                        USD forces everything to USD at a fixed 3.67 AED→USD peg.
+                    -->
+                    <div class="btn-group btn-group-sm mudon_ccy_toggle" role="group" aria-label="Currency mode">
+                        <button class="btn btn-outline-light"
+                                t-att-class="state.currencyMode === 'native' ? 'active' : ''"
+                                t-on-click="() => this.setCurrencyMode('native')">
+                            Native
+                        </button>
+                        <button class="btn btn-outline-light"
+                                t-att-class="state.currencyMode === 'usd' ? 'active' : ''"
+                                t-on-click="() => this.setCurrencyMode('usd')"
+                                title="Show all amounts in USD at a fixed 3.67 AED/USD rate">
+                            USD @ 3.67
+                        </button>
+                    </div>
                     <button class="btn btn-outline-secondary btn-sm" t-on-click="() => this.refresh()">
                         <i class="fa fa-refresh me-1"/>Refresh
                     </button>

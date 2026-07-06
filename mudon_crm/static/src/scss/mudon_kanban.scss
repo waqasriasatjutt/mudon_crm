@@ -30,13 +30,15 @@
     }
 
     // Per-stage-kind band colours (keys = crm.stage.mudon_stage_kind).
-    .mudon_band_new_lead   { background: #6c757d; }   // grey
-    .mudon_band_qualified  { background: #0d6efd; }   // blue
-    .mudon_band_offer_sent { background: #6f42c1; }   // purple
-    .mudon_band_meeting    { background: #fd7e14; }   // orange
-    .mudon_band_eoi        { background: #20c997; }   // teal
-    .mudon_band_won        { background: #198754; }   // green
-    .mudon_band_lost       { background: #dc3545; }   // red
+    // Rainbow gradient per Abdul Rehman 07-06 feedback (item 5):
+    // Red → Orange → Yellow → Light Green → Medium Green → Full Green; Lost = black.
+    .mudon_band_new_lead   { background: #dc3545; color: #fff; }   // red
+    .mudon_band_qualified  { background: #fd7e14; color: #fff; }   // orange
+    .mudon_band_offer_sent { background: #ffc107; color: #212529; } // yellow (dark text for contrast)
+    .mudon_band_meeting    { background: #8bc34a; color: #fff; }   // light green
+    .mudon_band_eoi        { background: #4caf50; color: #fff; }   // medium green
+    .mudon_band_won        { background: #198754; color: #fff; }   // full green
+    .mudon_band_lost       { background: #000000; color: #fff; }   // black
 
     .mudon_badges,
     .mudon_tags,

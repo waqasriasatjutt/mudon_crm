@@ -184,7 +184,7 @@ class CrmLead(models.Model):
              "drives visibility of the free-text city field on the form.",
     )
     mudon_priority = fields.Selection(
-        PRIORITY_SELECTION, string="Priority", default="normal",
+        PRIORITY_SELECTION, string="Priority",
     )
     mudon_budget = fields.Monetary(
         string="Budget", currency_field="mudon_budget_currency_id",
@@ -577,12 +577,11 @@ class CrmLead(models.Model):
         field(s) and route the user to the quick-fill wizard if any are
         missing.
 
-        - Single-step advance: only the qualify DATA fields (Service /
-          City / Priority / Budget) are hard-gated — a lone stage tick is
-          auto-confirmed by the drag itself (see write()).
-        - Skipping stages: the user must fill / confirm every crossed
-          stage's mandatory field, so a card dragged New → Meeting is
-          asked for Qualified + Offer Sent + Meeting in one wizard.
+        Abdul Rehman 07-06 feedback (items 6 + 9): EVERY forward move
+        must ask for confirmation of the milestone tick — no silent
+        auto-tick on adjacent drags. So single-step and multi-step
+        advances are treated identically: every unset crossed field
+        opens the wizard.
 
         Lost is handled separately by _mudon_check_stage_transitions.
         """
@@ -602,17 +601,11 @@ class CrmLead(models.Model):
             if ti <= ci:
                 continue  # backward / same stage → no gate
             crossed = rec._mudon_crossed_required(ck, target_kind)
-            if (ti - ci) > 1:
-                # skipping stages → confirm the full crossed set
-                required = [
-                    f for f in crossed if not (rec[f] or vals.get(f))
-                ]
-            else:
-                # single-step advance → only the qualify DATA is hard-gated
-                required = [
-                    f for f in crossed
-                    if f in MUDON_QUALIFY_DATA and not (rec[f] or vals.get(f))
-                ]
+            # Confirm EVERY crossed field, single-step or skip. The
+            # wizard collects them all together.
+            required = [
+                f for f in crossed if not (rec[f] or vals.get(f))
+            ]
             if not required:
                 continue
             action = self.env["ir.actions.act_window"]._for_xml_id(
@@ -638,6 +631,9 @@ class CrmLead(models.Model):
     # The auto-tick is applied inside write() by mutating `vals` before
     # super() is called; the after-write hook then sees the flip and
     # fires the usual side-effects (notifications, counter bumps).
+    # Kept for reference / potential future use. As of Abdul Rehman
+    # 07-06 feedback the auto-tick behaviour is removed — every gated
+    # forward move goes through the quick-fill wizard.
     MUDON_AUTOTICK_GATES = {
         "offer_sent": "mudon_tick_offer_sent",
         "meeting": "mudon_visit_confirmed",
@@ -646,9 +642,12 @@ class CrmLead(models.Model):
     }
 
     def _mudon_check_stage_transitions(self, new_stage, vals=None):
-        """Only Lost still needs a hard gate — the reason can't be
-        auto-picked. The other 4 stage kinds are handled by the
-        auto-tick path in write().
+        """Enforce Lost has a Lost Reason before the write goes through.
+
+        Offer Sent / Meeting / EOI / WON are covered by
+        _mudon_check_stage_requirements (crossed-field gate). Lost is
+        singled out here because the reason can't be inferred from
+        other data.
 
         On Lost with no Lost Reason set, we throw a RedirectWarning
         pointing to the quick-fill wizard so the user picks a reason
@@ -707,29 +706,10 @@ class CrmLead(models.Model):
             new_stage = self.env["crm.stage"].sudo().browse(vals["stage_id"])
             self._mudon_check_stage_requirements(new_stage, vals)
             self._mudon_check_stage_transitions(new_stage, vals)
-            # Auto-tick the transition field ONLY for a single-step
-            # forward drag into offer_sent / meeting / eoi / won — the
-            # drag IS the confirmation. A multi-stage SKIP does NOT
-            # auto-tick: the quick-fill wizard collects every crossed
-            # stage's confirmation instead. The after-write hook then
-            # detects the flip and fires the side-effects exactly once.
-            kind = new_stage.mudon_stage_kind
-            tick_field = self.MUDON_AUTOTICK_GATES.get(kind)
-            if tick_field and tick_field not in vals:
-                ti = (MUDON_STAGE_ORDER.index(kind)
-                      if kind in MUDON_STAGE_ORDER else -1)
-                needs_tick = any(
-                    rec.mudon_pipeline_kind and not rec[tick_field]
-                    and ti >= 0
-                    and ti - (
-                        MUDON_STAGE_ORDER.index(rec.mudon_stage_kind_current)
-                        if rec.mudon_stage_kind_current in MUDON_STAGE_ORDER
-                        else -1
-                    ) == 1
-                    for rec in self
-                )
-                if needs_tick:
-                    vals[tick_field] = True
+            # NOTE: no silent auto-tick — per Abdul 07-06 feedback,
+            # every forward move opens the quick-fill wizard so the
+            # user consciously confirms the milestone. The wizard
+            # writes the tick + stage_id together in a single vals.
         pre = {
             r.id: {
                 "stage_id": r.stage_id.id,
@@ -980,6 +960,41 @@ class CrmLead(models.Model):
             "target": "current",
             "context": {"default_lead_id": self.id},
         }
+
+    # ─── Header shortcuts (Abdul 07-06 UX feedback) ─────────────────
+    # Item 7: a discoverable Delete button; item 8: an explicit Back
+    # to Pipeline so exiting a card doesn't feel like navigation
+    # guesswork. Both return an Odoo action that navigates cleanly.
+    def _mudon_pipeline_action(self):
+        """The CRM Pipeline act_window scoped to this lead's team so the
+        user lands back exactly where they came from (Turkey / UAE)."""
+        self.ensure_one()
+        action = self.env["ir.actions.act_window"]._for_xml_id(
+            "crm.crm_lead_action_pipeline",
+        )
+        if self.team_id:
+            ctx = dict(action.get("context") or {})
+            ctx["default_team_id"] = self.team_id.id
+            action["context"] = ctx
+        return action
+
+    def action_mudon_back_to_pipeline(self):
+        """Header **← Back to Pipeline** — close the form cleanly and
+        return the user to the kanban of the same team. No side-effects."""
+        self.ensure_one()
+        return self._mudon_pipeline_action()
+
+    def action_mudon_delete_lead(self):
+        """Header **Delete** — remove this lead + return to the pipeline.
+
+        ACL: gated to Sales Managers via ``groups=`` in the view. If a
+        salesperson somehow reaches this method (context bypass), the
+        ORM's own security check on ``unlink`` will reject the delete.
+        """
+        self.ensure_one()
+        action = self._mudon_pipeline_action()
+        self.unlink()
+        return action
 
     # ─── Branch + country-code routing ──────────────────────────────
     def _mudon_auto_assign_agent(self):

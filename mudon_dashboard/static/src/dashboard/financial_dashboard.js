@@ -41,7 +41,14 @@ class MudonFinancialDashboard extends Component {
             sortKey: "closed",
             sortDir: "desc",
             renderKey: 0,
+            // Currency display mode — Abdul 07-06 (item 1b).
+            // "native" = show whatever the pipeline currency is (default);
+            // "usd"    = force everything to USD at a fixed AED→USD rate.
+            currencyMode: "native",
         });
+        // Fixed peg per Abdul's instruction. Not read from res.currency
+        // because he wanted a stable review rate independent of live FX.
+        this.AED_TO_USD = 3.67;
 
         onWillStart(async () => {
             try {
@@ -198,24 +205,41 @@ class MudonFinancialDashboard extends Component {
     }
     fmtDate(s) { return s || "—"; }
 
+    // Convert a native amount to the currently-selected display
+    // currency + return { value, sym, position }. Native → USD when
+    // the toggle is USD and the native is AED (divide by 3.67); native
+    // → AED not currently offered (Abdul asked only for USD toggle).
+    _mudonDisplay(v) {
+        const m = (this.state.data && this.state.data.meta) || {};
+        const nativeSym = m.currency || "";
+        const nativePos = m.currency_position || "before";
+        if (this.state.currencyMode === "usd" && (nativeSym === "AED" || nativeSym === "د.إ")) {
+            return { value: v / this.AED_TO_USD, sym: "$", position: "before" };
+        }
+        return { value: v, sym: nativeSym, position: nativePos };
+    }
+
     fmtMoney(v) {
         if (v == null) { return "—"; }
-        const m = this.state.data && this.state.data.meta;
-        const sym = (m && m.currency) || "";
+        const d = this._mudonDisplay(v);
         let n;
-        const a = Math.abs(v);
-        if (a >= 1000000) { n = (v / 1000000).toFixed(2).replace(/\.?0+$/, "") + "M"; }
-        else if (a >= 1000) { n = Math.round(v / 1000) + "K"; }
-        else { n = new Intl.NumberFormat().format(Math.round(v)); }
-        return (m && m.currency_position === "after") ? `${n} ${sym}` : `${sym} ${n}`;
+        const a = Math.abs(d.value);
+        if (a >= 1000000) { n = (d.value / 1000000).toFixed(2).replace(/\.?0+$/, "") + "M"; }
+        else if (a >= 1000) { n = Math.round(d.value / 1000) + "K"; }
+        else { n = new Intl.NumberFormat().format(Math.round(d.value)); }
+        return d.position === "after" ? `${n} ${d.sym}` : `${d.sym} ${n}`;
     }
 
     fmtFull(v) {
         if (v == null) { return "—"; }
-        const m = this.state.data && this.state.data.meta;
-        const sym = (m && m.currency) || "";
-        const n = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(Math.round(v));
-        return (m && m.currency_position === "after") ? `${n} ${sym}` : `${sym} ${n}`;
+        const d = this._mudonDisplay(v);
+        const n = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(Math.round(d.value));
+        return d.position === "after" ? `${n} ${d.sym}` : `${d.sym} ${n}`;
+    }
+
+    setCurrencyMode(mode) {
+        this.state.currencyMode = mode;
+        this.state.renderKey++;  // trigger chart re-render with new axis labels
     }
 
     get kpiCards() {

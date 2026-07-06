@@ -270,6 +270,20 @@
                 <button name="action_mudon_reopen" type="object"
                         string="Restore" class="btn-secondary"
                         invisible="mudon_stage_kind_current != 'lost'"/>
+                <!--
+                    Abdul 07-06 feedback (items 7 + 8): explicit Delete
+                    and Back-to-Pipeline buttons so the exit and delete
+                    paths are one visible click, not buried in the
+                    Actions menu.
+                -->
+                <button name="action_mudon_back_to_pipeline" type="object"
+                        string="← Back to Pipeline" class="btn-light"
+                        invisible="not mudon_pipeline_kind"/>
+                <button name="action_mudon_delete_lead" type="object"
+                        string="Delete" class="btn-outline-danger"
+                        confirm="Delete this lead permanently? This action cannot be undone."
+                        invisible="not mudon_pipeline_kind"
+                        groups="sales_team.group_sale_manager"/>
             </xpath>
 
             <!-- WON / LOST ribbons (Mudon uses its own stages, not won_status). -->
@@ -337,7 +351,7 @@
             -->
             <xpath expr="//footer" position="before">
                 <div t-if="record.mudon_pipeline_kind.raw_value"
-                     t-attf-class="mudon_card_block mudon_prio_#{record.mudon_priority.raw_value or 'normal'}">
+                     t-attf-class="mudon_card_block mudon_prio_#{record.mudon_priority.raw_value or 'none'}">
                     <!-- Stage band header (colour by stage kind) -->
                     <div t-attf-class="mudon_band mudon_band_#{record.mudon_stage_kind_current.raw_value or 'new_lead'}">
                         <t t-out="record.stage_id.value"/>
