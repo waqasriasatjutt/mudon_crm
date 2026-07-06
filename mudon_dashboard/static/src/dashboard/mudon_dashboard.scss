@@ -21,10 +21,15 @@
     // inside a 1400px band centred horizontally. Per Abdul 07-06 (item 3) —
     // this is a stronger centring than `> * max-width + margin auto`
     // because it doesn't require every row to be a direct child.
+    //
+    // NOTE on the unquote(): libsass has its own SCSS max() that tries to
+    // resolve args at compile time and rejects var()/calc() as "not a
+    // number". Wrapping the call in unquote() emits the string as raw CSS
+    // so the browser evaluates max() at runtime against the viewport.
     padding-top: var(--mpad-y);
     padding-bottom: 48px;
-    padding-left: max(var(--mpad-x), calc((100% - 1400px) / 2));
-    padding-right: max(var(--mpad-x), calc((100% - 1400px) / 2));
+    padding-left: unquote("max(var(--mpad-x), calc((100% - 1400px) / 2))");
+    padding-right: unquote("max(var(--mpad-x), calc((100% - 1400px) / 2))");
     background: #f4f5f2;
     color: var(--mink);
     font-size: 14px;
