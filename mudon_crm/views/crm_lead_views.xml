@@ -560,9 +560,16 @@
                 pipeline action puts its team in `default_team_id`, so scope
                 the lookup to that team when one is present, and fall back to
                 the unfiltered list on the All Mudon Leads view.
+
+                The stock search view has no Stage field at all, which is why
+                the client reached Stage through Add Custom Filter and got the
+                unscoped picker. Adding it here gives a scoped Stage straight
+                from the search bar; crm_stage.py scopes the picker itself so
+                the custom-filter route is covered too.
             -->
-            <xpath expr="//field[@name='stage_id']" position="attributes">
-                <attribute name="domain">context.get('default_team_id') and [('team_ids', '=', context.get('default_team_id'))] or []</attribute>
+            <xpath expr="//search" position="inside">
+                <field name="stage_id" string="Stage"
+                       domain="context.get('default_team_id') and [('team_ids', '=', context.get('default_team_id'))] or []"/>
             </xpath>
 
             <!--
