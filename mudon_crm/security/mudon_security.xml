@@ -48,103 +48,151 @@
         ══════════════════════════════════════════════════════════════════
     -->
 
-    <!-- ─── Category shown on the user form ──────────────────────────── -->
+    <!--
+        ═══ HOW ODOO 19 GROUPS ROLES ON THE USER FORM ═══════════════
+        Odoo 19 replaced `res.groups.category_id` with `privilege_id`,
+        pointing at the new `res.groups.privilege` model. Groups that share
+        a privilege render as ONE selector (pick exactly one), and a
+        privilege holding a single group renders as an on/off choice.
+
+        That maps cleanly onto the client's matrix:
+          * the 7 scope roles share one privilege, giving a single "Mudon
+            Role" selector, because nobody is both a Sales Agent and a
+            Sales Director;
+          * each functional role gets its own privilege, giving independent
+            switches, because an Accountant can also be a Team Leader.
+    -->
     <record id="module_category_mudon_crm" model="ir.module.category">
         <field name="name">Mudon CRM</field>
         <field name="description">Role-based access for the Mudon Property CRM.</field>
         <field name="sequence">5</field>
     </record>
-    <record id="module_category_mudon_function" model="ir.module.category">
-        <field name="name">Mudon CRM — Functional Roles</field>
-        <field name="description">Additional job-function roles. Tick any that apply, on top of the Mudon CRM scope role.</field>
-        <field name="sequence">6</field>
+
+    <record id="res_groups_privilege_mudon_role" model="res.groups.privilege">
+        <field name="name">Mudon Role</field>
+        <field name="category_id" ref="module_category_mudon_crm"/>
+        <field name="sequence">1</field>
+        <field name="placeholder">No Mudon access</field>
+        <field name="description">Decides which leads this person can see: their own, their team's, their branch's, or the whole company.</field>
+    </record>
+    <record id="res_groups_privilege_mudon_after_sales" model="res.groups.privilege">
+        <field name="name">Customer Admin / After-Sales</field>
+        <field name="category_id" ref="module_category_mudon_crm"/>
+        <field name="sequence">10</field>
+        <field name="description">Completed sales, documents, title deeds, citizenship and handover.</field>
+    </record>
+    <record id="res_groups_privilege_mudon_accounting" model="res.groups.privilege">
+        <field name="name">Accounting</field>
+        <field name="category_id" ref="module_category_mudon_crm"/>
+        <field name="sequence">11</field>
+        <field name="description">Invoices, payments, commissions and the Financial Dashboard.</field>
+    </record>
+    <record id="res_groups_privilege_mudon_marketing" model="res.groups.privilege">
+        <field name="name">Marketing</field>
+        <field name="category_id" ref="module_category_mudon_crm"/>
+        <field name="sequence">12</field>
+        <field name="description">Lead sources, campaigns and communication templates. No access to financial figures.</field>
+    </record>
+    <record id="res_groups_privilege_mudon_compliance" model="res.groups.privilege">
+        <field name="name">Document Control / Compliance</field>
+        <field name="category_id" ref="module_category_mudon_crm"/>
+        <field name="sequence">13</field>
+        <field name="description">Review and approval of customer, legal and transaction documents.</field>
     </record>
 
     <!--
-        ═══ SCOPE LADDER ════════════════════════════════════════════════
-        Ordered low → high. Each implies the previous one.
+        ═══ SCOPE LADDER ═════════════════════════════════════
+        Ordered low to high; each implies the one below it. `sequence`
+        controls the order they appear in the selector.
     -->
 
-    <!-- V — View-only access for management, auditors or consultants. -->
+    <!-- V: view-only access for management, auditors or consultants. -->
     <record id="group_mudon_viewer" model="res.groups">
         <field name="name">Viewer / Auditor</field>
-        <field name="category_id" ref="module_category_mudon_crm"/>
-        <field name="comment">Read-only access to management, auditors or consultants. Cannot create, edit or delete anything.</field>
+        <field name="privilege_id" ref="res_groups_privilege_mudon_role"/>
+        <field name="sequence">10</field>
+        <field name="comment">Read-only access for management, auditors or consultants. Cannot create, edit or delete anything.</field>
     </record>
 
-    <!-- O — Works on assigned leads, clients, activities and deals. -->
+    <!-- O: works on assigned leads, clients, activities and deals. -->
     <record id="group_mudon_sales_agent" model="res.groups">
         <field name="name">Sales Agent</field>
-        <field name="category_id" ref="module_category_mudon_crm"/>
+        <field name="privilege_id" ref="res_groups_privilege_mudon_role"/>
+        <field name="sequence">20</field>
         <field name="implied_ids" eval="[(4, ref('sales_team.group_sale_salesman'))]"/>
         <field name="comment">Works on assigned leads, clients, activities and deals. Sees only records assigned to them.</field>
     </record>
 
-    <!-- T — Manages a defined sales team and its assigned records. -->
+    <!-- T: manages a defined sales team and its assigned records. -->
     <record id="group_mudon_team_leader" model="res.groups">
         <field name="name">Team Leader</field>
-        <field name="category_id" ref="module_category_mudon_crm"/>
+        <field name="privilege_id" ref="res_groups_privilege_mudon_role"/>
+        <field name="sequence">30</field>
         <field name="implied_ids" eval="[(4, ref('group_mudon_sales_agent'))]"/>
         <field name="comment">Manages a defined sales team and its assigned records.</field>
     </record>
 
-    <!-- B — Manages one or more branches (Dubai / Istanbul / Trabzon). -->
+    <!-- B: manages one or more branches (Dubai / Istanbul / Trabzon). -->
     <record id="group_mudon_branch_manager" model="res.groups">
         <field name="name">Branch Manager</field>
-        <field name="category_id" ref="module_category_mudon_crm"/>
+        <field name="privilege_id" ref="res_groups_privilege_mudon_role"/>
+        <field name="sequence">40</field>
         <field name="implied_ids" eval="[(4, ref('group_mudon_team_leader'))]"/>
         <field name="comment">Manages one or more branches, such as Dubai, Istanbul or Trabzon.</field>
     </record>
 
-    <!-- A — Company-wide sales oversight across all branches and teams. -->
+    <!-- A: company-wide sales oversight across all branches and teams. -->
     <record id="group_mudon_sales_director" model="res.groups">
         <field name="name">Sales Director</field>
-        <field name="category_id" ref="module_category_mudon_crm"/>
+        <field name="privilege_id" ref="res_groups_privilege_mudon_role"/>
+        <field name="sequence">50</field>
         <field name="implied_ids" eval="[(4, ref('group_mudon_branch_manager')), (4, ref('sales_team.group_sale_manager'))]"/>
         <field name="comment">Company-wide sales oversight across all branches and teams.</field>
     </record>
 
-    <!-- A + configuration — user administration and system configuration. -->
+    <!-- A plus configuration: user administration and system settings. -->
     <record id="group_mudon_system_admin" model="res.groups">
         <field name="name">System Admin</field>
-        <field name="category_id" ref="module_category_mudon_crm"/>
+        <field name="privilege_id" ref="res_groups_privilege_mudon_role"/>
+        <field name="sequence">60</field>
         <field name="implied_ids" eval="[(4, ref('group_mudon_sales_director'))]"/>
         <field name="comment">System configuration and user administration, without authority to remove the final Super Admin.</field>
     </record>
 
-    <!-- F — Unrestricted system ownership and highest security authority. -->
+    <!-- F: unrestricted system ownership and highest security authority. -->
     <record id="group_mudon_super_admin" model="res.groups">
         <field name="name">Super Admin</field>
-        <field name="category_id" ref="module_category_mudon_crm"/>
+        <field name="privilege_id" ref="res_groups_privilege_mudon_role"/>
+        <field name="sequence">70</field>
         <field name="implied_ids" eval="[(4, ref('group_mudon_system_admin'))]"/>
-        <field name="comment">Unrestricted system ownership and highest security authority. Only a Super Admin may delete CRM records or remove another administrator.</field>
+        <field name="comment">Unrestricted system ownership and highest security authority. Only a Super Admin may delete CRM records.</field>
     </record>
 
     <!--
-        ═══ FUNCTIONAL ROLES (independent check-boxes) ══════════════════
+        ═══ FUNCTIONAL ROLES (independent switches) ══════════════════
     -->
 
     <record id="group_mudon_customer_admin" model="res.groups">
-        <field name="name">Customer Admin / After-Sales</field>
-        <field name="category_id" ref="module_category_mudon_function"/>
+        <field name="name">Customer Admin</field>
+        <field name="privilege_id" ref="res_groups_privilege_mudon_after_sales"/>
         <field name="comment">Manages completed sales, documents, title deeds, citizenship and handover processes.</field>
     </record>
 
     <record id="group_mudon_accountant" model="res.groups">
         <field name="name">Accountant</field>
-        <field name="category_id" ref="module_category_mudon_function"/>
-        <field name="comment">Manages invoices, payments, commissions, expenses and financial reports. The only functional role that can see the Financial Dashboard.</field>
+        <field name="privilege_id" ref="res_groups_privilege_mudon_accounting"/>
+        <field name="comment">Manages invoices, payments, commissions, expenses and financial reports. Required to see the Financial Dashboard.</field>
     </record>
 
     <record id="group_mudon_marketing" model="res.groups">
         <field name="name">Marketing User</field>
-        <field name="category_id" ref="module_category_mudon_function"/>
+        <field name="privilege_id" ref="res_groups_privilege_mudon_marketing"/>
         <field name="comment">Manages lead sources, campaigns, marketing reports and approved communication templates. Explicitly has NO access to financial figures.</field>
     </record>
 
     <record id="group_mudon_compliance" model="res.groups">
-        <field name="name">Document Controller / Compliance</field>
-        <field name="category_id" ref="module_category_mudon_function"/>
+        <field name="name">Document Controller</field>
+        <field name="privilege_id" ref="res_groups_privilege_mudon_compliance"/>
         <field name="comment">Reviews and approves customer, legal and transaction documents.</field>
     </record>
 
