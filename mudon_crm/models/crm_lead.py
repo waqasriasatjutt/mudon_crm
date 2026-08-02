@@ -1765,11 +1765,19 @@ class CrmLead(models.Model):
         than disabling the reminder — a mistyped setting must never
         silently switch off a client-facing SLA. A value of 0 IS honoured
         and means "fire on the next sweep".
+
+        NOTE: ``get_param`` returns the boolean ``False`` for a key that has
+        never been written, and ``int(False)`` is 0 rather than an error.
+        Without the emptiness check below, every timer would read as 0 until
+        somebody opened Settings and pressed Save — so all reminders would
+        fire on the first sweep after a lead was created.
         """
         raw = self.env["ir.config_parameter"].sudo().get_param(
             "mudon_crm.%s" % key)
+        if raw is False or raw is None or str(raw).strip() == "":
+            return default
         try:
-            value = int(raw)
+            value = int(str(raw).strip())
         except (TypeError, ValueError):
             return default
         return value if value >= 0 else default

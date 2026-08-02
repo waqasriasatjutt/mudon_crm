@@ -26,7 +26,36 @@ def migrate(cr, version):
     _hide_generate_leads(env)
     _recompute_sort_keys(env)
     _seed_roles(env)
+    _seed_timers(env)
     _report_unrouted_leads(env)
+
+
+def _seed_timers(env):
+    """Comment 6 — write the spec defaults so Settings opens populated.
+
+    The fields carry `default=` values, but Odoo only persists those once
+    somebody saves the Settings page. Writing them here means the client
+    sees the real numbers (30 / 60 / 30 / 120 / 3 / 15 / 15 / 3) the first
+    time they open the page, instead of empty boxes they might mistake for
+    "no reminder configured".
+    """
+    ICP = env["ir.config_parameter"].sudo()
+    defaults = {
+        "sla_new_lead_first": "30",
+        "sla_new_lead_escalate": "60",
+        "sla_qualified_first": "30",
+        "sla_qualified_escalate": "120",
+        "sla_offer_followup": "3",
+        "sla_visit_notice": "15",
+        "sla_stay_in_touch": "15",
+        "survey_after_offer": "3",
+        "meeting_reminder_days": "3,2,1",
+    }
+    for key, value in defaults.items():
+        param = "mudon_crm.%s" % key
+        if not ICP.get_param(param):
+            ICP.set_param(param, value)
+    _logger.info("mudon_crm: notification timers seeded with spec defaults")
 
 
 def _strip_opportunity_suffix(cr):
