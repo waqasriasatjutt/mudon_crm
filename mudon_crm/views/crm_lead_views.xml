@@ -47,14 +47,15 @@
                 -->
 
                 <!-- Lost (current) -->
-                <group string="Lost" invisible="mudon_stage_kind_current != 'lost'">
+                <group string="Lost" class="mudon_sec mudon_sec_lost"
+                       invisible="mudon_stage_kind_current != 'lost'">
                     <field name="mudon_lost_reason_id" string="Lost Reason"
                            options="{'no_create_edit': True}" readonly="1"/>
                 </group>
 
                 <!-- WON / SPA Signed -->
                 <group invisible="mudon_stage_kind_current != 'won'">
-                    <group string="WON — closing details">
+                    <group string="WON — closing details" class="mudon_sec mudon_sec_won">
                         <field name="mudon_closing_amount"/>
                         <field name="mudon_developer_id"
                                options="{'no_create_edit': True}"/>
@@ -65,13 +66,13 @@
                         <field name="mudon_handover_type"/>
                         <field name="mudon_reason_to_win"/>
                     </group>
-                    <group string="Billing &amp; collection">
+                    <group string="Billing &amp; collection" class="mudon_sec mudon_sec_won">
                         <field name="mudon_invoiced_amount"/>
                         <field name="mudon_invoiced_date"/>
                         <field name="mudon_collected_amount"/>
                         <field name="mudon_collected_date"/>
                     </group>
-                    <group string="Funnel triggers">
+                    <group string="Funnel triggers" class="mudon_sec mudon_sec_won">
                         <field name="mudon_need_invoice"/>
                         <field name="mudon_title_deed_required"/>
                         <field name="mudon_citizenship_required"
@@ -102,14 +103,14 @@
                 </group>
 
                 <!-- EOI / Booking (this stage + later) -->
-                <group string="EOI / Booking"
+                <group string="EOI / Booking" class="mudon_sec mudon_sec_eoi"
                        invisible="mudon_stage_kind_current not in ('eoi', 'won')">
                     <field name="mudon_fully_paid"
                            string="Fully Paid → advance to WON (SPA Signed)"/>
                 </group>
 
                 <!-- Meeting (this stage + later) -->
-                <group string="Meeting"
+                <group string="Meeting" class="mudon_sec mudon_sec_meeting"
                        invisible="mudon_stage_kind_current not in ('meeting', 'eoi', 'won')">
                     <field name="mudon_client_type"/>
                     <field name="mudon_property_requirements"/>
@@ -119,7 +120,7 @@
 
                 <!-- Offer Sent (this stage + later) -->
                 <group invisible="mudon_stage_kind_current not in ('offer_sent', 'meeting', 'eoi', 'won')">
-                    <group string="Offer Sent">
+                    <group string="Offer Sent" class="mudon_sec mudon_sec_offer_sent">
                         <label for="mudon_offer_counter" string="Offers sent"/>
                         <div class="mudon_offer_row d-flex flex-wrap align-items-center">
                             <field name="mudon_offer_counter" readonly="1" nolabel="1"
@@ -135,8 +136,9 @@
                         <field name="mudon_visit_confirmed" widget="boolean_toggle"
                                string="Visit Confirmed → advance to Meeting"/>
                     </group>
-                    <group string="3rd-offer survey">
-                        <field name="mudon_3rd_offer_survey_sent" readonly="1"/>
+                    <group string="3rd-offer survey" class="mudon_sec mudon_sec_offer_sent"
+                           invisible="not mudon_3rd_offer_survey_sent">
+                        <field name="mudon_3rd_offer_survey_sent" invisible="1"/>
                         <field name="mudon_survey_received_offer"
                                invisible="not mudon_3rd_offer_survey_sent"/>
                         <field name="mudon_survey_suitable"
@@ -153,16 +155,16 @@
                 </group>
 
                 <!-- Qualified (this stage + later) -->
-                <group string="Qualified"
+                <group string="Qualified" class="mudon_sec mudon_sec_qualified"
                        invisible="mudon_stage_kind_current not in ('qualified', 'offer_sent', 'meeting', 'eoi', 'won')">
                     <field name="mudon_tick_offer_sent"
                            string="Offer Sent → advance to Offer Sent"/>
                 </group>
 
                 <!-- New Lead intake (always visible; the heading flips per stage) -->
-                <separator string="▶ New Lead — capture the enquiry, then drag the card to Qualified"
+                <separator string="New Lead — capture the enquiry" class="mudon_sec mudon_sec_new_lead"
                            invisible="not mudon_pipeline_kind or mudon_stage_kind_current != 'new_lead'"/>
-                <separator string="Lead details"
+                <separator string="Lead details" class="mudon_sec mudon_sec_new_lead"
                            invisible="not mudon_pipeline_kind or mudon_stage_kind_current == 'new_lead'"/>
                 <group invisible="not mudon_pipeline_kind">
                     <group>
@@ -196,7 +198,7 @@
                         <field name="mudon_beds"/>
                         <field name="mudon_visit_date"/>
                     </group>
-                    <group string="Requirements" colspan="2">
+                    <group string="Requirements" colspan="2" class="mudon_sec mudon_sec_new_lead">
                         <field name="mudon_purpose_ids" widget="many2many_tags"
                                options="{'no_create_edit': True, 'color_field': 'color'}"
                                domain="[('pipeline_kind', 'in', [mudon_pipeline_kind, 'any'])]"/>
@@ -208,7 +210,7 @@
                 </group>
 
                 <!-- Move to Lost (escape hatch from any funnel stage) -->
-                <group string="Move to Lost"
+                <group string="Move to Lost" class="mudon_sec mudon_sec_lost"
                        invisible="not mudon_pipeline_kind or mudon_stage_kind_current in ('won', 'lost')">
                     <field name="mudon_lost_reason_id" string="Lost Reason"
                            options="{'no_create_edit': True}"/>
@@ -247,6 +249,45 @@
             </xpath>
 
             <!--
+                Comment 30 — "Remove from inside the card: at Probability
+                0.00 %". That whole strip is the stock <h2> banner (native
+                revenue + recurring revenue + the AI probability widget).
+                Mudon carries its own Budget field and does not use Odoo's
+                predictive scoring, so the banner is hidden wholesale for
+                Mudon leads. Non-Mudon pipelines keep it untouched.
+            -->
+            <xpath expr="//div[@id='probability']/.." position="attributes">
+                <attribute name="invisible">mudon_pipeline_kind</attribute>
+            </xpath>
+            <xpath expr="//span[@groups='!crm.group_use_recurring_revenues']" position="attributes">
+                <attribute name="invisible">mudon_pipeline_kind</attribute>
+            </xpath>
+
+            <!--
+                Comment 20 — "Expected Closing? To be removed" (and the
+                priority stars sitting beside it, which duplicate Mudon's
+                own Urgent/Normal priority).
+            -->
+            <xpath expr="//label[@for='date_deadline']" position="attributes">
+                <attribute name="invisible">mudon_pipeline_kind</attribute>
+            </xpath>
+            <xpath expr="//field[@name='date_deadline']" position="attributes">
+                <attribute name="invisible">mudon_pipeline_kind</attribute>
+            </xpath>
+            <xpath expr="//field[@name='priority'][@nolabel='1']" position="attributes">
+                <attribute name="invisible">mudon_pipeline_kind</attribute>
+            </xpath>
+
+            <!--
+                Comment 21 — "What is Tags?". Odoo's generic CRM tags are
+                unused here: Mudon classifies with Service / City / Purpose /
+                Property Type masters instead, so the field is just noise.
+            -->
+            <xpath expr="//field[@name='tag_ids']" position="attributes">
+                <attribute name="invisible">mudon_pipeline_kind</attribute>
+            </xpath>
+
+            <!--
                 HEADER — enterprise stage controls. The stock CRM "Won" and
                 "Lost" header buttons bypass Mudon's stage gates (Won) or
                 ARCHIVE the lead (Lost → active=False, so it vanishes from
@@ -260,30 +301,40 @@
             <xpath expr="//header/button[@data-hotkey='l']" position="attributes">
                 <attribute name="invisible">mudon_pipeline_kind or won_status != 'pending' or not active</attribute>
             </xpath>
+            <!--
+                HEADER BUTTON ORDER + COLOURS — client comment 24 supplied a
+                mock-up: "← Back to Pipeline | Delete | Mark Lost | Advance",
+                with Advance as the green primary action on the right. XML
+                order is render order, so the buttons are declared in exactly
+                the sequence he drew.
+            -->
             <xpath expr="//header/field[@name='stage_id']" position="before">
-                <button name="action_mudon_kanban_advance" type="object"
-                        string="Advance" class="btn-primary" data-hotkey="n"
-                        invisible="not mudon_pipeline_kind or not mudon_is_funnel_stage or mudon_stage_kind_current in ('won', 'lost')"/>
-                <button name="action_mudon_mark_lost" type="object"
-                        string="Mark Lost" class="btn-secondary"
-                        invisible="not mudon_pipeline_kind or mudon_stage_kind_current in ('won', 'lost')"/>
-                <button name="action_mudon_reopen" type="object"
-                        string="Restore" class="btn-secondary"
-                        invisible="mudon_stage_kind_current != 'lost'"/>
                 <!--
-                    Abdul 07-06 feedback (items 7 + 8): explicit Delete
-                    and Back-to-Pipeline buttons so the exit and delete
-                    paths are one visible click, not buried in the
-                    Actions menu.
+                    Zero-height marker. It renders only on a Mudon lead, which
+                    lets the stylesheet colour this form's stage bar to match
+                    the kanban stage colours (comment 10) via :has(), without
+                    touching any other CRM pipeline in the database.
                 -->
+                <div class="mudon_form_marker d-none"
+                     invisible="not mudon_pipeline_kind"/>
                 <button name="action_mudon_back_to_pipeline" type="object"
-                        string="← Back to Pipeline" class="btn-light"
+                        string="← Back to Pipeline" class="btn-link mudon_btn_back"
                         invisible="not mudon_pipeline_kind"/>
                 <button name="action_mudon_delete_lead" type="object"
-                        string="Delete" class="btn-outline-danger"
+                        string="Delete" class="btn-outline-danger mudon_btn_delete"
                         confirm="Delete this lead permanently? This action cannot be undone."
                         invisible="not mudon_pipeline_kind"
-                        groups="sales_team.group_sale_manager"/>
+                        groups="mudon_crm.group_mudon_super_admin"/>
+                <button name="action_mudon_mark_lost" type="object"
+                        string="Mark Lost" class="btn-outline-secondary mudon_btn_lost"
+                        invisible="not mudon_pipeline_kind or mudon_stage_kind_current in ('won', 'lost')"/>
+                <button name="action_mudon_kanban_advance" type="object"
+                        string="Advance" class="btn-success mudon_btn_advance"
+                        data-hotkey="n"
+                        invisible="not mudon_pipeline_kind or not mudon_is_funnel_stage or mudon_stage_kind_current in ('won', 'lost')"/>
+                <button name="action_mudon_reopen" type="object"
+                        string="Restore" class="btn-success mudon_btn_advance"
+                        invisible="mudon_stage_kind_current != 'lost'"/>
             </xpath>
 
             <!-- WON / LOST ribbons (Mudon uses its own stages, not won_status). -->
@@ -321,6 +372,53 @@
         <field name="model">crm.lead</field>
         <field name="inherit_id" ref="crm.crm_case_kanban_view_leads"/>
         <field name="arch" type="xml">
+            <!--
+                Comment 8 — the quick-create popup must ask for Name, Phone,
+                Email and Amount only (no Company / "Opportunity's Name").
+            -->
+            <xpath expr="//kanban" position="attributes">
+                <attribute name="quick_create_view">mudon_crm.mudon_crm_lead_view_quick_create</attribute>
+            </xpath>
+
+            <!--
+                ══ Comment 28 — card clean-up ══════════════════════════════
+                The client marked four things on the card as duplicates to
+                REMOVE. Every one of them is a stock CRM element that the
+                Mudon block below already renders in its own styling:
+
+                  * "$ 200,000.00" strip  -> shown in company currency (USD),
+                    which is what made the Dubai cards read "$" in comment 4;
+                    the Mudon block shows it in the pipeline currency (AED).
+                  * contact chip "T TEst117 TR7" -> repeats the card title.
+                  * the "M" agent avatar in the footer -> the Mudon footer
+                    already carries the agent avatar.
+                  * the priority stars -> duplicate Mudon's Urgent / Normal.
+
+                All are hidden for Mudon leads only; other pipelines keep the
+                stock card exactly as it is.
+            -->
+            <xpath expr="//div[@class='o_kanban_card_crm_lead_revenue']" position="attributes">
+                <attribute name="invisible">mudon_pipeline_kind</attribute>
+            </xpath>
+            <xpath expr="//field[@name='partner_id'][@widget='many2one_avatar']/.." position="attributes">
+                <attribute name="invisible">mudon_pipeline_kind or not partner_id</attribute>
+            </xpath>
+            <xpath expr="//field[@name='contact_name']" position="attributes">
+                <attribute name="invisible">mudon_pipeline_kind or partner_id</attribute>
+            </xpath>
+            <xpath expr="//field[@name='partner_name']" position="attributes">
+                <attribute name="invisible">mudon_pipeline_kind or partner_id or contact_name</attribute>
+            </xpath>
+            <xpath expr="//field[@name='tag_ids']" position="attributes">
+                <attribute name="invisible">mudon_pipeline_kind</attribute>
+            </xpath>
+            <xpath expr="//field[@name='priority'][@widget='priority']" position="attributes">
+                <attribute name="invisible">mudon_pipeline_kind</attribute>
+            </xpath>
+            <xpath expr="//field[@name='user_id'][@widget='many2one_avatar_user']" position="attributes">
+                <attribute name="invisible">mudon_pipeline_kind</attribute>
+            </xpath>
+
             <xpath expr="//templates" position="before">
                 <field name="mudon_pipeline_kind"/>
                 <field name="mudon_service_id"/>
@@ -340,6 +438,10 @@
                 <field name="phone"/>
                 <field name="mudon_wa_phone"/>
                 <field name="mudon_first_contact_logged"/>
+                <field name="mudon_status_id"/>
+                <field name="mudon_source_id"/>
+                <field name="partner_id"/>
+                <field name="contact_name"/>
             </xpath>
             <!--
                 v19.0.1.2.0 — styled Mudon card block: a stage-coloured
@@ -386,6 +488,27 @@
                             Offers: <t t-out="record.mudon_offer_counter.value"/>
                         </span>
                     </div>
+                    <!--
+                        Comment 28 "Add" column: Status, Source and Expected
+                        Visit Date on the card face. Comment 19 asks for the
+                        visit date specifically once a card reaches Meeting,
+                        so it is highlighted from that stage onward.
+                    -->
+                    <div class="mudon_cardinfo mt-1 small">
+                        <div t-if="record.mudon_status_id.raw_value" class="mudon_ci">
+                            <span class="mudon_ci_lbl">Status</span>
+                            <span class="mudon_ci_val"><t t-out="record.mudon_status_id.value"/></span>
+                        </div>
+                        <div t-if="record.mudon_source_id.raw_value" class="mudon_ci">
+                            <span class="mudon_ci_lbl">Source</span>
+                            <span class="mudon_ci_val"><t t-out="record.mudon_source_id.value"/></span>
+                        </div>
+                        <div t-if="record.mudon_visit_date.raw_value"
+                             t-attf-class="mudon_ci #{record.mudon_stage_kind_current.raw_value == 'meeting' ? 'mudon_ci_hi' : ''}">
+                            <span class="mudon_ci_lbl">Expected Visit</span>
+                            <span class="mudon_ci_val"><t t-out="record.mudon_visit_date.value"/></span>
+                        </div>
+                    </div>
                     <!-- Card footer: agent avatar + SLA chip + one-tap WhatsApp
                          (the Gulf real-estate team lives in WhatsApp). -->
                     <div class="mudon_cardfoot d-flex align-items-center justify-content-between mt-1 px-2 pb-1">
@@ -429,7 +552,97 @@
         <field name="model">crm.lead</field>
         <field name="inherit_id" ref="crm.view_crm_case_leads_filter"/>
         <field name="arch" type="xml">
+            <!--
+                ══ Comment 7 — stage filter leaked across pipelines ════════
+                "when filtering stage while in Dubai pipeline, it shows all
+                the item of both pipelines" — the Search:Stage dialog listed
+                all 14 stages because the stage field carried no domain. Each
+                pipeline action puts its team in `default_team_id`, so scope
+                the lookup to that team when one is present, and fall back to
+                the unfiltered list on the All Mudon Leads view.
+            -->
+            <xpath expr="//field[@name='stage_id']" position="attributes">
+                <attribute name="domain">context.get('default_team_id') and [('team_ids', '=', context.get('default_team_id'))] or []</attribute>
+            </xpath>
+
+            <!--
+                ══ Comment 22 — "Make search bar possible by default to all
+                criteria of the fields" ═══════════════════════════════════
+                Every field the client listed is registered here, so the
+                search bar offers it as you type and Add Custom Filter can
+                reach it. The Yes/No filters cover the tick-box fields he
+                wanted searchable: a Boolean is already searchable in Odoo,
+                so these give the Yes/No choice he asked for without a risky
+                change to the stored field type.
+            -->
             <xpath expr="//search" position="inside">
+                <field name="mudon_service_id" string="Service"/>
+                <field name="mudon_city_id" string="City"/>
+                <field name="mudon_priority" string="Priority"/>
+                <field name="mudon_status_id" string="Status"/>
+                <field name="mudon_source_id" string="Source"/>
+                <field name="mudon_nationality_id" string="Nationality"/>
+                <field name="mudon_living_in_id" string="Living In"/>
+                <field name="mudon_branch_id" string="Branch"/>
+                <field name="mudon_beds" string="No. of Beds"/>
+                <field name="mudon_cbi_files" string="No. of CBI Files"/>
+                <field name="mudon_visit_date" string="Expected Visit Date"/>
+                <field name="mudon_purpose_ids" string="Purpose of the Property"/>
+                <field name="mudon_property_type_ids" string="Property Type"/>
+                <field name="mudon_other_specs" string="Other Specifications"/>
+                <field name="mudon_notes" string="Notes"/>
+                <field name="mudon_offer_counter" string="Offers Sent"/>
+                <field name="mudon_seriousness" string="Seriousness"/>
+                <field name="mudon_last_offer_date" string="Last Offer Sent At"/>
+                <field name="mudon_client_type" string="Client Type"/>
+                <field name="mudon_property_requirements" string="Property Requirements"/>
+                <field name="mudon_closing_amount" string="Closing Amount"/>
+                <field name="mudon_developer_id" string="Developer"/>
+                <field name="mudon_project_id" string="Project"/>
+                <field name="mudon_commission" string="Commission"/>
+                <field name="mudon_handover_type" string="Handover Type"/>
+                <field name="mudon_reason_to_win" string="Reason to Win"/>
+                <field name="mudon_invoiced_amount" string="Invoiced / Commission Billed"/>
+                <field name="mudon_invoiced_date" string="Invoice Date"/>
+                <field name="mudon_collected_amount" string="Collected / Cash In"/>
+                <field name="mudon_collected_date" string="Payment Received Date"/>
+                <field name="mudon_lost_reason_id" string="Lost Reason"/>
+
+                <!-- Yes / No searching for every tick-box field. -->
+                <separator/>
+                <filter name="mudon_in_country_yes" string="In Turkey / UAE Now: Yes"
+                        domain="[('mudon_in_country', '=', True)]"/>
+                <filter name="mudon_in_country_no" string="In Turkey / UAE Now: No"
+                        domain="[('mudon_in_country', '=', False)]"/>
+                <separator/>
+                <filter name="mudon_offer_yes" string="Offer Sent: Yes"
+                        domain="[('mudon_tick_offer_sent', '=', True)]"/>
+                <filter name="mudon_offer_no" string="Offer Sent: No"
+                        domain="[('mudon_tick_offer_sent', '=', False)]"/>
+                <filter name="mudon_visit_yes" string="Visit Confirmed: Yes"
+                        domain="[('mudon_visit_confirmed', '=', True)]"/>
+                <filter name="mudon_visit_no" string="Visit Confirmed: No"
+                        domain="[('mudon_visit_confirmed', '=', False)]"/>
+                <filter name="mudon_booking_yes" string="Paid Booking: Yes"
+                        domain="[('mudon_paid_booking', '=', True)]"/>
+                <filter name="mudon_booking_no" string="Paid Booking: No"
+                        domain="[('mudon_paid_booking', '=', False)]"/>
+                <filter name="mudon_paid_yes" string="Fully Paid: Yes"
+                        domain="[('mudon_fully_paid', '=', True)]"/>
+                <filter name="mudon_paid_no" string="Fully Paid: No"
+                        domain="[('mudon_fully_paid', '=', False)]"/>
+                <separator/>
+                <filter name="mudon_invoice_yes" string="Need Invoice: Yes"
+                        domain="[('mudon_need_invoice', '=', True)]"/>
+                <filter name="mudon_deed_yes" string="Title Deed Required: Yes"
+                        domain="[('mudon_title_deed_required', '=', True)]"/>
+                <filter name="mudon_citizenship_yes" string="Citizenship Required: Yes"
+                        domain="[('mudon_citizenship_required', '=', True)]"/>
+                <filter name="mudon_residence_yes" string="Residence Required: Yes"
+                        domain="[('mudon_residence_required', '=', True)]"/>
+                <filter name="mudon_furniture_yes" string="Furniture / Other Required: Yes"
+                        domain="[('mudon_furniture_required', '=', True)]"/>
+
                 <separator/>
                 <filter name="mudon_turkey" string="Mudon Turkey"
                         domain="[('mudon_pipeline_kind', '=', 'turkey')]"/>

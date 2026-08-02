@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        Client comment 3 — the exact dialog he sketched:
+
+            Move Card Back?
+            This will delete all entries from later stages. Continue?
+            Cancel | Move Back
+    -->
+    <record id="view_mudon_move_back_wizard_form" model="ir.ui.view">
+        <field name="name">mudon.move.back.wizard.form</field>
+        <field name="model">mudon.move.back.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Move Card Back?">
+                <sheet>
+                    <field name="lead_id" invisible="1"/>
+                    <field name="target_stage_id" invisible="1"/>
+                    <h3 class="mb-3">Move Card Back?</h3>
+                    <p>
+                        This will delete all entries from later stages.
+                        Continue?
+                    </p>
+                    <group>
+                        <field name="lead_name" readonly="1"/>
+                        <field name="current_stage_name" readonly="1"/>
+                        <field name="target_stage_id" readonly="1"
+                               string="Move back to" force_save="1"/>
+                    </group>
+                    <separator string="This will delete"/>
+                    <field name="cleared_summary" nolabel="1" readonly="1"
+                           widget="text"/>
+                </sheet>
+                <footer>
+                    <button special="cancel" string="Cancel"
+                            class="btn-secondary"/>
+                    <button name="action_confirm" type="object"
+                            string="Move Back" class="btn-danger"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_mudon_move_back_wizard" model="ir.actions.act_window">
+        <field name="name">Move Card Back?</field>
+        <field name="res_model">mudon.move.back.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+</odoo>

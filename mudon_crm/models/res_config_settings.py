@@ -61,3 +61,72 @@ class ResConfigSettings(models.TransientModel):
         help="Receives the WhatsApp alert when a lead is marked Lost. "
              "Falls back to the sales-team manager if unset.",
     )
+
+    # ─── Notification timers (client comment 6) ─────────────────────────
+    # "WhatsApp Automation Notification messages timers to be added to
+    # configuration". Every delay the SLA engine used to hard-code is now
+    # editable here; the crons read these at run time, so a change takes
+    # effect on the next sweep with no upgrade and no downtime.
+    mudon_sla_new_lead_first = fields.Integer(
+        string="New Lead — first reminder (minutes)",
+        config_parameter="mudon_crm.sla_new_lead_first",
+        default=30,
+        help="Minutes after a new lead arrives before the assigned agent is "
+             "reminded that the client has not been contacted. Spec: 30.",
+    )
+    mudon_sla_new_lead_escalate = fields.Integer(
+        string="New Lead — escalation to manager (minutes)",
+        config_parameter="mudon_crm.sla_new_lead_escalate",
+        default=60,
+        help="Minutes before the New Lead reminder escalates to the agent "
+             "AND the manager. Spec: 60.",
+    )
+    mudon_sla_qualified_first = fields.Integer(
+        string="Qualified — first reminder (minutes)",
+        config_parameter="mudon_crm.sla_qualified_first",
+        default=30,
+        help="Minutes on the Qualified stage without contact before the "
+             "agent is reminded. Spec: 30.",
+    )
+    mudon_sla_qualified_escalate = fields.Integer(
+        string="Qualified — escalation to manager (minutes)",
+        config_parameter="mudon_crm.sla_qualified_escalate",
+        default=120,
+        help="Minutes on the Qualified stage without contact before the "
+             "manager is copied in. Spec: 2 hours = 120.",
+    )
+    mudon_sla_offer_followup = fields.Integer(
+        string="Offer Sent — follow-up reminder (hours)",
+        config_parameter="mudon_crm.sla_offer_followup",
+        default=3,
+        help="Hours after each offer is sent before the agent is reminded "
+             "to chase feedback. Spec: 3.",
+    )
+    mudon_sla_visit_notice = fields.Integer(
+        string="Offer Sent — days before visit reminder (days)",
+        config_parameter="mudon_crm.sla_visit_notice",
+        default=15,
+        help="Days before the Expected Visit Date that the agent is asked "
+             "to confirm the visit. Spec: 15.",
+    )
+    mudon_sla_stay_in_touch = fields.Integer(
+        string="Offer Sent — stay-in-touch cadence (days)",
+        config_parameter="mudon_crm.sla_stay_in_touch",
+        default=15,
+        help="How often to nudge the agent while the visit is still far "
+             "away, so leads do not go cold. Spec: every 15 days.",
+    )
+    mudon_survey_after_offer = fields.Integer(
+        string="Client survey after N offers",
+        config_parameter="mudon_crm.survey_after_offer",
+        default=3,
+        help="Number of offers after which the company number sends the "
+             "client the structured survey. Spec: 3.",
+    )
+    mudon_meeting_reminder_days = fields.Char(
+        string="Meeting reminders — days before",
+        config_parameter="mudon_crm.meeting_reminder_days",
+        default="3,2,1",
+        help="Comma-separated list of days-before-meeting to remind the "
+             "agent. Spec: 3,2,1.",
+    )

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!--
+        Kanban quick-create for Mudon pipelines — client comment 8.
+
+        "When adding new card lead it shows Company field.
+         Required Fields only: Name, phone number, email, amount"
+
+        Odoo's stock quick-create (crm.quick_create_opportunity_form) leads
+        with Company, then Contact, then "Opportunity's Name" — and it is
+        that form's partner logic that stamps the "<Contact>'s opportunity"
+        title the client asked us to drop in comment 13. Replacing it with a
+        four-field form fixes both complaints at the source.
+    -->
+    <record id="mudon_crm_lead_view_quick_create" model="ir.ui.view">
+        <field name="name">crm.lead.form.mudon.quick.create</field>
+        <field name="model">crm.lead</field>
+        <field name="priority">1000</field>
+        <field name="arch" type="xml">
+            <form>
+                <group>
+                    <field name="name" string="Name" placeholder="Client name"
+                           required="1"/>
+                    <field name="phone" string="Phone" placeholder="+971 50 000 0000"/>
+                    <field name="email_from" string="Email" placeholder="client@example.com"/>
+                    <field name="mudon_budget_currency_id" invisible="1"/>
+                    <field name="expected_revenue" string="Amount"
+                           widget="monetary"
+                           options="{'currency_field': 'mudon_budget_currency_id'}"/>
+                </group>
+            </form>
+        </field>
+    </record>
+
+    <!--
+        Bulk fix for the routing bug behind comments 14 / 15 / 16.
+
+        Auto-assignment never ran for leads created in the UI, so a large
+        backlog sits on whoever keyed them in. Reassigning them silently
+        during the upgrade would move live work between agents, so it is
+        offered as a deliberate manager action instead: select the leads
+        in the pipeline or list and pick this from the Actions menu.
+    -->
+    <record id="action_mudon_reassign_auto" model="ir.actions.server">
+        <field name="name">Re-run automatic assignment</field>
+        <field name="model_id" ref="crm.model_crm_lead"/>
+        <field name="binding_model_id" ref="crm.model_crm_lead"/>
+        <field name="binding_view_types">list,kanban,form</field>
+        <field name="groups_id" eval="[(4, ref('mudon_crm.group_mudon_sales_director'))]"/>
+        <field name="state">code</field>
+        <field name="code">records.action_mudon_reassign_auto()</field>
+    </record>
+</odoo>

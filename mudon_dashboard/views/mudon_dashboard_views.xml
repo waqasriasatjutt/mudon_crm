@@ -11,19 +11,28 @@
         <field name="tag">mudon_financial_dashboard</field>
     </record>
 
-    <!-- Under the existing Mudon CRM app, managers only. -->
+    <!--
+        Menu visibility per the client's role matrix (comments 1 + 26).
+
+        Sales Dashboard row      -> Team Leader and above (Sales Agent sees
+                                    "Own only", which the record rules already
+                                    enforce on the underlying leads).
+        Financial Dashboard row  -> Accountant, Sales Director and above.
+                                    Marketing is "N" on financial data, so the
+                                    menu must not appear for them.
+    -->
     <menuitem id="menu_mudon_management_dashboard"
               name="Management Dashboard"
               parent="mudon_crm.mudon_menu_app_root"
               action="action_mudon_management_dashboard"
-              groups="sales_team.group_sale_manager"
+              groups="mudon_crm.group_mudon_team_leader,mudon_crm.group_mudon_marketing,mudon_crm.group_mudon_viewer"
               sequence="1"/>
 
     <menuitem id="menu_mudon_financial_dashboard"
               name="Financial Dashboard"
               parent="mudon_crm.mudon_menu_app_root"
               action="action_mudon_financial_dashboard"
-              groups="sales_team.group_sale_manager"
+              groups="mudon_crm.group_mudon_sales_director,mudon_crm.group_mudon_accountant"
               sequence="2"/>
 
 </odoo>

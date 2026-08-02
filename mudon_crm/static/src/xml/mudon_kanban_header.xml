@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!--
+        Comment 23 — "On top of each stage, I need to see the number of cards"
+
+        Odoo already renders the count next to a column title, but core gates
+        it on `!progressBar`:
+
+            <span t-if="!progressBar and !...useSampleModel"
+                  t-esc="'(' + group.count + ')'"/>
+
+        The CRM kanban ships a progressbar (the activity-state bar carrying
+        the revenue total), so the count was suppressed. Rather than drop the
+        progressbar — which would also lose the per-column revenue total the
+        client relies on — add the count back alongside the title for exactly
+        the case core skips.
+    -->
+    <t t-name="mudon_crm.KanbanHeaderCount"
+       t-inherit="web.KanbanHeader" t-inherit-mode="extension">
+        <xpath expr="//span[@class='text-truncate']" position="after">
+            <span t-if="progressBar and !props.list.model.useSampleModel"
+                  class="mudon_col_count"
+                  t-esc="'(' + group.count + ')'"/>
+        </xpath>
+    </t>
+
+</templates>

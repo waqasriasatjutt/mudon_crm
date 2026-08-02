@@ -53,6 +53,7 @@
                     <option value="this_quarter" t-att-selected="state.period === 'this_quarter'">This Quarter</option>
                     <option value="this_year" t-att-selected="state.period === 'this_year'">This Year</option>
                     <option value="last_year" t-att-selected="state.period === 'last_year'">Last Year</option>
+                    <option value="all_time" t-att-selected="state.period === 'all_time'">All Time</option>
                 </select>
                 <select class="form-select" t-on-change="(ev) => this.setFilter('agent_id', ev)">
                     <option value="">All agents</option>

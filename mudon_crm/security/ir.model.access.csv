@@ -27,5 +27,55 @@ access_mudon_project_user,mudon.project user,model_mudon_project,sales_team.grou
 access_mudon_project_manager,mudon.project manager,model_mudon_project,sales_team.group_sale_manager,1,1,1,1
 access_mudon_quick_fill_wizard_user,mudon.quick.fill.wizard user,model_mudon_quick_fill_wizard,sales_team.group_sale_salesman,1,1,1,1
 access_mudon_quick_fill_wizard_manager,mudon.quick.fill.wizard manager,model_mudon_quick_fill_wizard,sales_team.group_sale_manager,1,1,1,1
+access_mudon_move_back_wizard_user,mudon.move.back.wizard user,model_mudon_move_back_wizard,sales_team.group_sale_salesman,1,1,1,1
+access_mudon_move_back_wizard_manager,mudon.move.back.wizard manager,model_mudon_move_back_wizard,sales_team.group_sale_manager,1,1,1,1
 access_mudon_wa_message_user,mudon.wa.message user,model_mudon_wa_message,sales_team.group_sale_salesman,1,0,0,0
 access_mudon_wa_message_manager,mudon.wa.message manager,model_mudon_wa_message,sales_team.group_sale_manager,1,1,1,1
+role_lead_viewer,ROLE Viewer/Auditor: leads view-only,crm.model_crm_lead,mudon_crm.group_mudon_viewer,1,0,0,0
+role_lead_agent,ROLE Sales Agent: own leads,crm.model_crm_lead,mudon_crm.group_mudon_sales_agent,1,1,1,0
+role_lead_director,ROLE Sales Director: all leads,crm.model_crm_lead,mudon_crm.group_mudon_sales_director,1,1,1,0
+role_lead_superadmin,ROLE Super Admin: delete leads,crm.model_crm_lead,mudon_crm.group_mudon_super_admin,1,1,1,1
+role_lead_customer_admin,ROLE Customer Admin: leads view-only,crm.model_crm_lead,mudon_crm.group_mudon_customer_admin,1,0,0,0
+role_lead_accountant,ROLE Accountant: leads view-only,crm.model_crm_lead,mudon_crm.group_mudon_accountant,1,0,0,0
+role_lead_marketing,ROLE Marketing: leads view-only,crm.model_crm_lead,mudon_crm.group_mudon_marketing,1,0,0,0
+role_lead_compliance,ROLE Compliance: leads view-only,crm.model_crm_lead,mudon_crm.group_mudon_compliance,1,0,0,0
+role_stage_viewer,ROLE any: read stages,crm.model_crm_stage,mudon_crm.group_mudon_viewer,1,0,0,0
+role_stage_sysadmin,ROLE System Admin: pipeline/stage configuration,crm.model_crm_stage,mudon_crm.group_mudon_system_admin,1,1,1,1
+role_team_viewer,ROLE any: read teams,sales_team.model_crm_team,mudon_crm.group_mudon_viewer,1,0,0,0
+role_team_sysadmin,ROLE System Admin: manage teams,sales_team.model_crm_team,mudon_crm.group_mudon_system_admin,1,1,1,1
+role_partner_agent,ROLE Sales Agent: contacts,base.model_res_partner,mudon_crm.group_mudon_sales_agent,1,1,1,0
+role_partner_viewer,ROLE Viewer/Auditor: contacts view-only,base.model_res_partner,mudon_crm.group_mudon_viewer,1,0,0,0
+role_partner_customer_admin,ROLE Customer Admin: contacts,base.model_res_partner,mudon_crm.group_mudon_customer_admin,1,1,0,0
+role_partner_compliance,ROLE Compliance: contacts,base.model_res_partner,mudon_crm.group_mudon_compliance,1,1,0,0
+role_branch_viewer,ROLE any: read branches,model_mudon_branch,mudon_crm.group_mudon_viewer,1,0,0,0
+role_branch_sysadmin,ROLE System Admin: manage branches,model_mudon_branch,mudon_crm.group_mudon_system_admin,1,1,1,1
+role_country_map_sysadmin,ROLE System Admin: lead assignment rules,model_mudon_country_agent_mapping,mudon_crm.group_mudon_system_admin,1,1,1,1
+role_admin_task_customer_admin,ROLE Customer Admin: admin funnel,model_mudon_admin_task,mudon_crm.group_mudon_customer_admin,1,1,1,0
+role_admin_task_accountant,ROLE Accountant: invoicing tasks,model_mudon_admin_task,mudon_crm.group_mudon_accountant,1,1,0,0
+role_admin_task_viewer,ROLE Viewer/Auditor: admin funnel view-only,model_mudon_admin_task,mudon_crm.group_mudon_viewer,1,0,0,0
+role_after_sales_customer_admin,ROLE Customer Admin: after-sales cases,model_mudon_after_sales_task,mudon_crm.group_mudon_customer_admin,1,1,1,0
+role_after_sales_compliance,ROLE Compliance: title deed / citizenship docs,model_mudon_after_sales_task,mudon_crm.group_mudon_compliance,1,1,0,0
+role_after_sales_viewer,ROLE Viewer/Auditor: after-sales view-only,model_mudon_after_sales_task,mudon_crm.group_mudon_viewer,1,0,0,0
+role_wa_message_marketing,ROLE Marketing: communication templates log,model_mudon_wa_message,mudon_crm.group_mudon_marketing,1,1,0,0
+role_wa_message_compliance,ROLE Compliance: communication log,model_mudon_wa_message,mudon_crm.group_mudon_compliance,1,0,0,0
+role_wa_message_viewer,ROLE Viewer/Auditor: communication log,model_mudon_wa_message,mudon_crm.group_mudon_viewer,1,0,0,0
+role_source_marketing,ROLE Marketing: manage lead sources,model_mudon_source,mudon_crm.group_mudon_marketing,1,1,1,1
+role_masters_viewer_service,ROLE Viewer/Auditor: services,model_mudon_service,mudon_crm.group_mudon_viewer,1,0,0,0
+role_masters_viewer_city,ROLE Viewer/Auditor: cities,model_mudon_city,mudon_crm.group_mudon_viewer,1,0,0,0
+role_masters_viewer_status,ROLE Viewer/Auditor: lead statuses,model_mudon_lead_status,mudon_crm.group_mudon_viewer,1,0,0,0
+role_masters_viewer_source,ROLE Viewer/Auditor: sources,model_mudon_source,mudon_crm.group_mudon_viewer,1,0,0,0
+role_masters_viewer_purpose,ROLE Viewer/Auditor: purposes,model_mudon_purpose,mudon_crm.group_mudon_viewer,1,0,0,0
+role_masters_viewer_ptype,ROLE Viewer/Auditor: property types,model_mudon_property_type,mudon_crm.group_mudon_viewer,1,0,0,0
+role_masters_viewer_lost,ROLE Viewer/Auditor: lost reasons,model_mudon_lost_reason,mudon_crm.group_mudon_viewer,1,0,0,0
+role_masters_viewer_project,ROLE Viewer/Auditor: projects,model_mudon_project,mudon_crm.group_mudon_viewer,1,0,0,0
+role_masters_viewer_developer,ROLE Viewer/Auditor: developers,model_mudon_developer,mudon_crm.group_mudon_viewer,1,0,0,0
+role_masters_sysadmin_service,ROLE System Admin: services,model_mudon_service,mudon_crm.group_mudon_system_admin,1,1,1,1
+role_masters_sysadmin_city,ROLE System Admin: cities,model_mudon_city,mudon_crm.group_mudon_system_admin,1,1,1,1
+role_masters_sysadmin_status,ROLE System Admin: lead statuses,model_mudon_lead_status,mudon_crm.group_mudon_system_admin,1,1,1,1
+role_masters_sysadmin_purpose,ROLE System Admin: purposes,model_mudon_purpose,mudon_crm.group_mudon_system_admin,1,1,1,1
+role_masters_sysadmin_ptype,ROLE System Admin: property types,model_mudon_property_type,mudon_crm.group_mudon_system_admin,1,1,1,1
+role_masters_sysadmin_lost,ROLE System Admin: lost reasons,model_mudon_lost_reason,mudon_crm.group_mudon_system_admin,1,1,1,1
+role_masters_sysadmin_project,ROLE System Admin: projects,model_mudon_project,mudon_crm.group_mudon_system_admin,1,1,1,1
+role_masters_sysadmin_developer,ROLE System Admin: developers,model_mudon_developer,mudon_crm.group_mudon_system_admin,1,1,1,1
+role_quickfill_viewer,ROLE any: stage wizards,model_mudon_quick_fill_wizard,mudon_crm.group_mudon_viewer,1,1,1,1
+role_moveback_viewer,ROLE any: move-back wizard,model_mudon_move_back_wizard,mudon_crm.group_mudon_viewer,1,1,1,1

@@ -1,11 +1,11 @@
 {
     "name": "Mudon Property — CRM",
-    "version": "19.0.1.11.0",
+    "version": "19.0.1.12.0",
     "summary": "Mudon Property real-estate CRM — Turkey CBI + UAE Dubai "
                "Golden-Visa pipelines, 7-stage flow, country-code & "
                "branch routing, WhatsApp greetings + agent + company "
                "sends, multi-stage SLA escalations, Admin + After-Sales "
-               "funnels, META Cloud inbound webhook.",
+               "funnels, META Cloud inbound webhook, role-based access.",
     "description": "M1-M7 full build per proposal WR-2026-MUDON-CRM.",
     "category": "Sales/CRM",
     "author": "Waqas Riasat",
@@ -16,6 +16,8 @@
         "mail",
     ],
     "data": [
+        # Groups and record rules first — the ACL table below refers to them.
+        "security/mudon_security.xml",
         "security/ir.model.access.csv",
         "data/res_currency_data.xml",
         "data/mudon_masters_data.xml",
@@ -32,17 +34,23 @@
         "views/admin_task_views.xml",
         "views/after_sales_task_views.xml",
         "views/mudon_masters_views.xml",
+        "views/mudon_quick_create_views.xml",
         "views/crm_lead_views.xml",
         "views/mudon_quick_fill_wizard_views.xml",
+        "views/mudon_move_back_wizard_views.xml",
         "views/menu_views.xml",
+        "views/mudon_org_views.xml",
         "views/mudon_wa_message_views.xml",
         "views/res_config_settings_views.xml",
     ],
     "assets": {
         "web.assets_backend": [
             "mudon_crm/static/src/scss/mudon_kanban.scss",
+            "mudon_crm/static/src/scss/mudon_form.scss",
             "mudon_crm/static/src/scss/mudon_form_mobile.scss",
             "mudon_crm/static/src/js/mudon_auto_wizard.js",
+            "mudon_crm/static/src/js/mudon_esc_back.js",
+            "mudon_crm/static/src/xml/mudon_kanban_header.xml",
         ],
     },
     "installable": True,

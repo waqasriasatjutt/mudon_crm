@@ -1,0 +1,285 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!--
+        ══════════════════════════════════════════════════════════════════
+        MUDON ROLE-BASED ACCESS CONTROL
+        Built from the client's "Role-Based Access Matrix" (Abdul Rehman,
+        comments 1 + 26).
+
+        Access-level codes from the client's §1:
+          F  Full access: view, create, edit, delete, assign, administer
+          A  All company records, no system-ownership authority
+          B  Records within the user's assigned branch(es)
+          T  Records belonging to the user's assigned team
+          O  The user's own assigned records only
+          V  View-only
+          N  No access
+
+        DESIGN NOTES
+
+        1. The 7 "scope" roles form a LADDER (each implies the one below)
+           so the user form shows a single clean radio selector:
+               Viewer < Sales Agent < Team Leader < Branch Manager
+                      < Sales Director < System Admin < Super Admin
+           The 4 "function" roles (Customer Admin / Accountant / Marketing
+           / Compliance) are independent check-boxes — a person can be an
+           Accountant *and* a Team Leader.
+
+        2. "Custom Role" from the matrix = an administrator composing any
+           combination of the boxes above. No 13th group is needed; the
+           combination IS the custom role.
+
+        3. These groups are ADDITIVE. They do not replace Odoo's stock
+           Sales groups, so nothing that works today stops working. Users
+           with no Mudon role keep their current behaviour.
+
+        4. CAREFUL: record rules are OR-ed across a user's groups, so a
+           narrow role must never imply a group that owns a broad rule.
+           Sales Agent therefore does NOT imply Viewer (which reads every
+           lead), and Team Leader does NOT imply Odoo's "All Leads" group
+           (domain [(1,'=',1)]). Either would silently turn O or T into A.
+           Viewer and the functional roles sit outside the ladder for this
+           reason.
+
+        5. Record rules are OR-ed across a user's groups, and the ladder
+           uses implied_ids — so a Team Leader automatically gets the
+           Sales Agent rule (own records) OR-ed with the team rule, which
+           is exactly the intent ("own + my team").
+        ══════════════════════════════════════════════════════════════════
+    -->
+
+    <!-- ─── Category shown on the user form ──────────────────────────── -->
+    <record id="module_category_mudon_crm" model="ir.module.category">
+        <field name="name">Mudon CRM</field>
+        <field name="description">Role-based access for the Mudon Property CRM.</field>
+        <field name="sequence">5</field>
+    </record>
+    <record id="module_category_mudon_function" model="ir.module.category">
+        <field name="name">Mudon CRM — Functional Roles</field>
+        <field name="description">Additional job-function roles. Tick any that apply, on top of the Mudon CRM scope role.</field>
+        <field name="sequence">6</field>
+    </record>
+
+    <!--
+        ═══ SCOPE LADDER ════════════════════════════════════════════════
+        Ordered low → high. Each implies the previous one.
+    -->
+
+    <!-- V — View-only access for management, auditors or consultants. -->
+    <record id="group_mudon_viewer" model="res.groups">
+        <field name="name">Viewer / Auditor</field>
+        <field name="category_id" ref="module_category_mudon_crm"/>
+        <field name="comment">Read-only access to management, auditors or consultants. Cannot create, edit or delete anything.</field>
+    </record>
+
+    <!-- O — Works on assigned leads, clients, activities and deals. -->
+    <record id="group_mudon_sales_agent" model="res.groups">
+        <field name="name">Sales Agent</field>
+        <field name="category_id" ref="module_category_mudon_crm"/>
+        <field name="implied_ids" eval="[(4, ref('sales_team.group_sale_salesman'))]"/>
+        <field name="comment">Works on assigned leads, clients, activities and deals. Sees only records assigned to them.</field>
+    </record>
+
+    <!-- T — Manages a defined sales team and its assigned records. -->
+    <record id="group_mudon_team_leader" model="res.groups">
+        <field name="name">Team Leader</field>
+        <field name="category_id" ref="module_category_mudon_crm"/>
+        <field name="implied_ids" eval="[(4, ref('group_mudon_sales_agent'))]"/>
+        <field name="comment">Manages a defined sales team and its assigned records.</field>
+    </record>
+
+    <!-- B — Manages one or more branches (Dubai / Istanbul / Trabzon). -->
+    <record id="group_mudon_branch_manager" model="res.groups">
+        <field name="name">Branch Manager</field>
+        <field name="category_id" ref="module_category_mudon_crm"/>
+        <field name="implied_ids" eval="[(4, ref('group_mudon_team_leader'))]"/>
+        <field name="comment">Manages one or more branches, such as Dubai, Istanbul or Trabzon.</field>
+    </record>
+
+    <!-- A — Company-wide sales oversight across all branches and teams. -->
+    <record id="group_mudon_sales_director" model="res.groups">
+        <field name="name">Sales Director</field>
+        <field name="category_id" ref="module_category_mudon_crm"/>
+        <field name="implied_ids" eval="[(4, ref('group_mudon_branch_manager')), (4, ref('sales_team.group_sale_manager'))]"/>
+        <field name="comment">Company-wide sales oversight across all branches and teams.</field>
+    </record>
+
+    <!-- A + configuration — user administration and system configuration. -->
+    <record id="group_mudon_system_admin" model="res.groups">
+        <field name="name">System Admin</field>
+        <field name="category_id" ref="module_category_mudon_crm"/>
+        <field name="implied_ids" eval="[(4, ref('group_mudon_sales_director'))]"/>
+        <field name="comment">System configuration and user administration, without authority to remove the final Super Admin.</field>
+    </record>
+
+    <!-- F — Unrestricted system ownership and highest security authority. -->
+    <record id="group_mudon_super_admin" model="res.groups">
+        <field name="name">Super Admin</field>
+        <field name="category_id" ref="module_category_mudon_crm"/>
+        <field name="implied_ids" eval="[(4, ref('group_mudon_system_admin'))]"/>
+        <field name="comment">Unrestricted system ownership and highest security authority. Only a Super Admin may delete CRM records or remove another administrator.</field>
+    </record>
+
+    <!--
+        ═══ FUNCTIONAL ROLES (independent check-boxes) ══════════════════
+    -->
+
+    <record id="group_mudon_customer_admin" model="res.groups">
+        <field name="name">Customer Admin / After-Sales</field>
+        <field name="category_id" ref="module_category_mudon_function"/>
+        <field name="comment">Manages completed sales, documents, title deeds, citizenship and handover processes.</field>
+    </record>
+
+    <record id="group_mudon_accountant" model="res.groups">
+        <field name="name">Accountant</field>
+        <field name="category_id" ref="module_category_mudon_function"/>
+        <field name="comment">Manages invoices, payments, commissions, expenses and financial reports. The only functional role that can see the Financial Dashboard.</field>
+    </record>
+
+    <record id="group_mudon_marketing" model="res.groups">
+        <field name="name">Marketing User</field>
+        <field name="category_id" ref="module_category_mudon_function"/>
+        <field name="comment">Manages lead sources, campaigns, marketing reports and approved communication templates. Explicitly has NO access to financial figures.</field>
+    </record>
+
+    <record id="group_mudon_compliance" model="res.groups">
+        <field name="name">Document Controller / Compliance</field>
+        <field name="category_id" ref="module_category_mudon_function"/>
+        <field name="comment">Reviews and approves customer, legal and transaction documents.</field>
+    </record>
+
+    <!--
+        ═══ RECORD RULES — crm.lead ═════════════════════════════════════
+        These implement the scope column (O / T / B / A / V) of the matrix.
+        Rules are OR-ed across the groups a user holds.
+    -->
+
+    <!-- O — Sales Agent: own assigned records only. -->
+    <record id="rule_mudon_lead_own" model="ir.rule">
+        <field name="name">Mudon: Sales Agent — own leads only</field>
+        <field name="model_id" ref="crm.model_crm_lead"/>
+        <field name="domain_force">[('user_id', '=', user.id)]</field>
+        <field name="groups" eval="[(4, ref('group_mudon_sales_agent'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <!-- T — Team Leader: every lead on a team they belong to or lead. -->
+    <record id="rule_mudon_lead_team" model="ir.rule">
+        <field name="name">Mudon: Team Leader — my team's leads</field>
+        <field name="model_id" ref="crm.model_crm_lead"/>
+        <field name="domain_force">[('team_id', 'in', user.mudon_team_ids.ids)]</field>
+        <field name="groups" eval="[(4, ref('group_mudon_team_leader'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <!-- B — Branch Manager: every lead in a branch they manage. -->
+    <record id="rule_mudon_lead_branch" model="ir.rule">
+        <field name="name">Mudon: Branch Manager — my branches' leads</field>
+        <field name="model_id" ref="crm.model_crm_lead"/>
+        <field name="domain_force">[('mudon_branch_id', 'in', user.mudon_branch_ids.ids)]</field>
+        <field name="groups" eval="[(4, ref('group_mudon_branch_manager'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <!-- A — Sales Director and above: all company records. -->
+    <record id="rule_mudon_lead_all" model="ir.rule">
+        <field name="name">Mudon: Sales Director — all leads</field>
+        <field name="model_id" ref="crm.model_crm_lead"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_mudon_sales_director'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+
+    <!--
+        V — the read-only roles see every lead but the ACL table below
+        grants them read only, so this rule can safely be company-wide.
+    -->
+    <record id="rule_mudon_lead_view_all" model="ir.rule">
+        <field name="name">Mudon: read-only roles — see all leads</field>
+        <field name="model_id" ref="crm.model_crm_lead"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_mudon_viewer')),
+                                    (4, ref('group_mudon_accountant')),
+                                    (4, ref('group_mudon_marketing')),
+                                    (4, ref('group_mudon_compliance')),
+                                    (4, ref('group_mudon_customer_admin'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <!--
+        ═══ RECORD RULES — funnel tasks ═════════════════════════════════
+        Matrix rows "After-Sales Cases" / "Title Deed" / "Citizenship" —
+        Customer Admin owns them (A), agents see only their own deal's.
+    -->
+    <record id="rule_mudon_after_sales_own" model="ir.rule">
+        <field name="name">Mudon: agents see after-sales tasks for their own deals</field>
+        <field name="model_id" ref="model_mudon_after_sales_task"/>
+        <field name="domain_force">['|', ('assigned_user_id', '=', user.id), ('lead_id.user_id', '=', user.id)]</field>
+        <field name="groups" eval="[(4, ref('group_mudon_sales_agent'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="rule_mudon_after_sales_all" model="ir.rule">
+        <field name="name">Mudon: after-sales / management see all after-sales tasks</field>
+        <field name="model_id" ref="model_mudon_after_sales_task"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_mudon_customer_admin')),
+                                    (4, ref('group_mudon_compliance')),
+                                    (4, ref('group_mudon_sales_director'))]"/>
+    </record>
+
+    <record id="rule_mudon_admin_task_own" model="ir.rule">
+        <field name="name">Mudon: agents see admin tasks for their own deals</field>
+        <field name="model_id" ref="model_mudon_admin_task"/>
+        <field name="domain_force">['|', ('assigned_user_id', '=', user.id), ('lead_id.user_id', '=', user.id)]</field>
+        <field name="groups" eval="[(4, ref('group_mudon_sales_agent'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="rule_mudon_admin_task_all" model="ir.rule">
+        <field name="name">Mudon: admin / accounting see all admin tasks</field>
+        <field name="model_id" ref="model_mudon_admin_task"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_mudon_customer_admin')),
+                                    (4, ref('group_mudon_accountant')),
+                                    (4, ref('group_mudon_sales_director'))]"/>
+    </record>
+
+    <!--
+        ═══ RECORD RULES — WhatsApp message log ═════════════════════════
+        Matrix row "Comments / Internal Notes": agent = own (O).
+    -->
+    <record id="rule_mudon_wa_message_own" model="ir.rule">
+        <field name="name">Mudon: agents see WhatsApp log for their own leads</field>
+        <field name="model_id" ref="model_mudon_wa_message"/>
+        <field name="domain_force">[('lead_id.user_id', '=', user.id)]</field>
+        <field name="groups" eval="[(4, ref('group_mudon_sales_agent'))]"/>
+    </record>
+    <record id="rule_mudon_wa_message_all" model="ir.rule">
+        <field name="name">Mudon: management sees the whole WhatsApp log</field>
+        <field name="model_id" ref="model_mudon_wa_message"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_mudon_sales_director')),
+                                    (4, ref('group_mudon_compliance')),
+                                    (4, ref('group_mudon_marketing'))]"/>
+    </record>
+</odoo>

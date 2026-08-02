@@ -1,0 +1,217 @@
+// Mudon CRM — lead form styling for client comments 9, 10, 11 and 24.
+//
+// Everything here is scoped behind `:has(.mudon_form_marker)`. That marker
+// is a zero-height div the form view renders ONLY when the record is on a
+// Mudon pipeline, so no other CRM pipeline in the database is restyled.
+
+// The single source of truth for stage colours. These are the same values
+// the kanban band uses (mudon_kanban.scss), which is the whole point of
+// comments 9 and 10: one stage, one colour, everywhere it appears.
+$mudon-stage-colors: (
+    "new_lead":   #dc3545,   // red
+    "qualified":  #fd7e14,   // orange
+    "offer_sent": #ffc107,   // yellow
+    "meeting":    #8bc34a,   // light green
+    "eoi":        #4caf50,   // medium green
+    "won":        #198754,   // full green
+    "lost":       #000000,   // black
+);
+
+// ═══ Comment 9 ═════════════════════════════════════════════════════════
+// "Add this icon at the start of every new section on the fields with the
+//  respective color of the stage"
+// Each stage block carries `mudon_sec mudon_sec_<kind>`; Odoo renders the
+// group's string as `.o_horizontal_separator`, so the marker goes there.
+.mudon_sec > .o_horizontal_separator,
+.mudon_sec.o_horizontal_separator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    &::before {
+        content: "\25B6";              // ▶
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+        width: 18px;
+        height: 18px;
+        border-radius: 4px;
+        font-size: 9px;
+        line-height: 1;
+        color: #fff;
+        background: #6c757d;           // fallback for an unmapped stage
+    }
+}
+
+@each $kind, $color in $mudon-stage-colors {
+    .mudon_sec_#{$kind} > .o_horizontal_separator::before,
+    .mudon_sec_#{$kind}.o_horizontal_separator::before {
+        background: $color;
+        // Yellow needs dark glyph for contrast; the rest stay white.
+        @if $kind == "offer_sent" { color: #212529; }
+    }
+    // Tint the section rule itself so the block reads as belonging to
+    // that stage even when scrolled past the heading.
+    .mudon_sec_#{$kind} > .o_horizontal_separator,
+    .mudon_sec_#{$kind}.o_horizontal_separator {
+        border-bottom: 2px solid rgba($color, 0.45);
+    }
+}
+
+// ═══ Comment 10 ════════════════════════════════════════════════════════
+// "Make the color of these similar to the stage color" — the screenshot
+// pointed at the grey stage bar on the form. Mudon pipelines always carry
+// the same 7 stages in the same order, so position maps to stage kind.
+.o_form_view:has(.mudon_form_marker) {
+    .o_form_statusbar .o_statusbar_status {
+        $kinds: "new_lead", "qualified", "offer_sent", "meeting", "eoi", "won", "lost";
+
+        @for $i from 1 through length($kinds) {
+            $kind: nth($kinds, $i);
+            $color: map-get($mudon-stage-colors, $kind);
+
+            > button.o_arrow_button:nth-of-type(#{$i}) {
+                // Unselected: a readable tint of the stage colour.
+                background-color: rgba($color, 0.16);
+                color: shade-color($color, 25%);
+                font-weight: 600;
+
+                &:hover { background-color: rgba($color, 0.3); }
+
+                // Selected: the full stage colour, matching the kanban band.
+                &.o_arrow_button_current,
+                &[aria-current="step"],
+                &.disabled.o_arrow_button_current {
+                    background-color: $color !important;
+                    @if $kind == "offer_sent" {
+                        color: #212529 !important;
+                    } @else {
+                        color: #fff !important;
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ═══ Comment 11 ════════════════════════════════════════════════════════
+// "All the entry fields are not visible where to enter data. What options
+//  we have to make it visible? Such as boxes maybe"
+// Odoo 19 draws inputs as bare underlines, so on a form with many empty
+// fields there is nothing showing WHERE to type. Give every editable input
+// a real box.
+.o_form_view:has(.mudon_form_marker) .o_form_editable {
+    .o_field_widget {
+        .o_input:not([type="checkbox"]):not([type="radio"]),
+        input.o_input,
+        textarea.o_input,
+        .o_input_dropdown > .o_input,
+        select.o_input {
+            border: 1px solid #ced4da !important;
+            border-radius: 4px;
+            padding: 4px 8px;
+            background-color: #fff;
+            min-height: 32px;
+            transition: border-color .15s ease, box-shadow .15s ease;
+
+            &:hover { border-color: #adb5bd !important; }
+            &:focus {
+                border-color: #1b2b44 !important;
+                box-shadow: 0 0 0 .18rem rgba(27, 43, 68, .15);
+                outline: none;
+            }
+        }
+
+        // Tag widgets (Purpose, Property Type) get the same box so the
+        // form reads consistently.
+        &.o_field_many2many_tags .o_input_dropdown,
+        &.o_field_many2many_tags > div {
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            padding: 2px 4px;
+            min-height: 32px;
+            background-color: #fff;
+        }
+    }
+
+    // An empty required field should be obvious before you hit save.
+    .o_field_widget.o_required_modifier .o_input:placeholder-shown {
+        border-color: #f0ad4e !important;
+        background-color: #fffdf7;
+    }
+
+    // Labels sit a touch clearer above their boxes.
+    .o_form_label { font-weight: 600; }
+}
+
+// ═══ Comment 24 ════════════════════════════════════════════════════════
+// "Change the color and position of the buttons as below" — the mock-up
+// puts Back to Pipeline first, then Delete, Mark Lost, and Advance as the
+// green primary on the right. Order comes from the view; colour and
+// spacing come from here.
+.o_form_view:has(.mudon_form_marker) .o_statusbar_buttons {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    .mudon_btn_back {
+        text-decoration: none;
+        font-weight: 600;
+        color: #1b2b44;
+        &:hover { text-decoration: underline; }
+    }
+
+    .mudon_btn_delete { font-weight: 600; }
+
+    .mudon_btn_lost { font-weight: 600; }
+
+    // Advance is the primary action: green, and pushed to the right of
+    // the group so it is always in the same place.
+    .mudon_btn_advance {
+        margin-left: auto;
+        font-weight: 700;
+        background-color: #198754;
+        border-color: #198754;
+        color: #fff;
+        &:hover { background-color: #157347; border-color: #146c43; }
+    }
+}
+
+// ═══ Comment 28 — extra card info block ════════════════════════════════
+// Status / Source / Expected Visit rendered as compact label-value rows.
+.mudon_card_block .mudon_cardinfo {
+    padding: 0 8px 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+
+    .mudon_ci {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        min-width: 0;
+        line-height: 1.35;
+    }
+    .mudon_ci_lbl { color: #6c757d; flex: 0 0 auto; }
+    .mudon_ci_val {
+        font-weight: 600;
+        text-align: right;
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+    // Comment 19: the visit date is the headline on the Meeting stage.
+    .mudon_ci_hi .mudon_ci_val {
+        color: #1b5e20;
+        background: rgba(139, 195, 74, .22);
+        border-radius: 3px;
+        padding: 0 5px;
+    }
+}
+
+// ═══ Comment 23 — record count next to the column title ════════════════
+.o_kanban_header .mudon_col_count {
+    font-weight: 600;
+    opacity: .55;
+    flex: 0 0 auto;
+}

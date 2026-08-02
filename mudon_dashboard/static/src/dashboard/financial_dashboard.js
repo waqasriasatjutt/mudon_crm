@@ -213,8 +213,17 @@ class MudonFinancialDashboard extends Component {
         const m = (this.state.data && this.state.data.meta) || {};
         const nativeSym = m.currency || "";
         const nativePos = m.currency_position || "before";
-        if (this.state.currencyMode === "usd" && (nativeSym === "AED" || nativeSym === "د.إ")) {
-            return { value: v / this.AED_TO_USD, sym: "$", position: "before" };
+        // Drive this off an explicit backend flag rather than sniffing the
+        // symbol: the board used to receive the COMPANY currency (always
+        // USD), so this branch could never fire and the toggle did nothing
+        // (comment 4).
+        const isAed = m.currency_is_aed || nativeSym === "AED" || nativeSym === "د.إ";
+        if (this.state.currencyMode === "usd" && isAed) {
+            return {
+                value: v / (m.aed_per_usd || this.AED_TO_USD),
+                sym: "$",
+                position: "before",
+            };
         }
         return { value: v, sym: nativeSym, position: nativePos };
     }

@@ -15,5 +15,6 @@ from . import mudon_lost_reason
 from . import mudon_project
 from . import mudon_wa_message
 from . import res_config_settings
+from . import res_users
 # crm.lead extension last so the relational fields can ref the masters above
 from . import crm_lead

@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        Client comment 2 — "Where to manage the company structure and who is
+        reporting to who?"
+
+        Answered inside the CRM rather than by installing the HR app: the
+        reporting line sits on the user record, next to the role that grants
+        their access, so one screen answers both "who is this person" and
+        "what can they see".
+    -->
+
+    <record id="mudon_res_users_view_list_structure" model="ir.ui.view">
+        <field name="name">res.users.list.mudon.structure</field>
+        <field name="model">res.users</field>
+        <field name="arch" type="xml">
+            <list string="Company Structure" create="false">
+                <field name="name"/>
+                <field name="mudon_job_title"/>
+                <field name="mudon_reports_to_id"/>
+                <field name="mudon_direct_report_count" string="Reports"/>
+                <field name="login" optional="hide"/>
+                <field name="phone" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <!--
+        Hierarchy view: expand a manager to see who reports into them.
+        The list is the fallback for databases where the hierarchy widget
+        is unavailable.
+    -->
+    <record id="mudon_res_users_view_form_structure" model="ir.ui.view">
+        <field name="name">res.users.form.mudon.structure</field>
+        <field name="model">res.users</field>
+        <field name="inherit_id" ref="base.view_users_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button type="object" name="action_mudon_open_direct_reports"
+                        class="oe_stat_button" icon="fa-sitemap"
+                        invisible="mudon_direct_report_count == 0">
+                    <field name="mudon_direct_report_count" widget="statinfo"
+                           string="Direct Reports"/>
+                </button>
+            </xpath>
+            <xpath expr="//field[@name='login']" position="after">
+                <field name="mudon_job_title"/>
+                <field name="mudon_reports_to_id"
+                       domain="[('id', '!=', id)]"
+                       options="{'no_create': True}"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="mudon_company_structure_action" model="ir.actions.act_window">
+        <field name="name">Company Structure</field>
+        <field name="res_model">res.users</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('share', '=', False)]</field>
+        <field name="context">{'search_default_group_reports_to': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Set who reports to whom.
+            </p>
+            <p>
+                Open a user and fill <b>Reports To</b> and <b>Job Title</b>.
+                Their Mudon role — Sales Agent, Team Leader, Branch Manager
+                and so on — is set on the same screen under Access Rights,
+                and decides which records they can see.
+            </p>
+        </field>
+    </record>
+
+    <record id="mudon_res_users_view_search_structure" model="ir.ui.view">
+        <field name="name">res.users.search.mudon.structure</field>
+        <field name="model">res.users</field>
+        <field name="inherit_id" ref="base.view_users_search"/>
+        <field name="arch" type="xml">
+            <xpath expr="//search" position="inside">
+                <field name="mudon_reports_to_id"/>
+                <filter name="group_reports_to" string="Reports To"
+                        context="{'group_by': 'mudon_reports_to_id'}"/>
+            </xpath>
+        </field>
+    </record>
+
+    <menuitem id="mudon_menu_company_structure"
+              name="Company Structure"
+              parent="mudon_menu_config_root"
+              action="mudon_company_structure_action"
+              groups="mudon_crm.group_mudon_system_admin"
+              sequence="5"/>
+
+</odoo>

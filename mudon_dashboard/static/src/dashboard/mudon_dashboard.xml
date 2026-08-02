@@ -14,6 +14,25 @@
                     </div>
                 </div>
                 <div class="mudon_head_actions">
+                    <!--
+                        Comment 4 — currency toggle, matching the financial
+                        board. Native shows the pipeline's own currency (AED
+                        on UAE Dubai, USD on Turkey); USD converts at the
+                        fixed peg the client specified.
+                    -->
+                    <div class="btn-group btn-group-sm mudon_ccy_toggle" role="group" aria-label="Currency mode">
+                        <button class="btn btn-outline-light"
+                                t-att-class="state.currencyMode === 'native' ? 'active' : ''"
+                                t-on-click="() => this.setCurrencyMode('native')">
+                            Native
+                        </button>
+                        <button class="btn btn-outline-light"
+                                t-att-class="state.currencyMode === 'usd' ? 'active' : ''"
+                                t-on-click="() => this.setCurrencyMode('usd')"
+                                title="Show all amounts in USD at a fixed 3.67 AED/USD rate">
+                            USD @ 3.67
+                        </button>
+                    </div>
                     <button class="btn btn-outline-secondary btn-sm" t-on-click="() => this.refresh()">
                         <i class="fa fa-refresh me-1"/>Refresh
                     </button>
@@ -35,6 +54,7 @@
                     <option value="this_quarter" t-att-selected="state.period === 'this_quarter'">This Quarter</option>
                     <option value="this_year" t-att-selected="state.period === 'this_year'">This Year</option>
                     <option value="last_year" t-att-selected="state.period === 'last_year'">Last Year</option>
+                    <option value="all_time" t-att-selected="state.period === 'all_time'">All Time</option>
                 </select>
                 <select class="form-select" t-on-change="(ev) => this.setFilter('agent_id', ev)">
                     <option value="">All agents</option>

@@ -26,6 +26,10 @@ class MudonManagementDashboard extends Component {
             error: false,
             pipeline: "all",
             period: "this_month",
+            // Comment 4 - the same USD toggle the financial board has, so a
+            // manager can read the UAE board in AED or in USD at the fixed
+            // peg. "native" shows the pipeline's own currency.
+            currencyMode: "native",
             basis: "pipeline",
             // extra filters
             agent_id: "",
@@ -165,16 +169,40 @@ class MudonManagementDashboard extends Component {
         return v == null ? "0" : new Intl.NumberFormat().format(v);
     }
 
+    // Convert a native amount into the selected display currency.
+    // The backend now reports the PIPELINE currency (AED on the UAE board,
+    // USD on Turkey) instead of the company currency, which is what made
+    // every board read "$" in comment 4.
+    _mudonDisplay(v) {
+        const m = (this.state.data && this.state.data.meta) || {};
+        if (this.state.currencyMode === "usd" && m.currency_is_aed) {
+            return {
+                value: v / (m.aed_per_usd || 3.67),
+                sym: "$",
+                position: "before",
+            };
+        }
+        return {
+            value: v,
+            sym: m.currency || "",
+            position: m.currency_position || "before",
+        };
+    }
+
+    setCurrencyMode(mode) {
+        this.state.currencyMode = mode;
+        this.state.renderKey++;
+    }
+
     fmtMoney(v) {
         if (v == null) { return "—"; }
-        const m = this.state.data && this.state.data.meta;
-        const sym = (m && m.currency) || "";
+        const d = this._mudonDisplay(v);
         let n;
-        const a = Math.abs(v);
-        if (a >= 1000000) { n = (v / 1000000).toFixed(2).replace(/\.?0+$/, "") + "M"; }
-        else if (a >= 1000) { n = Math.round(v / 1000) + "K"; }
-        else { n = new Intl.NumberFormat().format(Math.round(v)); }
-        return (m && m.currency_position === "after") ? `${n} ${sym}` : `${sym} ${n}`;
+        const a = Math.abs(d.value);
+        if (a >= 1000000) { n = (d.value / 1000000).toFixed(2).replace(/\.?0+$/, "") + "M"; }
+        else if (a >= 1000) { n = Math.round(d.value / 1000) + "K"; }
+        else { n = new Intl.NumberFormat().format(Math.round(d.value)); }
+        return d.position === "after" ? `${n} ${d.sym}` : `${d.sym} ${n}`;
     }
 
     convClass(v) {

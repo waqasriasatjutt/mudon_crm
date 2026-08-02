@@ -116,17 +116,13 @@ STAGE_FLOW = [
 
 class CrmLead(models.Model):
     _inherit = "crm.lead"
-    # Sort order applies to every kanban column on every team.
-    # 1. priority rank — P1 Citizenship+Urgent → P4 Investment+Normal
-    # 2. nearest expected visit date — relevant on Offer Sent + Meeting
-    # 3. most recent on top (the New Lead default per spec)
-    # Non-Mudon teams have null on all Mudon fields → sort collapses
-    # to the standard create_date desc behaviour for them.
-    _order = (
-        "mudon_kanban_priority_rank asc, "
-        "mudon_visit_date asc nulls last, "
-        "create_date desc, id desc"
-    )
+    # ONE sort key, but it means something different per stage — see
+    # `_compute_mudon_sort_key`. Odoo's `_order` is model-global (a single
+    # ORDER BY for every kanban column), while the client's spec asks for a
+    # DIFFERENT sort on each stage. Encoding the per-stage rule into one
+    # sortable string is what makes that possible, because a kanban column
+    # only ever holds leads of a single stage kind.
+    _order = "mudon_sort_key asc, id desc"
 
     # ─── Pipeline marker ────────────────────────────────────────────
     mudon_pipeline_kind = fields.Selection(
@@ -531,21 +527,132 @@ class CrmLead(models.Model):
                 rec.mudon_card_color_hint, 5,
             )
 
+    # ─── Per-stage kanban sort (client comments 18 + 27) ────────────────
+    mudon_sort_key = fields.Char(
+        compute="_compute_mudon_sort_key",
+        store=True, index=True, readonly=True,
+        string="Kanban sort key",
+        help="Internal. Encodes the sort rule the client specified for the "
+             "lead's CURRENT stage into one sortable string, because Odoo "
+             "applies a single _order to every kanban column.",
+    )
+
+    @api.depends("mudon_stage_kind_current", "mudon_kanban_priority_rank",
+                 "mudon_visit_date", "create_date")
+    def _compute_mudon_sort_key(self):
+        """Build a fixed-width, ascending-sortable key per the spec:
+
+        =============  ==========================================
+        Stage          Order requested by the client
+        =============  ==========================================
+        New Lead       Most recent on top                (#27)
+        Qualified      P1 → P4, latest first within each
+        Offer Sent     P1 → P4, then nearest visit date
+        Meeting        Nearest expected visit date on top (#18)
+        EOI/WON/Lost   P1 → P4, latest first within each
+        =============  ==========================================
+
+        The key is ``RDDDDDDDRRRRRRRRRR`` — 1 digit priority band, 7 digits
+        visit-date, 10 digits inverted recency. A component set to zero
+        simply drops out of the comparison, which is how one column sorts
+        purely by date and another purely by recency.
+        """
+        # Sentinels chosen so "unset" always sorts LAST, never first.
+        epoch_max = 4102444800          # 2100-01-01, > any create_date
+        no_date = 9999999               # > any real date.toordinal()
+        for rec in self:
+            kind = rec.mudon_stage_kind_current
+
+            created = rec.create_date
+            recency = epoch_max
+            if created:
+                # Inverted so the NEWEST record yields the SMALLEST number.
+                recency = max(0, epoch_max - int(created.timestamp()))
+
+            visit = rec.mudon_visit_date
+            # Ascending ordinal => the NEAREST date sorts first; blanks last.
+            date_part = visit.toordinal() if visit else no_date
+
+            rank = rec.mudon_kanban_priority_rank or 5
+
+            if kind == "new_lead":
+                band, dpart = 0, 0                    # pure recency
+            elif kind == "qualified":
+                band, dpart = rank, 0                 # priority, then recency
+            elif kind == "offer_sent":
+                band, dpart = rank, date_part         # priority, then visit
+            elif kind == "meeting":
+                band, dpart = 0, date_part            # pure visit date
+            else:
+                # EOI / WON / Lost / non-Mudon: priority then recency.
+                band, dpart = rank, 0
+
+            rec.mudon_sort_key = "%1d%07d%010d" % (band, dpart, recency)
+
     # ─── Create / write: stage flow + funnel spawn ──────────────────
+    # Odoo auto-titles an opportunity created from a contact as
+    # "<Contact>'s opportunity". The client asked for that wording gone
+    # from every card (comment 13), and it lives in the stored `name`, not
+    # in the view — so it has to be stripped on the way in.
+    _MUDON_NAME_SUFFIX = "'s opportunity"
+
+    @api.model
+    def _mudon_clean_name(self, name):
+        """Drop Odoo's auto-appended "'s opportunity" tail from a title."""
+        if not name:
+            return name
+        for suffix in (self._MUDON_NAME_SUFFIX, "’s opportunity"):
+            if name.endswith(suffix):
+                return name[: -len(suffix)].strip() or name
+        return name
+
     @api.model_create_multi
     def create(self, vals_list):
+        for vals in vals_list:
+            if vals.get("name"):
+                vals["name"] = self._mudon_clean_name(vals["name"])
         leads = super().create(vals_list)
-        for lead in leads:
+        for lead, vals in zip(leads, vals_list):
             try:
-                lead._mudon_auto_assign_agent()
+                # Was a salesperson DELIBERATELY chosen? Odoo defaults
+                # `user_id` to whoever is creating the record, so "the field
+                # is filled" is NOT evidence of an explicit choice — and the
+                # old code treated it as such, which is why country-code
+                # routing and round-robin never ran for UI-created leads
+                # (comments 14 / 15 / 16). Only a salesperson OTHER than the
+                # creator counts as a deliberate assignment.
+                chosen = vals.get("user_id")
+                explicit = bool(chosen) and chosen != self.env.uid
+                lead._mudon_auto_assign_agent(force=not explicit)
                 lead._mudon_send_client_greeting()
                 lead._mudon_notify_assigned_agent("new_lead")
+                # A lead captured with all four qualifying fields already
+                # filled belongs on Qualified, not New Lead (comment 17).
+                lead._mudon_try_auto_qualify()
             except Exception as exc:
                 _logger.warning(
                     "mudon_crm: post-create hook failed for lead %s: %s",
                     lead.id, exc,
                 )
         return leads
+
+    def _mudon_try_auto_qualify(self):
+        """Advance New Lead → Qualified once the intake data is complete.
+
+        Client comment 17: "If agent opens a card and fills the required
+        fields, it should advance the card automatically." The four fields
+        are exactly the gate the funnel already enforces, so satisfying the
+        gate is now enough to cross it — no drag needed.
+        """
+        self.ensure_one()
+        if not self.mudon_pipeline_kind:
+            return False
+        if self.mudon_stage_kind_current != "new_lead":
+            return False
+        if any(not self[f] for f in MUDON_QUALIFY_DATA):
+            return False
+        self._mudon_advance_stage("qualified")
+        return True
 
     # v19.0.1.4.0 — `mudon_city_ids` (Many2many tags) reduced to
     # `mudon_city_id` (Many2one) so branch round-robin routing has one
@@ -679,6 +786,143 @@ class CrmLead(models.Model):
                 _("Pick Lost Reason"),
             )
 
+    # ─── Moving a card BACK (client comment 3) ──────────────────────
+    # Which stage OWNS which fields. Moving back past a stage clears
+    # everything that stage collected, so a card never carries data — or a
+    # milestone tick — belonging to a stage it is no longer on. (Leaving
+    # the ticks in place was the actual complaint: the tick that advanced
+    # the card was still set, so the card sprang forward again.)
+    MUDON_STAGE_OWNED_FIELDS = {
+        "qualified": (
+            ("mudon_tick_offer_sent", "Offer Sent tick"),
+        ),
+        "offer_sent": (
+            ("mudon_offer_counter", "Offer counter"),
+            ("mudon_last_offer_date", "Last offer sent at"),
+            ("mudon_seriousness", "Seriousness"),
+            ("mudon_visit_confirmed", "Visit Confirmed tick"),
+            ("mudon_3rd_offer_survey_sent", "3rd-offer survey status"),
+            ("mudon_survey_received_offer", "Survey: received offer"),
+            ("mudon_survey_suitable", "Survey: was it suitable"),
+            ("mudon_survey_needs_support", "Survey: needs support"),
+            ("mudon_survey_property_options", "Survey: property options"),
+            ("mudon_survey_status", "Survey: status"),
+            ("mudon_survey_preferred_support", "Survey: preferred support"),
+            ("mudon_offer_3hr_reminder_idx", None),
+            ("mudon_last_15day_reminder_date", None),
+        ),
+        "meeting": (
+            ("mudon_client_type", "Client Type"),
+            ("mudon_property_requirements", "Property Requirements"),
+            ("mudon_paid_booking", "Paid Booking tick"),
+            ("mudon_meeting_reminder_3day_sent", None),
+            ("mudon_meeting_reminder_2day_sent", None),
+            ("mudon_meeting_reminder_1day_sent", None),
+        ),
+        "eoi": (
+            ("mudon_fully_paid", "Fully Paid tick"),
+        ),
+        "won": (
+            ("mudon_closing_amount", "Closing Amount"),
+            ("mudon_developer_id", "Developer"),
+            ("mudon_project_id", "Project"),
+            ("mudon_commission", "Commission"),
+            ("mudon_handover_type", "Handover Type"),
+            ("mudon_reason_to_win", "Reason to Win"),
+            ("mudon_invoiced_amount", "Invoiced amount"),
+            ("mudon_invoiced_date", "Invoice date"),
+            ("mudon_collected_amount", "Collected amount"),
+            ("mudon_collected_date", "Payment received date"),
+            ("mudon_need_invoice", "Need Invoice flag"),
+            ("mudon_title_deed_required", "Title Deed flag"),
+            ("mudon_citizenship_required", "Citizenship flag"),
+            ("mudon_residence_required", "Residence flag"),
+            ("mudon_furniture_required", "Furniture flag"),
+        ),
+    }
+
+    def _mudon_fields_cleared_on_back(self, target_kind, labels_only=False):
+        """Fields (or human labels) belonging to stages after `target_kind`.
+
+        Only fields that actually hold a value are reported, so the
+        confirmation dialog lists what will really be lost on THIS card
+        rather than a generic catalogue.
+        """
+        self.ensure_one()
+        order = MUDON_STAGE_ORDER
+        if target_kind not in order:
+            return []
+        ti = order.index(target_kind)
+        out = []
+        for kind in order[ti + 1:]:
+            for fname, label in self.MUDON_STAGE_OWNED_FIELDS.get(kind, ()):
+                if labels_only:
+                    if label and self[fname]:
+                        out.append(label)
+                else:
+                    out.append(fname)
+        # Reopening a Lost card must also drop the reason that closed it.
+        if self.mudon_stage_kind_current == "lost":
+            if labels_only:
+                if self.mudon_lost_reason_id:
+                    out.append("Lost Reason")
+            else:
+                out.append("mudon_lost_reason_id")
+        return out
+
+    def _mudon_check_move_back(self, new_stage):
+        """Ask before a backward move, per the client's requested dialog."""
+        if self.env.context.get("mudon_confirm_back"):
+            return
+        if not new_stage or not new_stage.mudon_stage_kind:
+            return
+        target_kind = new_stage.mudon_stage_kind
+        if target_kind not in MUDON_STAGE_ORDER:
+            return          # moving to Lost is handled by its own gate
+        from odoo.exceptions import RedirectWarning
+        ti = MUDON_STAGE_ORDER.index(target_kind)
+        for rec in self:
+            if not rec.mudon_pipeline_kind:
+                continue
+            ck = rec.mudon_stage_kind_current
+            is_back = (ck == "lost") or (
+                ck in MUDON_STAGE_ORDER
+                and MUDON_STAGE_ORDER.index(ck) > ti
+            )
+            if not is_back:
+                continue
+            action = self.env["ir.actions.act_window"]._for_xml_id(
+                "mudon_crm.action_mudon_move_back_wizard",
+            )
+            action["context"] = {
+                "default_lead_id": rec.id,
+                "default_target_stage_id": new_stage.id,
+            }
+            raise RedirectWarning(
+                _("Move Card Back? This will delete all entries from later "
+                  "stages for %s.") % (
+                    rec.name or rec.contact_name or _("this lead"),
+                ),
+                action,
+                _("Move Back"),
+            )
+
+    def _mudon_move_back_to(self, stage):
+        """Clear the abandoned stages' data, then land on `stage`."""
+        self.ensure_one()
+        vals = {}
+        for fname in self._mudon_fields_cleared_on_back(
+                stage.mudon_stage_kind):
+            vals[fname] = False
+        # Integer fields must go to 0, not False, to stay type-correct.
+        for int_field in ("mudon_offer_counter", "mudon_offer_3hr_reminder_idx"):
+            if int_field in vals:
+                vals[int_field] = 0
+        vals["stage_id"] = stage.id
+        return self.sudo().with_context(
+            mudon_in_write=True, mudon_confirm_back=True,
+        ).write(vals)
+
     def write(self, vals):
         """Drive stage transitions + side-effects from field flips.
 
@@ -704,6 +948,7 @@ class CrmLead(models.Model):
             return super().write(vals)
         if "stage_id" in vals and vals["stage_id"]:
             new_stage = self.env["crm.stage"].sudo().browse(vals["stage_id"])
+            self._mudon_check_move_back(new_stage)
             self._mudon_check_stage_requirements(new_stage, vals)
             self._mudon_check_stage_transitions(new_stage, vals)
             # NOTE: no silent auto-tick — per Abdul 07-06 feedback,
@@ -738,6 +983,13 @@ class CrmLead(models.Model):
         self.ensure_one()
         if not self.mudon_pipeline_kind:
             return
+
+        # New Lead → Qualified as soon as the intake data is complete
+        # (comment 17). Runs before the tick-driven transitions below so a
+        # single save that both completes intake AND ticks Offer Sent still
+        # lands on the further stage.
+        if "stage_id" not in vals:
+            self._mudon_try_auto_qualify()
 
         # Stage 2 → Stage 3: Offer Sent
         if self.mudon_tick_offer_sent and not prev.get("mudon_tick_offer_sent"):
@@ -966,16 +1218,44 @@ class CrmLead(models.Model):
     # to Pipeline so exiting a card doesn't feel like navigation
     # guesswork. Both return an Odoo action that navigates cleanly.
     def _mudon_pipeline_action(self):
-        """The CRM Pipeline act_window scoped to this lead's team so the
-        user lands back exactly where they came from (Turkey / UAE)."""
+        """The pipeline act_window scoped to this lead's team, so the user
+        lands back exactly where they came from (Turkey / UAE).
+
+        Client comment 12 — "Back to pipeline is not working" — was this
+        method crashing to the generic "Oops! Something went wrong" screen.
+        ``_for_xml_id`` returns ``context`` as the RAW STRING stored on the
+        action (``"{'default_type': 'opportunity'}"``), and ``dict()`` of a
+        string raises ValueError. Parse it properly instead, and prefer the
+        Mudon pipeline action so the user returns to the branded board with
+        its stage columns rather than the generic CRM pipeline.
+        """
         self.ensure_one()
-        action = self.env["ir.actions.act_window"]._for_xml_id(
-            "crm.crm_lead_action_pipeline",
-        )
+        xmlid_by_kind = {
+            "turkey": "mudon_crm.mudon_pipeline_turkey_action",
+            "uae": "mudon_crm.mudon_pipeline_uae_action",
+        }
+        xmlid = xmlid_by_kind.get(
+            self.mudon_pipeline_kind, "crm.crm_lead_action_pipeline")
+        try:
+            action = self.env["ir.actions.act_window"]._for_xml_id(xmlid)
+        except ValueError:
+            action = self.env["ir.actions.act_window"]._for_xml_id(
+                "crm.crm_lead_action_pipeline")
+
+        raw_ctx = action.get("context") or {}
+        if isinstance(raw_ctx, str):
+            from odoo.tools.safe_eval import safe_eval
+            try:
+                raw_ctx = safe_eval(raw_ctx, {"uid": self.env.uid}) or {}
+            except Exception:
+                raw_ctx = {}
+        ctx = dict(raw_ctx)
         if self.team_id:
-            ctx = dict(action.get("context") or {})
             ctx["default_team_id"] = self.team_id.id
-            action["context"] = ctx
+        action["context"] = ctx
+        # Land on the kanban board, not back on a form.
+        action["target"] = "main"
+        action["res_id"] = False
         return action
 
     def action_mudon_back_to_pipeline(self):
@@ -997,18 +1277,60 @@ class CrmLead(models.Model):
         return action
 
     # ─── Branch + country-code routing ──────────────────────────────
-    def _mudon_auto_assign_agent(self):
+    def _mudon_auto_assign_agent(self, force=False):
+        """Route the lead to an agent.
+
+        ``force=True`` overwrites the salesperson Odoo defaulted to (the
+        creating user); see the note in ``create``. With ``force=False``
+        an existing assignment is respected.
+        """
         self.ensure_one()
-        if self.user_id or not self.mudon_pipeline_kind:
+        if not self.mudon_pipeline_kind:
             return
-        agent = (
-            self._mudon_pick_by_branch()
-            or self._mudon_pick_by_country_code()
+        if self.user_id and not force:
+            return
+        agent = self._mudon_route_agent()
+        if agent and agent.id != self.user_id.id:
+            self.sudo().with_context(mudon_in_write=True).write(
+                {"user_id": agent.id})
+
+    def _mudon_route_agent(self):
+        """Pick the agent per the client's routing rules.
+
+        Comment 16 clarified the intent: *"Round robin will distribute only
+        to agent in the same city"*, and cities with no branch go to the
+        Sales Manager. The old chain fell through from an empty branch to a
+        team-wide round-robin, which leaked leads to agents in other
+        cities — so the city branch is now a hard boundary:
+
+        1. City maps to a branch  → round-robin INSIDE that branch only;
+           an empty branch falls to the Sales Manager, never to other cities.
+        2. City set but unmapped ("Other") → Sales Manager.
+        3. No city yet (a raw stage-1 enquiry) → phone country-code mapping,
+           then team round-robin, then Sales Manager.
+        """
+        self.ensure_one()
+        if self.mudon_branch_id:
+            return (self._mudon_pick_by_branch()
+                    or self._mudon_pick_sales_manager())
+        if self.mudon_city_id:
+            return self._mudon_pick_sales_manager()
+        return (
+            self._mudon_pick_by_country_code()
             or self._mudon_pick_round_robin()
             or self._mudon_pick_sales_manager()
         )
-        if agent:
-            self.write({"user_id": agent.id})
+
+    def action_mudon_reassign_auto(self):
+        """Re-run routing on demand (list/kanban action).
+
+        Lets a manager fix the leads that were created before the routing
+        bug was found, without re-keying each salesperson by hand.
+        """
+        for rec in self:
+            if rec.mudon_pipeline_kind:
+                rec._mudon_auto_assign_agent(force=True)
+        return True
 
     def _mudon_pick_by_branch(self):
         """If the lead's city maps to a branch, round-robin in that
@@ -1431,10 +1753,32 @@ class CrmLead(models.Model):
         self._mudon_send_whatsapp(self.phone, body, from_company=True)
 
     # ─── SLA cron handlers ──────────────────────────────────────────
+    # Every delay below is read from Settings at run time (client comment
+    # 6) rather than hard-coded, so the client can retune the automation
+    # without a code deploy. The defaults match the original spec exactly,
+    # so behaviour is unchanged until someone edits a value.
+    @api.model
+    def _mudon_timer(self, key, default):
+        """One notification timer from Settings, guarded.
+
+        A blank or non-numeric value falls back to the spec default rather
+        than disabling the reminder — a mistyped setting must never
+        silently switch off a client-facing SLA. A value of 0 IS honoured
+        and means "fire on the next sweep".
+        """
+        raw = self.env["ir.config_parameter"].sudo().get_param(
+            "mudon_crm.%s" % key)
+        try:
+            value = int(raw)
+        except (TypeError, ValueError):
+            return default
+        return value if value >= 0 else default
+
     @api.model
     def _mudon_cron_sla_30min(self):
-        """Stage 1 — 30-min reminder if no agent contact."""
-        threshold = fields.Datetime.now() - timedelta(minutes=30)
+        """Stage 1 — first reminder if no agent contact (default 30 min)."""
+        threshold = fields.Datetime.now() - timedelta(
+            minutes=self._mudon_timer("sla_new_lead_first", 30))
         leads = self.search([
             ("create_date", "<=", threshold),
             ("mudon_first_contact_logged", "=", False),
@@ -1449,8 +1793,9 @@ class CrmLead(models.Model):
 
     @api.model
     def _mudon_cron_sla_1hour(self):
-        """Stage 1 — 1-hour escalation to agent + manager."""
-        threshold = fields.Datetime.now() - timedelta(minutes=60)
+        """Stage 1 — escalation to agent + manager (default 60 min)."""
+        threshold = fields.Datetime.now() - timedelta(
+            minutes=self._mudon_timer("sla_new_lead_escalate", 60))
         leads = self.search([
             ("create_date", "<=", threshold),
             ("mudon_first_contact_logged", "=", False),
@@ -1467,7 +1812,9 @@ class CrmLead(models.Model):
 
     @api.model
     def _mudon_cron_qualified_30min(self):
-        threshold = fields.Datetime.now() - timedelta(minutes=30)
+        """Stage 2 — first reminder if no contact (default 30 min)."""
+        threshold = fields.Datetime.now() - timedelta(
+            minutes=self._mudon_timer("sla_qualified_first", 30))
         leads = self.search([
             ("mudon_qualified_entry_date", "<=", threshold),
             ("mudon_first_contact_logged", "=", False),
@@ -1481,7 +1828,9 @@ class CrmLead(models.Model):
 
     @api.model
     def _mudon_cron_qualified_2hour(self):
-        threshold = fields.Datetime.now() - timedelta(hours=2)
+        """Stage 2 — escalation to the manager (default 120 min)."""
+        threshold = fields.Datetime.now() - timedelta(
+            minutes=self._mudon_timer("sla_qualified_escalate", 120))
         leads = self.search([
             ("mudon_qualified_entry_date", "<=", threshold),
             ("mudon_first_contact_logged", "=", False),
@@ -1499,7 +1848,8 @@ class CrmLead(models.Model):
     def _mudon_cron_offer_3hour(self):
         """Stage 3 — 3hr after each offer was sent → 'contact for
         feedback' to the agent. Only fires once per offer increment."""
-        threshold = fields.Datetime.now() - timedelta(hours=3)
+        threshold = fields.Datetime.now() - timedelta(
+            hours=self._mudon_timer("sla_offer_followup", 3))
         leads = self.search([
             ("mudon_last_offer_date", "<=", threshold),
             ("mudon_offer_counter", ">", 0),
@@ -1517,7 +1867,8 @@ class CrmLead(models.Model):
     @api.model
     def _mudon_cron_offer_evd_15days_before(self):
         """Stage 3 — 15 days BEFORE the expected visit date."""
-        target = fields.Date.today() + timedelta(days=15)
+        target = fields.Date.today() + timedelta(
+            days=self._mudon_timer("sla_visit_notice", 15))
         leads = self.search([
             ("mudon_visit_date", "=", target),
             ("stage_id.id", "in", self._mudon_stage_ids("offer_sent")),
@@ -1530,14 +1881,15 @@ class CrmLead(models.Model):
     def _mudon_cron_offer_periodic_15days(self):
         """Stage 3 — every 15 days while (EVD − today) > 15."""
         today = fields.Date.today()
+        cadence = self._mudon_timer("sla_stay_in_touch", 15)
         leads = self.search([
-            ("mudon_visit_date", ">", today + timedelta(days=15)),
+            ("mudon_visit_date", ">", today + timedelta(days=cadence)),
             ("stage_id.id", "in", self._mudon_stage_ids("offer_sent")),
         ])
         fired = 0
         for lead in leads:
             last = lead.mudon_last_15day_reminder_date
-            if last and (today - last).days < 15:
+            if last and (today - last).days < cadence:
                 continue
             lead._mudon_notify_assigned_agent("offer_periodic_15")
             lead.mudon_last_15day_reminder_date = today
@@ -1549,7 +1901,8 @@ class CrmLead(models.Model):
         """Stage 3 — after 3rd offer sent, send the structured client
         survey from the Company WA number. One-shot per lead."""
         leads = self.search([
-            ("mudon_offer_counter", ">=", 3),
+            ("mudon_offer_counter", ">=",
+             self._mudon_timer("survey_after_offer", 3)),
             ("mudon_3rd_offer_survey_sent", "=", False),
             ("stage_id.id", "in", self._mudon_stage_ids("offer_sent")),
         ])
@@ -1563,11 +1916,18 @@ class CrmLead(models.Model):
         """Stage 4 — T-3 / T-2 / T-1 day meeting reminders."""
         today = fields.Date.today()
         fired = 0
-        for days, flag in (
-            (3, "mudon_meeting_reminder_3day_sent"),
-            (2, "mudon_meeting_reminder_2day_sent"),
-            (1, "mudon_meeting_reminder_1day_sent"),
-        ):
+        # Which days-before to remind on is configurable (comment 6); the
+        # three persisted flags cap it at three distinct reminders.
+        raw = self.env["ir.config_parameter"].sudo().get_param(
+            "mudon_crm.meeting_reminder_days", "3,2,1") or "3,2,1"
+        try:
+            wanted = [int(x) for x in raw.split(",") if x.strip()][:3]
+        except ValueError:
+            wanted = [3, 2, 1]
+        flags = ("mudon_meeting_reminder_3day_sent",
+                 "mudon_meeting_reminder_2day_sent",
+                 "mudon_meeting_reminder_1day_sent")
+        for days, flag in zip(wanted or [3, 2, 1], flags):
             target = today + timedelta(days=days)
             leads = self.search([
                 ("mudon_visit_date", "=", target),

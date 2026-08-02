@@ -59,6 +59,12 @@ class MudonDashboard(models.TransientModel):
             return date(y, 1, 1), today
         if period == "last_year":
             return date(y - 1, 1, 1), date(y - 1, 12, 31)
+        if period == "all_time":
+            # Client comment 31 - "No of assigned lead on Dashboard not
+            # matching pipeline? 18/15". The board was period-filtered
+            # (This Month) while the kanban shows every card, so the two
+            # counts could never agree. All Time makes them reconcile.
+            return date(2000, 1, 1), today
         # default: this_month
         return date(y, m, 1), today
 
@@ -137,6 +143,61 @@ class MudonDashboard(models.TransientModel):
                     return prefix
         return "other"
 
+    # ── currency (client comment 4) ─────────────────────────────────────
+    # "AED/USD is still not working correctly ... the dashboards are not
+    # reflecting correct currency/conversion."
+    #
+    # Both boards used to report `self.env.company.currency_id`, which is
+    # USD for every pipeline — so the UAE board showed $ against AED figures,
+    # and the USD toggle had nothing to convert because it only fires when
+    # the native currency is AED. The pipeline decides the currency, exactly
+    # like crm.lead.mudon_budget_currency_id does on the records themselves.
+    AED_PER_USD = 3.67          # fixed peg the client specified
+
+    @api.model
+    def _pipeline_currency(self, pipeline):
+        """(symbol, position, is_aed) for the selected pipeline.
+
+        UAE bills in AED, Turkey in USD. On the combined "All" board the
+        two cannot be added up honestly, so amounts are normalised to USD
+        and the UI is told so via ``mixed_currency``.
+        """
+        if pipeline == "uae":
+            aed = self.env.ref("base.AED", raise_if_not_found=False)
+            if aed:
+                return (aed.symbol or "AED", aed.position or "before", True)
+            return ("AED", "before", True)
+        usd = self.env.ref("base.USD", raise_if_not_found=False)
+        return ((usd.symbol if usd else "$") or "$",
+                (usd.position if usd else "before") or "before", False)
+
+    @api.model
+    def _currency_meta(self, pipeline):
+        symbol, position, is_aed = self._pipeline_currency(pipeline)
+        return {
+            "currency": symbol,
+            "currency_position": position,
+            "currency_is_aed": is_aed,
+            "aed_per_usd": self.AED_PER_USD,
+            # On "All", Turkey (USD) and UAE (AED) figures are converted to
+            # a single unit before they are summed - see _to_display_amount.
+            "mixed_currency": pipeline == "all",
+        }
+
+    @api.model
+    def _to_display_amount(self, lead, amount, pipeline):
+        """Normalise one lead's amount into the board's display currency.
+
+        Per-pipeline boards already share a currency, so nothing to do. The
+        combined board converts AED rows to USD at the fixed peg so the
+        totals are not a meaningless mix of two currencies.
+        """
+        if not amount:
+            return 0.0
+        if pipeline == "all" and lead.mudon_pipeline_kind == "uae":
+            return amount / self.AED_PER_USD
+        return amount
+
     @api.model
     def _period_label(self, period, filters):
         filters = filters or {}
@@ -147,7 +208,7 @@ class MudonDashboard(models.TransientModel):
         return {
             "this_month": "This Month", "last_month": "Last Month",
             "this_quarter": "This Quarter", "this_year": "This Year",
-            "last_year": "Last Year",
+            "last_year": "Last Year", "all_time": "All Time",
         }.get(period, "This Month")
 
     @api.model
@@ -289,7 +350,6 @@ class MudonDashboard(models.TransientModel):
     def get_management_data(self, pipeline="all", period="this_month",
                             basis="pipeline", filters=None):
         Lead = self.env["crm.lead"].sudo()
-        currency = self.env.company.currency_id
 
         d_from, d_to = self._resolve_range(period, filters)
         dt_from = datetime.combine(d_from, time.min)
@@ -309,10 +369,9 @@ class MudonDashboard(models.TransientModel):
                 "period_label": self._period_label(period, filters),
                 "basis": basis,
                 "basis_label": "Pipeline Date" if basis == "pipeline" else "Close Date",
-                "currency": currency.symbol or currency.name or "",
-                "currency_position": currency.position or "before",
                 "generated": fields.Datetime.now().strftime("%Y-%m-%d %H:%M"),
-            }, **self._range_meta(period, filters)),
+            }, **dict(self._currency_meta(pipeline),
+                      **self._range_meta(period, filters))),
             "kpis": {}, "tables": {}, "charts": {}, "_errors": [],
         }
 
@@ -369,10 +428,14 @@ class MudonDashboard(models.TransientModel):
                 if i == 5:
                     b["won"] += 1
                     tot["won"] += 1
-                    b["revenue"] += lead.expected_revenue or 0.0
-                    tot["revenue"] += lead.expected_revenue or 0.0
-                    b["commission"] += lead.mudon_commission or 0.0
-                    tot["commission"] += lead.mudon_commission or 0.0
+                    rev = self._to_display_amount(
+                        lead, lead.expected_revenue or 0.0, pipeline)
+                    com = self._to_display_amount(
+                        lead, lead.mudon_commission or 0.0, pipeline)
+                    b["revenue"] += rev
+                    tot["revenue"] += rev
+                    b["commission"] += com
+                    tot["commission"] += com
 
             data["kpis"] = {
                 "assigned": tot["assigned"],
@@ -519,7 +582,6 @@ class MudonDashboard(models.TransientModel):
                   here (this board is won-only).
         """
         Lead = self.env["crm.lead"].sudo()
-        currency = self.env.company.currency_id
         if basis not in self._FIN_BASIS:
             basis = "won"
         amount_field, date_field = self._FIN_BASIS[basis]
@@ -552,11 +614,10 @@ class MudonDashboard(models.TransientModel):
                 "source": source,
                 "source_label": ("Accounting (live)" if source == "accounting"
                                  else "CRM (admin-tracked)"),
-                "currency": currency.symbol or currency.name or "",
-                "currency_position": currency.position or "before",
                 "year": y,
                 "generated": fields.Datetime.now().strftime("%Y-%m-%d %H:%M"),
-            }, **self._range_meta(period, filters)),
+            }, **dict(self._currency_meta(pipeline),
+                      **self._range_meta(period, filters))),
             "kpis": {}, "tables": {}, "charts": {}, "notes": [], "_errors": [],
         }
 
