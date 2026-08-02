@@ -46,7 +46,8 @@
         <field name="model_id" ref="crm.model_crm_lead"/>
         <field name="binding_model_id" ref="crm.model_crm_lead"/>
         <field name="binding_view_types">list,kanban,form</field>
-        <field name="groups_id" eval="[(4, ref('mudon_crm.group_mudon_sales_director'))]"/>
+        <!-- Odoo 19 renamed ir.actions.server.groups_id to group_ids. -->
+        <field name="group_ids" eval="[(4, ref('mudon_crm.group_mudon_sales_director'))]"/>
         <field name="state">code</field>
         <field name="code">records.action_mudon_reassign_auto()</field>
     </record>
