@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <!--
+        Pull in the generated stage-colour stylesheet (client comment 10).
+
+        It is a <link> rather than part of the SCSS bundle because the rules
+        are keyed on the stage database ids, which differ per environment, so
+        they cannot be written as a static file. See controllers/stage_css.py
+        for why the two earlier CSS-only and JavaScript approaches could not
+        work.
+    -->
+    <template id="mudon_stage_colors_assets" inherit_id="web.webclient_bootstrap">
+        <xpath expr="//t[@t-call='web.conditional_assets_tests']" position="after">
+            <link rel="stylesheet" type="text/css" href="/mudon/stage_colors.css"/>
+        </xpath>
+    </template>
+
+</odoo>
