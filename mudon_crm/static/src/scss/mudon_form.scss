@@ -206,9 +206,15 @@ $mudon-stage-colors: (
     }
 }
 
-// ═══ Comment 23 — record count next to the column title ════════════════
-.o_kanban_header .mudon_col_count {
+// ═══ Comment 23 — lead count on the column aggregate row ═══════════════
+// Pushed right so it sits beside the revenue total rather than floating in
+// the middle of the row: [bar] ....... Leads: 10   367k AED
+.o_kanban_counter .mudon_lead_count {
+    margin-left: auto;
+    margin-right: 10px;
+    font-size: 12px;
     font-weight: 600;
-    opacity: .55;
+    color: #6c757d;
+    white-space: nowrap;
     flex: 0 0 auto;
 }

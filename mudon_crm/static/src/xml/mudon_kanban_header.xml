@@ -2,26 +2,25 @@
 <templates xml:space="preserve">
 
     <!--
-        Comment 23 — "On top of each stage, I need to see the number of cards"
+        Comment 23 - "On top of each stage, I need to see the number of cards
+        ... there should be total leads in that stage", placed before the
+        revenue total.
 
-        Odoo already renders the count next to a column title, but core gates
-        it on `!progressBar`:
+        Odoo renders the column aggregate through web.ColumnProgress, which
+        ends with an AnimatedNumber holding the summed revenue. The lead count
+        goes immediately before it, so the row reads:
 
-            <span t-if="!progressBar and !...useSampleModel"
-                  t-esc="'(' + group.count + ')'"/>
+            [progress bar]            Leads: 10      367k AED
 
-        The CRM kanban ships a progressbar (the activity-state bar carrying
-        the revenue total), so the count was suppressed. Rather than drop the
-        progressbar — which would also lose the per-column revenue total the
-        client relies on — add the count back alongside the title for exactly
-        the case core skips.
+        `props.group.count` is the record count Odoo already uses for the bar
+        widths, so it always agrees with the column contents.
     -->
-    <t t-name="mudon_crm.KanbanHeaderCount"
-       t-inherit="web.KanbanHeader" t-inherit-mode="extension">
-        <xpath expr="//span[@class='text-truncate']" position="after">
-            <span t-if="progressBar and !props.list.model.useSampleModel"
-                  class="mudon_col_count"
-                  t-esc="'(' + group.count + ')'"/>
+    <t t-name="mudon_crm.ColumnProgressLeadCount"
+       t-inherit="web.ColumnProgress" t-inherit-mode="extension">
+        <xpath expr="//t[@t-if='props.progressBar.isReady']" position="before">
+            <span class="mudon_lead_count" t-if="!props.group.isFolded">
+                Leads: <t t-esc="props.group.count"/>
+            </span>
         </xpath>
     </t>
 
