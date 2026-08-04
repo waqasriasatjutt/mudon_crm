@@ -7,18 +7,27 @@
 
             [progress bar]            Leads: 10      367k AED
 
-        Odoo renders the column aggregate through web.ColumnProgress, which
-        ends with an AnimatedNumber holding the summed revenue. The insertion
-        point is written as an <AnimatedNumber position="before"> selector,
-        which is the form core itself uses for this same template (see
-        mail/static/src/js/rotting_mixin/rotting_column_progress.xml). An
-        equivalent xpath expression did not take effect here.
+        IMPORTANT - inherit `crm.ColumnProgress`, NOT `web.ColumnProgress`.
+        The CRM pipeline renders its own component chain:
+
+            CrmKanbanRenderer
+              -> CrmKanbanHeader        (template mail.RottingKanbanHeader)
+                 -> CrmColumnProgress   (template crm.ColumnProgress)
+
+        and `crm.ColumnProgress` is declared with t-inherit-mode="primary"
+        from `mail.RottingColumnProgress`, which is itself a primary copy of
+        `web.ColumnProgress`. Primary inheritance takes a SNAPSHOT at the time
+        the copy is made, so an extension registered later against the base
+        template is never seen by the copy. Earlier attempts extended
+        `web.KanbanHeader` and `web.ColumnProgress`; both shipped correctly in
+        the bundle and neither rendered, because the pipeline never draws
+        those templates.
 
         `props.group.count` is the record count Odoo already uses to size the
         progress bars, so it cannot disagree with the column contents.
     -->
     <t t-name="mudon_crm.ColumnProgressLeadCount"
-       t-inherit="web.ColumnProgress" t-inherit-mode="extension">
+       t-inherit="crm.ColumnProgress" t-inherit-mode="extension">
         <AnimatedNumber position="before">
             <span class="mudon_lead_count">
                 Leads: <t t-esc="props.group.count"/>
