@@ -458,6 +458,29 @@ class MudonDashboard(models.TransientModel):
             tot["commission"] = round(tot["commission"], 2)
             data["tables"]["agents"] = rows
             data["tables"]["agents_total"] = tot
+
+            # Client comment 31 - "in turkey i see qualified stage have around
+            # 10 leads in kanban but in dashboard it says only 3 qualified".
+            # The KPI above is CUMULATIVE (leads that reached qualified or
+            # beyond), which is the right funnel metric but is not what the
+            # board shows. This block counts leads by the stage they are on
+            # RIGHT NOW, so every row matches its kanban column exactly.
+            stage_labels = {
+                "new_lead": "New Lead", "qualified": "Qualified",
+                "offer_sent": "Offer Sent", "meeting": "Meeting",
+                "eoi": "EOI / Booking", "won": "WON (SPA Signed)",
+                "lost": "Lost",
+            }
+            current = {k: 0 for k in stage_labels}
+            for lead in leads:
+                kind = lead.mudon_stage_kind_current
+                if kind in current:
+                    current[kind] += 1
+            data["tables"]["by_stage"] = [
+                {"kind": k, "label": stage_labels[k], "count": current[k]}
+                for k in ("new_lead", "qualified", "offer_sent", "meeting",
+                          "eoi", "won", "lost")
+            ]
         except Exception as e:
             data["_errors"].append("agents: %s" % e)
             leads = Lead.browse()

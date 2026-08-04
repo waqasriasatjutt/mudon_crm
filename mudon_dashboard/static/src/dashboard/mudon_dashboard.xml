@@ -110,6 +110,23 @@
             <div t-if="state.error" class="mudon_dash_msg mudon_err"><t t-esc="state.error"/></div>
 
             <t t-if="state.data">
+                <!--
+                    Leads by current stage. These numbers match the kanban
+                    columns one for one (comment 31). The KPI strip below is
+                    cumulative funnel progress, which is a different question
+                    and will read higher.
+                -->
+                <div class="mudon_stage_counts" t-if="state.data.tables.by_stage">
+                    <t t-foreach="state.data.tables.by_stage" t-as="s" t-key="s.kind">
+                        <div t-attf-class="mudon_sc mudon_sc_{{ s.kind }} mudon_clickable"
+                             t-on-click="() => this.openDrill('stage', s.kind)"
+                             title="Click to see these leads">
+                            <div class="mudon_sc_label"><t t-esc="s.label"/></div>
+                            <div class="mudon_sc_count"><t t-esc="s.count"/></div>
+                        </div>
+                    </t>
+                </div>
+
                 <!-- KPI strip -->
                 <div class="mudon_kpis">
                     <t t-foreach="kpiCards" t-as="card" t-key="card.label">

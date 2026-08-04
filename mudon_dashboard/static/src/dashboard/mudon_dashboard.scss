@@ -360,3 +360,36 @@
         > * { max-width: 1680px; }
     }
 }
+
+// Leads by current stage (comment 31). Colours match the kanban bands so a
+// column and its tile are visibly the same thing.
+.mudon_dash .mudon_stage_counts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 8px;
+    margin-bottom: 14px;
+
+    .mudon_sc {
+        border-radius: 6px;
+        padding: 8px 10px;
+        color: #fff;
+        min-width: 0;
+
+        .mudon_sc_label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: .4px;
+            opacity: .95;
+            overflow-wrap: anywhere;
+        }
+        .mudon_sc_count { font-size: 22px; font-weight: 700; line-height: 1.1; }
+    }
+
+    .mudon_sc_new_lead   { background: #dc3545; }
+    .mudon_sc_qualified  { background: #fd7e14; }
+    .mudon_sc_offer_sent { background: #ffc107; color: #212529; }
+    .mudon_sc_meeting    { background: #8bc34a; }
+    .mudon_sc_eoi        { background: #4caf50; }
+    .mudon_sc_won        { background: #198754; }
+    .mudon_sc_lost       { background: #000000; }
+}
