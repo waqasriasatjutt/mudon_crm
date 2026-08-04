@@ -19,6 +19,14 @@
         <field name="arch" type="xml">
             <form>
                 <group>
+                    <!--
+                        Invisible, but required: the phone dial-code onchange
+                        reads the pipeline, and an onchange can only see
+                        fields present in the view. Without these, a lead
+                        added from the kanban "+" got no country code.
+                    -->
+                    <field name="team_id" invisible="1"/>
+                    <field name="mudon_pipeline_kind" invisible="1"/>
                     <field name="name" string="Name" placeholder="Client name"
                            required="1"/>
                     <field name="phone" string="Phone" placeholder="+971 50 000 0000"/>

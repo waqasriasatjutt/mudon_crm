@@ -2,26 +2,28 @@
 <templates xml:space="preserve">
 
     <!--
-        Comment 23 - "On top of each stage, I need to see the number of cards
-        ... there should be total leads in that stage", placed before the
-        revenue total.
-
-        Odoo renders the column aggregate through web.ColumnProgress, which
-        ends with an AnimatedNumber holding the summed revenue. The lead count
-        goes immediately before it, so the row reads:
+        Comment 23 - "there should be total leads in that stage", shown before
+        the revenue total on the kanban column row:
 
             [progress bar]            Leads: 10      367k AED
 
-        `props.group.count` is the record count Odoo already uses for the bar
-        widths, so it always agrees with the column contents.
+        Odoo renders the column aggregate through web.ColumnProgress, which
+        ends with an AnimatedNumber holding the summed revenue. The insertion
+        point is written as an <AnimatedNumber position="before"> selector,
+        which is the form core itself uses for this same template (see
+        mail/static/src/js/rotting_mixin/rotting_column_progress.xml). An
+        equivalent xpath expression did not take effect here.
+
+        `props.group.count` is the record count Odoo already uses to size the
+        progress bars, so it cannot disagree with the column contents.
     -->
     <t t-name="mudon_crm.ColumnProgressLeadCount"
        t-inherit="web.ColumnProgress" t-inherit-mode="extension">
-        <xpath expr="//t[@t-if='props.progressBar.isReady']" position="before">
-            <span class="mudon_lead_count" t-if="!props.group.isFolded">
+        <AnimatedNumber position="before">
+            <span class="mudon_lead_count">
                 Leads: <t t-esc="props.group.count"/>
             </span>
-        </xpath>
+        </AnimatedNumber>
     </t>
 
 </templates>
