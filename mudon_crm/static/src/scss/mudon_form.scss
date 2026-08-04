@@ -59,10 +59,16 @@ $mudon-stage-colors: (
     }
 }
 
-// ═══ Comment 10 ════════════════════════════════════════════════════════
-// "Make the color of these similar to the stage color" — the screenshot
-// pointed at the grey stage bar on the form. Mudon pipelines always carry
-// the same 7 stages in the same order, so position maps to stage kind.
+// ═══ Comment 10, revised ═══════════════════════════════════════════════
+// "in stages when opens form you added colors but its not same like stage
+//  colors in kanban view"
+//
+// The palette was already identical to the kanban (#dc3545 for New Lead and
+// so on). What made it look different was rendering the unselected pills as
+// a 16% tint, which washed the colour out next to the solid kanban band. So
+// every pill now carries the SOLID stage colour, exactly as the kanban does.
+// The current stage is distinguished by weight and an outline rather than by
+// being the only one with real colour.
 .o_form_view:has(.mudon_form_marker) {
     .o_form_statusbar .o_statusbar_status {
         $kinds: "new_lead", "qualified", "offer_sent", "meeting", "eoi", "won", "lost";
@@ -72,26 +78,53 @@ $mudon-stage-colors: (
             $color: map-get($mudon-stage-colors, $kind);
 
             > button.o_arrow_button:nth-of-type(#{$i}) {
-                // Unselected: a readable tint of the stage colour.
-                background-color: rgba($color, 0.16);
-                color: shade-color($color, 25%);
+                background-color: $color !important;
+                border-color: $color !important;
                 font-weight: 600;
+                // Yellow needs dark text to stay legible; the rest take white.
+                @if $kind == "offer_sent" {
+                    color: #212529 !important;
+                } @else {
+                    color: #fff !important;
+                }
+                // Stages not yet reached read as slightly recessed without
+                // losing their identity colour.
+                opacity: .55;
 
-                &:hover { background-color: rgba($color, 0.3); }
+                &:hover { opacity: .8; }
 
-                // Selected: the full stage colour, matching the kanban band.
                 &.o_arrow_button_current,
                 &[aria-current="step"],
                 &.disabled.o_arrow_button_current {
-                    background-color: $color !important;
-                    @if $kind == "offer_sent" {
-                        color: #212529 !important;
-                    } @else {
-                        color: #fff !important;
-                    }
+                    opacity: 1;
+                    font-weight: 700;
+                    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .65);
                 }
             }
         }
+    }
+}
+
+// ═══ Comment 9, extended ═══════════════════════════════════════════════
+// "all fields should be having same color icon same color to stage ... so
+//  any field relevant to relevant stage should have same color icon"
+//
+// The marker was only on the section heading. Carry it onto every field
+// label inside that section so a field is visibly tied to the stage it
+// belongs to, in that stage's colour.
+.mudon_sec .o_form_label::before {
+    content: "\25B8";                  // ▸
+    display: inline-block;
+    margin-right: 5px;
+    font-size: 9px;
+    line-height: 1;
+    vertical-align: middle;
+    color: #6c757d;                    // fallback for an unmapped stage
+}
+
+@each $kind, $color in $mudon-stage-colors {
+    .mudon_sec_#{$kind} .o_form_label::before {
+        color: $color;
     }
 }
 
