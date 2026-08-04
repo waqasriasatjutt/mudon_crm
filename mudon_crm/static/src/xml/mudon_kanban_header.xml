@@ -25,4 +25,16 @@
         </xpath>
     </t>
 
+    <!--
+        Comment 10 - emit the stage kind on each stage button so the
+        stylesheet can colour it to match the kanban band. See
+        mudon_stage_colors.js for why position cannot be used as the key.
+    -->
+    <t t-name="mudon_crm.StatusBarStageKind"
+       t-inherit="web.StatusBarField" t-inherit-mode="extension">
+        <xpath expr="//t[@t-foreach='items.inline']//button" position="attributes">
+            <attribute name="t-att-data-mudon-kind">item.mudonKind</attribute>
+        </xpath>
+    </t>
+
 </templates>

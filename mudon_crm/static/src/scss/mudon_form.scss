@@ -69,38 +69,36 @@ $mudon-stage-colors: (
 // every pill now carries the SOLID stage colour, exactly as the kanban does.
 // The current stage is distinguished by weight and an outline rather than by
 // being the only one with real colour.
-.o_form_view:has(.mudon_form_marker) {
-    .o_form_statusbar .o_statusbar_status {
-        $kinds: "new_lead", "qualified", "offer_sent", "meeting", "eoi", "won", "lost";
+// Keyed on data-mudon-kind, stamped by mudon_stage_colors.js. Position was
+// unusable: the dropdown toggles share the o_arrow_button class, so
+// :nth-of-type slid the colours onto the wrong stages, and which stages
+// collapse into the dropdown changes with the window width.
+.o_form_statusbar .o_statusbar_status button.o_arrow_button[data-mudon-kind] {
+    font-weight: 600;
+    // Stages not yet reached read as recessed without losing their colour.
+    opacity: .5;
 
-        @for $i from 1 through length($kinds) {
-            $kind: nth($kinds, $i);
-            $color: map-get($mudon-stage-colors, $kind);
+    &:hover { opacity: .8; }
 
-            > button.o_arrow_button:nth-of-type(#{$i}) {
-                background-color: $color !important;
-                border-color: $color !important;
-                font-weight: 600;
-                // Yellow needs dark text to stay legible; the rest take white.
-                @if $kind == "offer_sent" {
-                    color: #212529 !important;
-                } @else {
-                    color: #fff !important;
-                }
-                // Stages not yet reached read as slightly recessed without
-                // losing their identity colour.
-                opacity: .55;
+    &.o_arrow_button_current,
+    &[aria-current="step"],
+    &.disabled.o_arrow_button_current {
+        opacity: 1;
+        font-weight: 700;
+        box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .7);
+    }
+}
 
-                &:hover { opacity: .8; }
-
-                &.o_arrow_button_current,
-                &[aria-current="step"],
-                &.disabled.o_arrow_button_current {
-                    opacity: 1;
-                    font-weight: 700;
-                    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .65);
-                }
-            }
+@each $kind, $color in $mudon-stage-colors {
+    .o_form_statusbar .o_statusbar_status
+    button.o_arrow_button[data-mudon-kind="#{$kind}"] {
+        background-color: $color !important;
+        border-color: $color !important;
+        // Yellow needs dark text to stay legible; the rest take white.
+        @if $kind == "offer_sent" {
+            color: #212529 !important;
+        } @else {
+            color: #fff !important;
         }
     }
 }

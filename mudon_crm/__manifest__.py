@@ -1,6 +1,6 @@
 {
     "name": "Mudon Property — CRM",
-    "version": "19.0.1.12.1",
+    "version": "19.0.1.13.0",
     "summary": "Mudon Property real-estate CRM — Turkey CBI + UAE Dubai "
                "Golden-Visa pipelines, 7-stage flow, country-code & "
                "branch routing, WhatsApp greetings + agent + company "
@@ -51,6 +51,7 @@
             "mudon_crm/static/src/js/mudon_auto_wizard.js",
             "mudon_crm/static/src/js/mudon_esc_back.js",
             "mudon_crm/static/src/js/mudon_stage_filter_scope.js",
+            "mudon_crm/static/src/js/mudon_stage_colors.js",
             "mudon_crm/static/src/xml/mudon_kanban_header.xml",
         ],
     },

@@ -26,7 +26,7 @@ class MudonFinancialDashboard extends Component {
             loading: true,
             error: false,
             pipeline: "all",
-            period: "this_month",
+            period: "all_time",
             basis: "won",
             source: "crm",
             // extra filters

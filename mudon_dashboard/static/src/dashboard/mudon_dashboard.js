@@ -25,7 +25,7 @@ class MudonManagementDashboard extends Component {
             loading: true,
             error: false,
             pipeline: "all",
-            period: "this_month",
+            period: "all_time",
             // Comment 4 - the same USD toggle the financial board has, so a
             // manager can read the UAE board in AED or in USD at the fixed
             // peg. "native" shows the pipeline's own currency.

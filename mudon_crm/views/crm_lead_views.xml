@@ -381,6 +381,18 @@
             </xpath>
 
             <!--
+                Comment 23 - the column header totalled `expected_revenue`,
+                whose currency_field is the COMPANY currency, so the Dubai
+                board added up AED amounts and printed them with a $. Sum the
+                pipeline-currency mirror instead so each board totals in its
+                own currency. The record count next to the column title comes
+                from the KanbanHeader template inherit.
+            -->
+            <xpath expr="//progressbar" position="attributes">
+                <attribute name="sum_field">mudon_pipeline_revenue</attribute>
+            </xpath>
+
+            <!--
                 ══ Comment 28 — card clean-up ══════════════════════════════
                 The client marked four things on the card as duplicates to
                 REMOVE. Every one of them is a stock CRM element that the
@@ -440,6 +452,7 @@
                 <field name="mudon_first_contact_logged"/>
                 <field name="mudon_status_id"/>
                 <field name="mudon_source_id"/>
+                <field name="mudon_pipeline_revenue"/>
                 <field name="partner_id"/>
                 <field name="contact_name"/>
             </xpath>
@@ -614,6 +627,24 @@
                 <field name="mudon_collected_amount" string="Collected / Cash In"/>
                 <field name="mudon_collected_date" string="Payment Received Date"/>
                 <field name="mudon_lost_reason_id" string="Lost Reason"/>
+
+                <!--
+                    Comment 22 - Odoo's search bar cannot offer a Boolean for
+                    free-text search, which is why the tick-box fields never
+                    appeared in the type-ahead list. These stored Yes/No
+                    mirrors are searchable and groupable; the underlying
+                    Booleans still drive every stage gate.
+                -->
+                <field name="mudon_in_country_yn" string="In Turkey / UAE Now"/>
+                <field name="mudon_tick_offer_sent_yn" string="Offer Sent"/>
+                <field name="mudon_visit_confirmed_yn" string="Visit Confirmed"/>
+                <field name="mudon_paid_booking_yn" string="Paid Booking"/>
+                <field name="mudon_fully_paid_yn" string="Fully Paid"/>
+                <field name="mudon_need_invoice_yn" string="Need Invoice"/>
+                <field name="mudon_title_deed_required_yn" string="Title Deed Required"/>
+                <field name="mudon_citizenship_required_yn" string="Citizenship Required"/>
+                <field name="mudon_residence_required_yn" string="Residence Required"/>
+                <field name="mudon_furniture_required_yn" string="Furniture / Other Required"/>
 
                 <!-- Yes / No searching for every tick-box field. -->
                 <separator/>

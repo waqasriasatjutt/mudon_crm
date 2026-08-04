@@ -527,6 +527,123 @@ class CrmLead(models.Model):
                 rec.mudon_card_color_hint, 5,
             )
 
+    # ─── Column total in the pipeline's own currency (comment 23) ──────
+    # The kanban column header sums `expected_revenue`, whose currency_field
+    # is the COMPANY currency, so the Dubai board totalled AED amounts and
+    # printed them as USD. This mirror carries the same number against the
+    # pipeline currency, and the kanban progressbar sums this instead.
+    mudon_pipeline_revenue = fields.Monetary(
+        string="Budget (pipeline currency)",
+        currency_field="mudon_budget_currency_id",
+        compute="_compute_mudon_pipeline_revenue",
+        store=True, readonly=True,
+    )
+
+    @api.depends("expected_revenue")
+    def _compute_mudon_pipeline_revenue(self):
+        for rec in self:
+            rec.mudon_pipeline_revenue = rec.expected_revenue or 0.0
+
+    # ─── Yes/No mirrors so tick-boxes are searchable (comment 22) ──────
+    # "we may need to replace all these green tick box with yes/no to make it
+    # searchable" - correct diagnosis: Odoo's search bar cannot offer a
+    # Boolean for free-text search, so those fields never appeared in the
+    # type-ahead list. Rather than change the stored type (which every stage
+    # gate and automation reads), each tick gets a stored Selection mirror.
+    # The Boolean stays the source of truth; the mirror exists purely so the
+    # field is searchable and groupable as Yes / No.
+    MUDON_YESNO_MIRRORS = {
+        "mudon_in_country_yn": "mudon_in_country",
+        "mudon_tick_offer_sent_yn": "mudon_tick_offer_sent",
+        "mudon_visit_confirmed_yn": "mudon_visit_confirmed",
+        "mudon_paid_booking_yn": "mudon_paid_booking",
+        "mudon_fully_paid_yn": "mudon_fully_paid",
+        "mudon_need_invoice_yn": "mudon_need_invoice",
+        "mudon_title_deed_required_yn": "mudon_title_deed_required",
+        "mudon_citizenship_required_yn": "mudon_citizenship_required",
+        "mudon_residence_required_yn": "mudon_residence_required",
+        "mudon_furniture_required_yn": "mudon_furniture_required",
+    }
+
+    mudon_in_country_yn = fields.Selection(
+        YESNO_SELECTION, string="In Country Now (Yes/No)",
+        compute="_compute_mudon_yesno", store=True, readonly=True)
+    mudon_tick_offer_sent_yn = fields.Selection(
+        YESNO_SELECTION, string="Offer Sent (Yes/No)",
+        compute="_compute_mudon_yesno", store=True, readonly=True)
+    mudon_visit_confirmed_yn = fields.Selection(
+        YESNO_SELECTION, string="Visit Confirmed (Yes/No)",
+        compute="_compute_mudon_yesno", store=True, readonly=True)
+    mudon_paid_booking_yn = fields.Selection(
+        YESNO_SELECTION, string="Paid Booking (Yes/No)",
+        compute="_compute_mudon_yesno", store=True, readonly=True)
+    mudon_fully_paid_yn = fields.Selection(
+        YESNO_SELECTION, string="Fully Paid (Yes/No)",
+        compute="_compute_mudon_yesno", store=True, readonly=True)
+    mudon_need_invoice_yn = fields.Selection(
+        YESNO_SELECTION, string="Need Invoice (Yes/No)",
+        compute="_compute_mudon_yesno", store=True, readonly=True)
+    mudon_title_deed_required_yn = fields.Selection(
+        YESNO_SELECTION, string="Title Deed Required (Yes/No)",
+        compute="_compute_mudon_yesno", store=True, readonly=True)
+    mudon_citizenship_required_yn = fields.Selection(
+        YESNO_SELECTION, string="Citizenship Required (Yes/No)",
+        compute="_compute_mudon_yesno", store=True, readonly=True)
+    mudon_residence_required_yn = fields.Selection(
+        YESNO_SELECTION, string="Residence Required (Yes/No)",
+        compute="_compute_mudon_yesno", store=True, readonly=True)
+    mudon_furniture_required_yn = fields.Selection(
+        YESNO_SELECTION, string="Furniture / Other Required (Yes/No)",
+        compute="_compute_mudon_yesno", store=True, readonly=True)
+
+    @api.depends("mudon_in_country", "mudon_tick_offer_sent",
+                 "mudon_visit_confirmed", "mudon_paid_booking",
+                 "mudon_fully_paid", "mudon_need_invoice",
+                 "mudon_title_deed_required", "mudon_citizenship_required",
+                 "mudon_residence_required", "mudon_furniture_required")
+    def _compute_mudon_yesno(self):
+        for rec in self:
+            for mirror, source in self.MUDON_YESNO_MIRRORS.items():
+                rec[mirror] = "yes" if rec[source] else "no"
+
+    # ─── Auto country code on the phone number ──────────────────────────
+    # Client: "if in turkey pipeline i put number it should auto add turkey
+    # country code same for dubai". A number typed without an international
+    # prefix is assumed to belong to the pipeline's own country, which also
+    # keeps the country-code routing and the wa.me links working.
+    MUDON_PIPELINE_DIAL_CODE = {"turkey": "+90", "uae": "+971"}
+
+    @api.onchange("phone", "mudon_pipeline_kind")
+    def _onchange_mudon_phone_dial_code(self):
+        for rec in self:
+            rec.phone = rec._mudon_apply_dial_code(rec.phone)
+
+    def _mudon_apply_dial_code(self, phone):
+        """Prefix a local number with the pipeline's dial code.
+
+        Left alone when the number already carries any international prefix
+        (leading + or 00), when it already starts with this pipeline's code,
+        or when there is no pipeline. A local number written with a national
+        trunk zero (0532...) drops that zero, which is what the international
+        format requires.
+        """
+        self.ensure_one()
+        raw = (phone or "").strip()
+        if not raw:
+            return phone
+        code = self.MUDON_PIPELINE_DIAL_CODE.get(self.mudon_pipeline_kind)
+        if not code:
+            return phone
+        compact = re.sub(r"[^\d+]", "", raw)
+        if compact.startswith("+") or compact.startswith("00"):
+            return phone
+        digits = compact.lstrip("0")
+        if not digits:
+            return phone
+        if digits.startswith(code.lstrip("+")):
+            return "+" + digits
+        return "%s %s" % (code, digits)
+
     # ─── Per-stage kanban sort (client comments 18 + 27) ────────────────
     mudon_sort_key = fields.Char(
         compute="_compute_mudon_sort_key",
