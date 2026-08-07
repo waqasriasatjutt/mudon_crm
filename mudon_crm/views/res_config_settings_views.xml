@@ -7,7 +7,7 @@
         <field name="inherit_id" ref="base.res_config_settings_view_form"/>
         <field name="arch" type="xml">
             <xpath expr="//form" position="inside">
-                <app string="Mudon CRM" name="mudon_crm">
+                <app data-string="Mudon CRM" string="Mudon CRM" name="mudon_crm">
                     <block title="WhatsApp — Meta Cloud API"
                            name="mudon_wa_setting_container">
                         <setting string="WhatsApp mode"
