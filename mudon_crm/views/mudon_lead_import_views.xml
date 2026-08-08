@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_mudon_lead_import_wizard_form" model="ir.ui.view">
+        <field name="name">mudon.lead.import.wizard.form</field>
+        <field name="model">mudon.lead.import.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Import Leads">
+                <field name="state" invisible="1"/>
+
+                <!-- ── Step 1: choose the file ─────────────────────────── -->
+                <div invisible="state != 'choose'">
+                    <group>
+                        <field name="pipeline_kind" widget="radio"/>
+                    </group>
+                    <div class="alert alert-info" role="status">
+                        <p class="mb-1">
+                            <b>New here?</b> Download the template first. It
+                            carries the exact column headers, and a second
+                            sheet listing every value the Service, City,
+                            Priority, Source, Purpose and Property Type
+                            columns will accept for this pipeline.
+                        </p>
+                        <button name="action_download_template" type="object"
+                                string="Download Excel template"
+                                class="btn btn-secondary btn-sm"
+                                icon="fa-download"/>
+                    </div>
+                    <group>
+                        <field name="file_name" invisible="1"/>
+                        <field name="file_data" filename="file_name"
+                               string="Excel or CSV file"/>
+                        <field name="skip_duplicates"/>
+                    </group>
+                    <div class="text-muted">
+                        <p class="mb-1">
+                            Every lead lands in the <b>New Lead</b> stage of
+                            the pipeline chosen above.
+                        </p>
+                        <p class="mb-1">
+                            Leave <b>Salesperson</b> blank and the system
+                            assigns the lead itself: city branch first, then
+                            phone country code, then round robin.
+                        </p>
+                        <p class="mb-0">
+                            Importing does not send WhatsApp greetings or
+                            agent alerts, so a large file will not flood
+                            anyone.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- ── Step 2: the result ──────────────────────────────── -->
+                <div invisible="state != 'done'">
+                    <field name="result_html" nolabel="1" readonly="1"/>
+                </div>
+
+                <footer>
+                    <button name="action_validate" type="object"
+                            string="Check file" class="btn-secondary"
+                            invisible="state != 'choose'"
+                            help="Reads the file and reports problems without creating anything."/>
+                    <button name="action_import" type="object"
+                            string="Import" class="btn-primary"
+                            invisible="state != 'choose'"/>
+                    <button name="action_open_imported" type="object"
+                            string="Open pipeline" class="btn-primary"
+                            invisible="state != 'done'"/>
+                    <button special="cancel" string="Close"
+                            class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_mudon_lead_import_wizard" model="ir.actions.act_window">
+        <field name="name">Import Leads from Excel</field>
+        <field name="res_model">mudon.lead.import.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <menuitem id="mudon_menu_import_leads"
+              name="Import Leads"
+              parent="mudon_menu_app_root"
+              action="action_mudon_lead_import_wizard"
+              groups="mudon_crm.group_mudon_team_leader"
+              sequence="40"/>
+
+</odoo>

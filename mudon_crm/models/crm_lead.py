@@ -728,6 +728,18 @@ class CrmLead(models.Model):
         for vals in vals_list:
             if vals.get("name"):
                 vals["name"] = self._mudon_clean_name(vals["name"])
+            # The dial-code onchange only runs in the UI. Imported rows come
+            # straight through create(), so apply it here as well.
+            if self.env.context.get("mudon_import_mode") and vals.get("phone"):
+                code = self.MUDON_PIPELINE_DIAL_CODE.get(
+                    self.env.context.get("mudon_import_pipeline"))
+                raw = re.sub(r"[^\d+]", "", str(vals["phone"]).strip())
+                if code and raw and not raw.startswith(("+", "00")):
+                    digits = raw.lstrip("0")
+                    if digits and not digits.startswith(code.lstrip("+")):
+                        vals["phone"] = "%s %s" % (code, digits)
+                    elif digits:
+                        vals["phone"] = "+" + digits
         leads = super().create(vals_list)
         for lead, vals in zip(leads, vals_list):
             try:
@@ -741,11 +753,16 @@ class CrmLead(models.Model):
                 chosen = vals.get("user_id")
                 explicit = bool(chosen) and chosen != self.env.uid
                 lead._mudon_auto_assign_agent(force=not explicit)
-                lead._mudon_send_client_greeting()
-                lead._mudon_notify_assigned_agent("new_lead")
-                # A lead captured with all four qualifying fields already
-                # filled belongs on Qualified, not New Lead (comment 17).
-                lead._mudon_try_auto_qualify()
+                # A bulk import must still be ROUTED, but it must not greet
+                # every client, page every agent, or push leads off New Lead.
+                # Importing 500 rows would otherwise fire 1000 WhatsApp
+                # messages and empty the New Lead column.
+                if not self.env.context.get("mudon_import_mode"):
+                    lead._mudon_send_client_greeting()
+                    lead._mudon_notify_assigned_agent("new_lead")
+                    # A lead captured with all four qualifying fields already
+                    # filled belongs on Qualified, not New Lead (comment 17).
+                    lead._mudon_try_auto_qualify()
             except Exception as exc:
                 _logger.warning(
                     "mudon_crm: post-create hook failed for lead %s: %s",
@@ -763,6 +780,8 @@ class CrmLead(models.Model):
         """
         self.ensure_one()
         if not self.mudon_pipeline_kind:
+            return False
+        if self.env.context.get("mudon_import_mode"):
             return False
         if self.mudon_stage_kind_current != "new_lead":
             return False
