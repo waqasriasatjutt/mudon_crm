@@ -289,16 +289,67 @@ class MudonLeadImportWizard(models.TransientModel):
                 ids.append(rec.id)
         return ids, "; ".join(errors) if errors else None
 
+    # Odoo stores several countries under their official local spelling, so a
+    # perfectly reasonable entry is rejected by an exact match. Turkey is the
+    # one that bites here: the code is TR but the stored name is "Türkiye",
+    # and the client's own column is literally called "In Turkey Now". These
+    # aliases cover the markets Mudon actually sells to, plus the usual
+    # shorthand an office types.
+    COUNTRY_ALIASES = {
+        "turkey": "TR", "turkiye": "TR", "türkiye": "TR",
+        "uae": "AE", "u.a.e.": "AE", "u.a.e": "AE", "emirates": "AE",
+        "united arab emirates": "AE", "dubai": "AE", "abu dhabi": "AE",
+        "ksa": "SA", "saudi": "SA", "saudi arabia": "SA",
+        "uk": "GB", "britain": "GB", "great britain": "GB", "england": "GB",
+        "usa": "US", "u.s.a.": "US", "america": "US",
+        "russia": "RU", "iran": "IR", "egypt": "EG", "jordan": "JO",
+        "lebanon": "LB", "iraq": "IQ", "kuwait": "KW", "qatar": "QA",
+        "oman": "OM", "bahrain": "BH", "pakistan": "PK", "india": "IN",
+    }
+
+    @staticmethod
+    def _fold(text):
+        """Lowercase and strip accents, so Turkiye matches Türkiye."""
+        import unicodedata
+        return "".join(
+            ch for ch in unicodedata.normalize("NFKD", (text or "").lower())
+            if not unicodedata.combining(ch)
+        ).strip()
+
     def _match_country(self, value):
         text = self._clean(value)
         if not text:
             return None, None
         Country = self.env["res.country"].sudo()
+
+        # 1. the shorthand people actually type
+        code = self.COUNTRY_ALIASES.get(self._fold(text))
+        if code:
+            rec = Country.search([("code", "=", code)], limit=1)
+            if rec:
+                return rec, None
+
+        # 2. exact name, or the two-letter code
         rec = Country.search(["|", ("name", "=ilike", text),
                               ("code", "=ilike", text)], limit=1)
         if rec:
             return rec, None
-        return None, _("\"%s\" is not a country name we recognise.") % text
+
+        # 3. accent-insensitive comparison against every country
+        folded = self._fold(text)
+        for country in Country.search([]):
+            if self._fold(country.name) == folded:
+                return country, None
+
+        # 4. a partial match, but only when it is unambiguous
+        partial = Country.search([("name", "ilike", text)])
+        if len(partial) == 1:
+            return partial, None
+
+        return None, _(
+            "\"%s\" is not a country we recognise. Use the full name, for "
+            "example Türkiye, United Arab Emirates or Saudi Arabia."
+        ) % text
 
     def _match_user(self, value):
         text = self._clean(value)
