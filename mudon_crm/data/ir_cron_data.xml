@@ -119,4 +119,16 @@
         <field name="interval_type">minutes</field>
         <field name="active">True</field>
     </record>
+
+    <!-- Meta Lead Ads: turn recorded webhook events into leads. The webhook
+         also processes inline, so this is the retry and safety net. -->
+    <record id="mudon_cron_meta_leadgen" model="ir.cron">
+        <field name="name">Mudon — Meta Lead Ads intake</field>
+        <field name="model_id" ref="model_mudon_meta_leadgen_event"/>
+        <field name="state">code</field>
+        <field name="code">model._mudon_cron_process_leadgen()</field>
+        <field name="interval_number">5</field>
+        <field name="interval_type">minutes</field>
+        <field name="active">True</field>
+    </record>
 </odoo>

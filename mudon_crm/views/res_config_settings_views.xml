@@ -41,6 +41,21 @@
                                    placeholder="v21.0"/>
                         </setting>
                     </block>
+                    <block title="Meta Lead Ads" name="mudon_meta_setting_container">
+                        <setting string="Meta page access token"
+                                 help="A PAGE token with the leads_retrieval permission. This is NOT the WhatsApp token.">
+                            <field name="mudon_meta_page_token" password="True"
+                                   placeholder="EAAG..."/>
+                        </setting>
+                        <setting string="Meta app secret"
+                                 help="App dashboard &gt; Settings &gt; Basic. Proves an incoming lead really came from Meta.">
+                            <field name="mudon_meta_app_secret" password="True"/>
+                        </setting>
+                        <setting string="Lead webhook verify token"
+                                 help="Any secret word; enter the same value on the Meta webhook page. Callback URL: your-domain/mudon/meta/leadgen">
+                            <field name="mudon_meta_verify_token"/>
+                        </setting>
+                    </block>
                     <block title="Notifications" name="mudon_notif_setting_container">
                         <setting string="Marketing user (Lost alerts)"
                                  help="Receives the WhatsApp alert when a lead is marked Lost. Falls back to the sales-team manager if unset.">

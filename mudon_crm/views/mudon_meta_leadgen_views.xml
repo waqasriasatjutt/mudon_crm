@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ═══ Form mapping: which Meta form feeds which pipeline ═══════ -->
+    <record id="mudon_meta_lead_form_view_list" model="ir.ui.view">
+        <field name="name">mudon.meta.lead.form.list</field>
+        <field name="model">mudon.meta.lead.form</field>
+        <field name="arch" type="xml">
+            <list string="Meta Lead Forms">
+                <field name="name"/>
+                <field name="form_id"/>
+                <field name="team_id"/>
+                <field name="source_id"/>
+                <field name="lead_count" string="Leads"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="mudon_meta_lead_form_view_form" model="ir.ui.view">
+        <field name="name">mudon.meta.lead.form.form</field>
+        <field name="model">mudon.meta.lead.form</field>
+        <field name="arch" type="xml">
+            <form string="Meta Lead Form">
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button type="object" name="action_view_leads"
+                                class="oe_stat_button" icon="fa-users"
+                                invisible="lead_count == 0">
+                            <field name="lead_count" widget="statinfo"
+                                   string="Leads"/>
+                        </button>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="name" placeholder="Dubai Golden Visa - August"/>
+                            <field name="form_id" placeholder="1234567890123456"/>
+                            <field name="page_id" placeholder="optional"/>
+                        </group>
+                        <group>
+                            <field name="allowed_team_ids" invisible="1"/>
+                            <field name="team_id"/>
+                            <field name="source_id"
+                                   options="{'no_create_edit': True}"/>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                    <div class="alert alert-info mt-2" role="status">
+                        Leads from this form are created in the
+                        <b>New Lead</b> stage of the pipeline above, and are
+                        assigned to an agent by the usual rules: city branch,
+                        then phone country code, then round robin.
+                    </div>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="mudon_meta_lead_form_action" model="ir.actions.act_window">
+        <field name="name">Meta Lead Forms</field>
+        <field name="res_model">mudon.meta.lead.form</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Map a Meta instant form to a pipeline.
+            </p>
+            <p>
+                Find the form id in Meta under Business Suite, All tools,
+                Instant Forms. Every lead from that form lands in the
+                New Lead stage of the pipeline you choose here. A form that
+                is not mapped is held safely in the intake log until you
+                map it, then you press Retry.
+            </p>
+        </field>
+    </record>
+
+    <!-- ═══ Intake log: every webhook Meta sent us ═══════════════════ -->
+    <record id="mudon_meta_leadgen_event_view_list" model="ir.ui.view">
+        <field name="name">mudon.meta.leadgen.event.list</field>
+        <field name="model">mudon.meta.leadgen.event</field>
+        <field name="arch" type="xml">
+            <list string="Meta Lead Intake"
+                  decoration-danger="state == 'error'"
+                  decoration-warning="state == 'skipped'"
+                  decoration-muted="state == 'pending'"
+                  create="false">
+                <field name="create_date" string="Received"/>
+                <field name="leadgen_id"/>
+                <field name="form_id"/>
+                <field name="form_mapping_id" string="Form"/>
+                <field name="lead_id"/>
+                <field name="state" widget="badge"
+                       decoration-success="state == 'done'"
+                       decoration-danger="state == 'error'"/>
+                <field name="attempts" optional="hide"/>
+                <field name="error" optional="show"/>
+                <button name="action_retry" type="object" string="Retry"
+                        icon="fa-refresh" invisible="state == 'done'"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="mudon_meta_leadgen_event_view_form" model="ir.ui.view">
+        <field name="name">mudon.meta.leadgen.event.form</field>
+        <field name="model">mudon.meta.leadgen.event</field>
+        <field name="arch" type="xml">
+            <form string="Meta Lead Intake" create="false">
+                <header>
+                    <button name="action_retry" type="object" string="Retry"
+                            class="btn-primary" invisible="state == 'done'"/>
+                    <button name="action_open_lead" type="object"
+                            string="Open lead" class="btn-secondary"
+                            invisible="not lead_id"/>
+                    <field name="state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="leadgen_id"/>
+                            <field name="form_id"/>
+                            <field name="form_mapping_id"/>
+                        </group>
+                        <group>
+                            <field name="page_id"/>
+                            <field name="lead_id"/>
+                            <field name="attempts"/>
+                        </group>
+                    </group>
+                    <group string="Problem" invisible="not error">
+                        <field name="error" nolabel="1" readonly="1"/>
+                    </group>
+                    <notebook>
+                        <page string="Form answers">
+                            <field name="answers" nolabel="1" readonly="1"/>
+                        </page>
+                        <page string="Raw webhook" groups="base.group_no_one">
+                            <field name="raw_payload" nolabel="1" readonly="1"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="mudon_meta_leadgen_event_action" model="ir.actions.act_window">
+        <field name="name">Meta Lead Intake</field>
+        <field name="res_model">mudon.meta.leadgen.event</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Nothing has come in from Meta yet.
+            </p>
+            <p>
+                Every lead Meta sends is recorded here before it becomes a
+                CRM lead, so nothing is lost if a form is unmapped or Meta
+                is briefly unreachable. Fix the cause and press Retry.
+            </p>
+        </field>
+    </record>
+
+    <menuitem id="mudon_menu_meta_forms"
+              name="Meta Lead Forms"
+              parent="mudon_menu_config_root"
+              action="mudon_meta_lead_form_action"
+              sequence="110"/>
+
+    <menuitem id="mudon_menu_meta_intake"
+              name="Meta Lead Intake"
+              parent="mudon_menu_config_root"
+              action="mudon_meta_leadgen_event_action"
+              sequence="120"/>
+
+</odoo>

@@ -26,6 +26,14 @@ PIPELINE_KIND_SELECTION = [
 # the same code-based identity checks (e.g. `rec.mudon_service_id.code
 # == "citizenship"`). Admins rename `name` freely; don't touch `code`.
 
+# Meta Lead Ads built-in question names. Anything else a form asks is a
+# custom question and is preserved in the lead notes.
+_MUDON_META_STANDARD = {
+    "full_name", "first_name", "last_name", "email", "phone_number",
+    "city", "state", "province", "country", "zip", "post_code",
+    "company_name", "job_title",
+}
+
 PRIORITY_SELECTION = [
     ("urgent", "Urgent"),
     ("normal", "Normal"),
@@ -1411,6 +1419,66 @@ class CrmLead(models.Model):
         action = self._mudon_pipeline_action()
         self.unlink()
         return action
+
+    # ─── Meta Lead Ads intake ───────────────────────────────────────────
+    mudon_meta_leadgen_id = fields.Char(
+        string="Meta lead ID", index=True, copy=False, readonly=True,
+        help="The Meta Lead Ads submission this lead came from. Present "
+             "only on leads captured from a Facebook or Instagram form.",
+    )
+
+    @api.model
+    def _mudon_create_from_meta(self, answers, mapping, leadgen_id):
+        """Create a New Lead from one Meta instant-form submission.
+
+        `answers` is the flattened form: {"full_name": "...", "email": ...}.
+        Meta's built-in questions map onto real fields; every custom
+        question is written verbatim into the notes, so an answer is never
+        lost just because the form asked something we did not anticipate.
+        """
+        stage = self.env["crm.stage"].sudo().search([
+            ("team_ids", "=", mapping.team_id.id),
+            ("mudon_stage_kind", "=", "new_lead"),
+        ], limit=1)
+
+        name = (answers.get("full_name")
+                or " ".join(x for x in (answers.get("first_name"),
+                                        answers.get("last_name")) if x).strip()
+                or answers.get("email")
+                or _("Meta lead %s") % leadgen_id)
+
+        vals = {
+            "name": name,
+            "contact_name": name,
+            "type": "opportunity",
+            "team_id": mapping.team_id.id,
+            "mudon_meta_leadgen_id": leadgen_id,
+        }
+        if stage:
+            vals["stage_id"] = stage.id
+        if answers.get("email"):
+            vals["email_from"] = answers["email"]
+        if answers.get("phone_number"):
+            vals["phone"] = answers["phone_number"]
+        if mapping.source_id:
+            vals["mudon_source_id"] = mapping.source_id.id
+
+        # Everything the form asked that is not a built-in question.
+        extras = ["%s: %s" % (k.replace("_", " ").title(), v)
+                  for k, v in answers.items()
+                  if k not in _MUDON_META_STANDARD and v]
+        if extras:
+            vals["mudon_other_specs"] = "\n".join(extras)
+
+        # Import mode: route the lead to an agent, but do not fire the
+        # client greeting or push it off New Lead. A Meta lead has not
+        # consented to WhatsApp yet, and the requirement is New Lead.
+        return self.with_context(
+            mudon_import_mode=True,
+            mudon_import_pipeline=mapping.team_id == self.env.ref(
+                "mudon_crm.mudon_team_turkey", raise_if_not_found=False)
+            and "turkey" or "uae",
+        ).create(vals)
 
     # ─── Branch + country-code routing ──────────────────────────────
     def _mudon_auto_assign_agent(self, force=False):

@@ -81,3 +81,8 @@ role_quickfill_viewer,ROLE any: stage wizards,model_mudon_quick_fill_wizard,mudo
 role_moveback_viewer,ROLE any: move-back wizard,model_mudon_move_back_wizard,mudon_crm.group_mudon_viewer,1,1,1,1
 access_mudon_lead_import_user,mudon.lead.import.wizard user,model_mudon_lead_import_wizard,sales_team.group_sale_salesman,1,1,1,1
 role_lead_import_leader,ROLE Team Leader+: import leads,model_mudon_lead_import_wizard,mudon_crm.group_mudon_team_leader,1,1,1,1
+access_mudon_meta_form_user,mudon.meta.lead.form user,model_mudon_meta_lead_form,sales_team.group_sale_salesman,1,0,0,0
+access_mudon_meta_form_admin,mudon.meta.lead.form admin,model_mudon_meta_lead_form,mudon_crm.group_mudon_system_admin,1,1,1,1
+access_mudon_meta_event_user,mudon.meta.leadgen.event user,model_mudon_meta_leadgen_event,sales_team.group_sale_salesman,1,0,0,0
+access_mudon_meta_event_admin,mudon.meta.leadgen.event admin,model_mudon_meta_leadgen_event,mudon_crm.group_mudon_system_admin,1,1,1,1
+access_mudon_meta_form_marketing,ROLE Marketing: meta lead forms,model_mudon_meta_lead_form,mudon_crm.group_mudon_marketing,1,1,1,0

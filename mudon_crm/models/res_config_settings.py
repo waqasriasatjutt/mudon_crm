@@ -62,6 +62,28 @@ class ResConfigSettings(models.TransientModel):
              "Falls back to the sales-team manager if unset.",
     )
 
+    # ─── Meta Lead Ads ──────────────────────────────────────────────────
+    mudon_meta_page_token = fields.Char(
+        string="Meta page access token",
+        config_parameter="mudon_crm.meta_page_token",
+        help="A PAGE token, not the WhatsApp one. It needs the "
+             "leads_retrieval permission and access to the page the ads run "
+             "from. Generate it against the System User that owns the page.",
+    )
+    mudon_meta_app_secret = fields.Char(
+        string="Meta app secret",
+        config_parameter="mudon_crm.meta_app_secret",
+        help="From the App dashboard, Settings > Basic. Used to verify that "
+             "an incoming lead really came from Meta. Leave blank only "
+             "while testing.",
+    )
+    mudon_meta_verify_token = fields.Char(
+        string="Lead webhook verify token",
+        config_parameter="mudon_crm.meta_verify_token",
+        help="Any secret word. Enter the same value on the Meta webhook "
+             "page. Callback URL is <your-domain>/mudon/meta/leadgen.",
+    )
+
     # ─── Notification timers (client comment 6) ─────────────────────────
     # "WhatsApp Automation Notification messages timers to be added to
     # configuration". Every delay the SLA engine used to hard-code is now
