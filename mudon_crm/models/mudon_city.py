@@ -27,6 +27,5 @@ class MudonCity(models.Model):
     active = fields.Boolean(default=True)
     color = fields.Integer()
 
-    _sql_constraints = [
-        ("code_unique", "unique(code)", "City code must be unique."),
-    ]
+    _code_unique = models.Constraint(
+        "unique(code)", "City code must be unique.")

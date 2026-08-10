@@ -33,6 +33,5 @@ class MudonService(models.Model):
              "form filters MService by the lead's pipeline.",
     )
 
-    _sql_constraints = [
-        ("code_unique", "unique(code)", "Service code must be unique."),
-    ]
+    _code_unique = models.Constraint(
+        "unique(code)", "Service code must be unique.")

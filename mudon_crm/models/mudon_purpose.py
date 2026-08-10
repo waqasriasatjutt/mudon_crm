@@ -23,6 +23,5 @@ class MudonPurpose(models.Model):
              "form filters Purpose by the lead's pipeline.",
     )
 
-    _sql_constraints = [
-        ("code_unique", "unique(code)", "Purpose code must be unique."),
-    ]
+    _code_unique = models.Constraint(
+        "unique(code)", "Purpose code must be unique.")

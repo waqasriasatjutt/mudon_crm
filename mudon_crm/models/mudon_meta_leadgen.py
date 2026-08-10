@@ -31,6 +31,8 @@ board the lead belongs on.
 import json
 import logging
 
+from psycopg2 import IntegrityError, errorcodes
+
 from odoo import _, api, fields, models
 
 _logger = logging.getLogger(__name__)
@@ -84,10 +86,8 @@ class MudonMetaLeadForm(models.Model):
     active = fields.Boolean(default=True)
     lead_count = fields.Integer(compute="_compute_lead_count", string="Leads")
 
-    _sql_constraints = [
-        ("form_id_unique", "unique(form_id)",
-         "That Meta form is already mapped."),
-    ]
+    _form_id_unique = models.Constraint(
+        "unique(form_id)", "That Meta form is already mapped.")
 
     @api.depends("name")
     def _compute_allowed_team_ids(self):
@@ -146,10 +146,8 @@ class MudonMetaLeadgenEvent(models.Model):
     raw_payload = fields.Text(readonly=True)
     answers = fields.Text(string="Form answers", readonly=True)
 
-    _sql_constraints = [
-        ("leadgen_id_unique", "unique(leadgen_id)",
-         "This Meta lead has already been received."),
-    ]
+    _leadgen_id_unique = models.Constraint(
+        "unique(leadgen_id)", "This Meta lead has already been received.")
 
     # ─── Ingestion (called by the controller, must be cheap) ────────────
     @api.model
@@ -164,12 +162,22 @@ class MudonMetaLeadgenEvent(models.Model):
             return False
         if self.sudo().search_count([("leadgen_id", "=", leadgen_id)]):
             return False
-        self.sudo().create({
-            "leadgen_id": leadgen_id,
-            "form_id": str(value.get("form_id") or "").strip(),
-            "page_id": str(value.get("page_id") or "").strip(),
-            "raw_payload": raw[:20000] if raw else False,
-        })
+        try:
+            # Meta re-delivers, sometimes fast enough that two requests
+            # clear the check above together. The unique index settles
+            # which one wins; losing that race is ordinary traffic, not
+            # an error, and must not become a non-200 for Meta.
+            with self.env.cr.savepoint():
+                self.sudo().create({
+                    "leadgen_id": leadgen_id,
+                    "form_id": str(value.get("form_id") or "").strip(),
+                    "page_id": str(value.get("page_id") or "").strip(),
+                    "raw_payload": raw[:20000] if raw else False,
+                })
+        except IntegrityError as exc:
+            if exc.pgcode == errorcodes.UNIQUE_VIOLATION:
+                return False
+            raise
         return True
 
     # ─── Processing (cron) ──────────────────────────────────────────────

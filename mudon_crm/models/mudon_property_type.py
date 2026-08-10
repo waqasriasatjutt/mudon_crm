@@ -16,6 +16,5 @@ class MudonPropertyType(models.Model):
     active = fields.Boolean(default=True)
     color = fields.Integer()
 
-    _sql_constraints = [
-        ("code_unique", "unique(code)", "Property-type code must be unique."),
-    ]
+    _code_unique = models.Constraint(
+        "unique(code)", "Property-type code must be unique.")

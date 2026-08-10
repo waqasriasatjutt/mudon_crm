@@ -49,18 +49,15 @@ class MudonBranch(models.Model):
     )
     active = fields.Boolean(default=True)
 
-    _sql_constraints = [
-        # Strict unique on (team, city). Archiving keeps the row in
-        # the table; admin un-archives the existing one rather than
-        # creating a duplicate. Including `active` in the unique
-        # tuple only allows ONE archived row per (team, city) pair —
-        # second archive collides.
-        (
-            "team_city_unique",
-            "unique(team_id, city_key)",
-            "A branch for this city already exists on this team.",
-        ),
-    ]
+    # Strict unique on (team, city). Archiving keeps the row in
+    # the table; admin un-archives the existing one rather than
+    # creating a duplicate. Including `active` in the unique
+    # tuple only allows ONE archived row per (team, city) pair —
+    # second archive collides.
+    _team_city_unique = models.Constraint(
+        "unique(team_id, city_key)",
+        "A branch for this city already exists on this team.",
+    )
 
     def _pick_next_agent(self, exclude_lead_id=False):
         """Round-robin within this branch. Picks the member who comes

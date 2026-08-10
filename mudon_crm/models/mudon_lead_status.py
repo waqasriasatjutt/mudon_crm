@@ -22,6 +22,5 @@ class MudonLeadStatus(models.Model):
              "intent-to-lose (used by automation rules).",
     )
 
-    _sql_constraints = [
-        ("code_unique", "unique(code)", "Status code must be unique."),
-    ]
+    _code_unique = models.Constraint(
+        "unique(code)", "Status code must be unique.")

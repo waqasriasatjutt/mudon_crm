@@ -26,6 +26,5 @@ class MudonSource(models.Model):
     active = fields.Boolean(default=True)
     color = fields.Integer()
 
-    _sql_constraints = [
-        ("code_unique", "unique(code)", "Source code must be unique."),
-    ]
+    _code_unique = models.Constraint(
+        "unique(code)", "Source code must be unique.")

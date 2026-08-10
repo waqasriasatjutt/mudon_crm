@@ -39,18 +39,15 @@ class MudonCountryAgentMapping(models.Model):
     )
     active = fields.Boolean(default=True)
 
-    _sql_constraints = [
-        # Strict unique on (country_code, team_id). Archived rows stay
-        # in the table; admin un-archives the existing row rather than
-        # creating a duplicate. Including `active` only lets ONE
-        # archived row coexist with the live one — second archive
-        # collides.
-        (
-            "country_code_team_unique",
-            "unique(country_code, team_id)",
-            "A mapping for this country code already exists on this team.",
-        ),
-    ]
+    # Strict unique on (country_code, team_id). Archived rows stay
+    # in the table; admin un-archives the existing row rather than
+    # creating a duplicate. Including `active` only lets ONE
+    # archived row coexist with the live one — second archive
+    # collides.
+    _country_code_team_unique = models.Constraint(
+        "unique(country_code, team_id)",
+        "A mapping for this country code already exists on this team.",
+    )
 
     @api.depends("country_code", "agent_user_id")
     def _compute_name(self):

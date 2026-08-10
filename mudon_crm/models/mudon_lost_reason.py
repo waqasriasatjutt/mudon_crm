@@ -51,9 +51,8 @@ class MudonLostReason(models.Model):
     sequence = fields.Integer(default=10)
     active = fields.Boolean(default=True)
 
-    _sql_constraints = [
-        ("code_unique", "unique(code)", "Lost-reason code must be unique."),
-    ]
+    _code_unique = models.Constraint(
+        "unique(code)", "Lost-reason code must be unique.")
 
     @api.depends("parent_id")
     def _compute_is_category(self):
