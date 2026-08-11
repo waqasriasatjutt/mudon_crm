@@ -86,3 +86,15 @@ access_mudon_meta_form_admin,mudon.meta.lead.form admin,model_mudon_meta_lead_fo
 access_mudon_meta_event_user,mudon.meta.leadgen.event user,model_mudon_meta_leadgen_event,sales_team.group_sale_salesman,1,0,0,0
 access_mudon_meta_event_admin,mudon.meta.leadgen.event admin,model_mudon_meta_leadgen_event,mudon_crm.group_mudon_system_admin,1,1,1,1
 access_mudon_meta_form_marketing,ROLE Marketing: meta lead forms,model_mudon_meta_lead_form,mudon_crm.group_mudon_marketing,1,1,1,0
+access_mudon_living_city_user,mudon.living.city user,model_mudon_living_city,sales_team.group_sale_salesman,1,0,0,0
+access_mudon_living_city_manager,mudon.living.city manager,model_mudon_living_city,sales_team.group_sale_manager,1,1,1,1
+access_mudon_property_area_user,mudon.property.area user,model_mudon_property_area,sales_team.group_sale_salesman,1,0,0,0
+access_mudon_property_area_manager,mudon.property.area manager,model_mudon_property_area,sales_team.group_sale_manager,1,1,1,1
+access_mudon_commission_type_user,mudon.commission.type user,model_mudon_commission_type,sales_team.group_sale_salesman,1,0,0,0
+access_mudon_commission_type_manager,mudon.commission.type manager,model_mudon_commission_type,sales_team.group_sale_manager,1,1,1,1
+role_masters_viewer_living_city,ROLE Viewer/Auditor: living cities,model_mudon_living_city,mudon_crm.group_mudon_viewer,1,0,0,0
+role_masters_viewer_prop_area,ROLE Viewer/Auditor: property areas,model_mudon_property_area,mudon_crm.group_mudon_viewer,1,0,0,0
+role_masters_viewer_comm_type,ROLE Viewer/Auditor: commission types,model_mudon_commission_type,mudon_crm.group_mudon_viewer,1,0,0,0
+role_masters_sysadmin_living_city,ROLE System Admin: living cities,model_mudon_living_city,mudon_crm.group_mudon_system_admin,1,1,1,1
+role_masters_sysadmin_prop_area,ROLE System Admin: property areas,model_mudon_property_area,mudon_crm.group_mudon_system_admin,1,1,1,1
+role_masters_sysadmin_comm_type,ROLE System Admin: commission types,model_mudon_commission_type,mudon_crm.group_mudon_system_admin,1,1,1,1

@@ -62,7 +62,16 @@
                         <field name="mudon_project_id"
                                domain="[('pipeline_kind', 'in', [mudon_pipeline_kind, 'any'])]"
                                options="{'no_create_edit': True}"/>
+                        <!--
+                            Field change 10: the client enters a percentage of
+                            the Closing Amount now. The money figure stays on
+                            screen, read-only, because that is the number the
+                            dashboards and the deal register report.
+                        -->
+                        <field name="mudon_commission_pct"/>
                         <field name="mudon_commission"/>
+                        <field name="mudon_commission_type_id"
+                               options="{'no_create_edit': True}"/>
                         <field name="mudon_handover_type"/>
                         <field name="mudon_reason_to_win"/>
                     </group>
@@ -181,21 +190,32 @@
                         <field name="expected_revenue"
                                options="{'currency_field': 'mudon_budget_currency_id'}"
                                required="mudon_pipeline_kind and mudon_stage_kind_current != 'new_lead'"/>
-                        <field name="mudon_status_id" options="{'no_create_edit': True}"/>
-                        <field name="mudon_source_id" options="{'no_create_edit': True}"/>
+                        <!--
+                            Affordability, asked for in the 2026-08-10 round
+                            (field change 13). Sits with the budget because
+                            that is the question it qualifies.
+                        -->
+                        <field name="mudon_full_amount_ready" widget="radio"
+                               options="{'horizontal': true}"/>
+                        <field name="mudon_ready_amount"
+                               options="{'currency_field': 'mudon_budget_currency_id'}"
+                               invisible="mudon_full_amount_ready == 'yes'"/>
+                        <field name="mudon_monthly_amount"
+                               options="{'currency_field': 'mudon_budget_currency_id'}"
+                               invisible="mudon_full_amount_ready == 'yes'"/>
                     </group>
                     <group>
                         <field name="mudon_nationality_id" options="{'no_create': True}"/>
                         <field name="mudon_living_in_id" options="{'no_create': True}"/>
+                        <field name="mudon_living_city_id"
+                               options="{'no_create_edit': True}"
+                               domain="[('country_id', 'in', [mudon_living_in_id, False])]"/>
                         <label for="mudon_in_country" string="In Turkey Now"
                                invisible="mudon_pipeline_kind != 'turkey'"/>
                         <label for="mudon_in_country" string="In UAE Now"
                                invisible="mudon_pipeline_kind != 'uae'"/>
                         <field name="mudon_in_country" nolabel="1"/>
-                        <field name="mudon_cbi_files"
-                               invisible="mudon_pipeline_kind != 'turkey'"/>
                         <field name="mudon_branch_id" readonly="1"/>
-                        <field name="mudon_beds"/>
                         <field name="mudon_visit_date"/>
                     </group>
                     <group string="Requirements" colspan="2" class="mudon_sec mudon_sec_new_lead">
@@ -204,6 +224,13 @@
                                domain="[('pipeline_kind', 'in', [mudon_pipeline_kind, 'any'])]"/>
                         <field name="mudon_property_type_ids" widget="many2many_tags"
                                options="{'no_create_edit': True, 'color_field': 'color'}"/>
+                        <field name="mudon_property_area_ids" widget="many2many_tags"
+                               options="{'no_create_edit': True, 'color_field': 'color'}"
+                               domain="[('pipeline_kind', 'in', [mudon_pipeline_kind, 'any'])]"/>
+                        <!-- Qty first, then Beds under it, as the client drew it. -->
+                        <field name="mudon_property_qty"/>
+                        <field name="mudon_beds" widget="radio"
+                               options="{'horizontal': true}"/>
                         <field name="mudon_other_specs"/>
                         <field name="mudon_notes"/>
                     </group>
@@ -241,6 +268,21 @@
                 record. Hide the native Expected Revenue on this form to
                 remove the duplicate (field kept in DB — reporting untouched).
             -->
+            <!--
+                Field change 2: "move Call Status & Source to top right of
+                the card". That is the group holding Salesperson, and
+                `date_deadline` is the only field unique to it — both
+                salesperson groups look otherwise identical, so anchoring on
+                user_id would land in the lead-type one half the time.
+            -->
+            <xpath expr="//field[@name='date_deadline']/ancestor::group[1]"
+                   position="inside">
+                <field name="mudon_status_id" options="{'no_create_edit': True}"
+                       invisible="not mudon_pipeline_kind"/>
+                <field name="mudon_source_id" options="{'no_create_edit': True}"
+                       invisible="not mudon_pipeline_kind"/>
+            </xpath>
+
             <xpath expr="//label[@for='expected_revenue']" position="attributes">
                 <attribute name="invisible">1</attribute>
             </xpath>
@@ -599,13 +641,18 @@
                 <field name="mudon_service_id" string="Service"/>
                 <field name="mudon_city_id" string="City"/>
                 <field name="mudon_priority" string="Priority"/>
-                <field name="mudon_status_id" string="Status"/>
+                <field name="mudon_status_id" string="Call Status"/>
                 <field name="mudon_source_id" string="Source"/>
                 <field name="mudon_nationality_id" string="Nationality"/>
-                <field name="mudon_living_in_id" string="Living In"/>
+                <field name="mudon_living_in_id" string="Living Country"/>
+                <field name="mudon_living_city_id" string="Living City"/>
                 <field name="mudon_branch_id" string="Branch"/>
                 <field name="mudon_beds" string="No. of Beds"/>
-                <field name="mudon_cbi_files" string="No. of CBI Files"/>
+                <field name="mudon_property_qty" string="Property Qty"/>
+                <field name="mudon_property_area_ids" string="Property Area"/>
+                <field name="mudon_full_amount_ready" string="Full Amount Ready"/>
+                <field name="mudon_ready_amount" string="Ready Amount"/>
+                <field name="mudon_monthly_amount" string="Available Monthly Amount"/>
                 <field name="mudon_visit_date" string="Expected Visit Date"/>
                 <field name="mudon_purpose_ids" string="Purpose of the Property"/>
                 <field name="mudon_property_type_ids" string="Property Type"/>
@@ -620,6 +667,8 @@
                 <field name="mudon_developer_id" string="Developer"/>
                 <field name="mudon_project_id" string="Project"/>
                 <field name="mudon_commission" string="Commission"/>
+                <field name="mudon_commission_pct" string="Commission %"/>
+                <field name="mudon_commission_type_id" string="Commission Type"/>
                 <field name="mudon_handover_type" string="Handover Type"/>
                 <field name="mudon_reason_to_win" string="Reason to Win"/>
                 <field name="mudon_invoiced_amount" string="Invoiced / Commission Billed"/>

@@ -6,6 +6,9 @@
         "When adding new card lead it shows Company field.
          Required Fields only: Name, phone number, email, amount"
 
+        Email was dropped again in the 2026-08-10 round, field change 1:
+        "Remove Email from the quick add (keep name/phone/amount)".
+
         Odoo's stock quick-create (crm.quick_create_opportunity_form) leads
         with Company, then Contact, then "Opportunity's Name" — and it is
         that form's partner logic that stamps the "<Contact>'s opportunity"
@@ -30,7 +33,6 @@
                     <field name="name" string="Name" placeholder="Client name"
                            required="1"/>
                     <field name="phone" string="Phone" placeholder="+971 50 000 0000"/>
-                    <field name="email_from" string="Email" placeholder="client@example.com"/>
                     <field name="mudon_budget_currency_id" invisible="1"/>
                     <field name="expected_revenue" string="Amount"
                            widget="monetary"

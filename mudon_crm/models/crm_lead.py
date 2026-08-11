@@ -58,11 +58,18 @@ MUDON_STAGE_REQUIRED = {
     "eoi": ("mudon_paid_booking",),
     "won": ("mudon_fully_paid",),
 }
+BEDS_SELECTION = [
+    ("studio", "Studio"),
+    ("1", "1"), ("2", "2"), ("3", "3"), ("4", "4"), ("5", "5"), ("6", "6"),
+]
+PROPERTY_QTY_SELECTION = [
+    ("1", "1"), ("2", "2"), ("3", "3"), ("4", "4"), ("5", "5"), ("6", "6"),
+]
 MUDON_STAGE_FIELD_LABELS = {
     "mudon_service_id": "Service",
     "mudon_city_id": "City",
     "mudon_priority": "Priority",
-    "expected_revenue": "Expected Revenue",
+    "expected_revenue": "Property Budget",
     "mudon_tick_offer_sent": "Offer Sent",
     "mudon_visit_confirmed": "Visit Confirmed",
     "mudon_paid_booking": "Paid Booking",
@@ -201,11 +208,21 @@ class CrmLead(models.Model):
         help="Per-pipeline currency — UAE Dubai = AED, Turkey = USD. "
              "Drives MBudget, Closing Amount and Commission.",
     )
+    # Relabel of the stock CRM field, per field change 4: "Rename Expected
+    # Revenue to Property Budget". Done here rather than per view so the
+    # kanban, list, search bar and every export agree on one name.
+    expected_revenue = fields.Monetary(string="Property Budget")
     mudon_status_id = fields.Many2one(
-        "mudon.lead.status", string="Status", ondelete="restrict",
+        "mudon.lead.status", string="Call Status", ondelete="restrict",
     )
     mudon_nationality_id = fields.Many2one("res.country", string="Nationality")
-    mudon_living_in_id = fields.Many2one("res.country", string="Living In")
+    mudon_living_in_id = fields.Many2one(
+        "res.country", string="Living Country")
+    mudon_living_city_id = fields.Many2one(
+        "mudon.living.city", string="Living City", ondelete="restrict",
+        help="Where the client currently lives. Managed under "
+             "Configuration → Living Cities.",
+    )
     mudon_in_country = fields.Boolean(string="In Country Now")
     mudon_purpose_ids = fields.Many2many(
         "mudon.purpose", "crm_lead_mudon_purpose_rel",
@@ -217,14 +234,41 @@ class CrmLead(models.Model):
         "lead_id", "property_type_id",
         string="Property Type",
     )
-    mudon_beds = fields.Integer(string="No. of Beds")
+    mudon_property_area_ids = fields.Many2many(
+        "mudon.property.area", "crm_lead_mudon_property_area_rel",
+        "lead_id", "area_id",
+        string="Property Area",
+    )
+    mudon_property_qty = fields.Selection(
+        PROPERTY_QTY_SELECTION, string="Property Qty",
+    )
+    # Was an Integer. The client asked for the button row in the
+    # screenshot, and "Studio" is not a number, so it had to become a
+    # Selection. The 19.0.1.16.0 migration carries the old counts over.
+    mudon_beds = fields.Selection(BEDS_SELECTION, string="No. of Beds")
     mudon_other_specs = fields.Text(string="Other Specifications")
     mudon_visit_date = fields.Date(string="Expected Visit Date")
     mudon_notes = fields.Text(string="Notes")
     mudon_source_id = fields.Many2one(
         "mudon.source", string="Source", ondelete="restrict",
     )
+    # Kept in the database but off every screen — field change 3 asked for
+    # it removed, and dropping the column would lose what Turkey has
+    # already captured.
     mudon_cbi_files = fields.Integer(string="No. of CBI Files")
+
+    # Affordability, captured at enquiry (field change 13). Both amounts
+    # follow the pipeline currency, so Dubai reads AED and Turkey USD.
+    mudon_full_amount_ready = fields.Selection(
+        YESNO_SELECTION, string="Full Amount Ready",
+    )
+    mudon_ready_amount = fields.Monetary(
+        string="Ready Amount", currency_field="mudon_budget_currency_id",
+    )
+    mudon_monthly_amount = fields.Monetary(
+        string="Available Monthly Amount",
+        currency_field="mudon_budget_currency_id",
+    )
 
     # SLA tracking — Stage 1 (30-min / 1-hour from spec)
     mudon_sla_30min_fired = fields.Boolean(copy=False)
@@ -342,8 +386,22 @@ class CrmLead(models.Model):
     mudon_project_id = fields.Many2one(
         "mudon.project", string="Project", ondelete="restrict",
     )
+    # The client now enters a percentage of the Closing Amount rather than
+    # a figure. The amount is kept as a stored compute, not dropped, because
+    # both dashboards, the XLSX export and the deal register all read
+    # `mudon_commission` — changing what they read would be a far wider
+    # change than the client asked for.
+    mudon_commission_pct = fields.Float(
+        string="Commission %", digits=(5, 2),
+        help="Percentage of the Closing Amount.",
+    )
     mudon_commission = fields.Monetary(
         string="Commission", currency_field="mudon_budget_currency_id",
+        compute="_compute_mudon_commission", store=True, readonly=True,
+    )
+    mudon_commission_type_id = fields.Many2one(
+        "mudon.commission.type", string="Commission Type",
+        ondelete="restrict",
     )
     # Billing / collection tracking (CRM-native) — filled by admin as
     # invoices go out and money comes in. Powers the Financial dashboard's
@@ -533,6 +591,14 @@ class CrmLead(models.Model):
         for rec in self:
             rec.mudon_kanban_priority_rank = ranks.get(
                 rec.mudon_card_color_hint, 5,
+            )
+
+    @api.depends("mudon_closing_amount", "mudon_commission_pct")
+    def _compute_mudon_commission(self):
+        for rec in self:
+            rec.mudon_commission = (
+                (rec.mudon_closing_amount or 0.0)
+                * (rec.mudon_commission_pct or 0.0) / 100.0
             )
 
     # ─── Column total in the pipeline's own currency (comment 23) ──────

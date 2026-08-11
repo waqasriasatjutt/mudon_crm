@@ -428,4 +428,21 @@
         <field name="parent_id" ref="mudon_lost_cat_product"/>
         <field name="sequence">20</field>
     </record>
+
+    <!--
+        2026-08-10 round, field change 11: "Add Commission type:
+        Cash/Invoice - add Configuration". Seeded because the client named
+        both values. Living Cities and Property Areas ship empty on purpose
+        — those lists are his to build.
+    -->
+    <record id="mudon_commission_type_cash" model="mudon.commission.type">
+        <field name="name">Cash</field>
+        <field name="code">cash</field>
+        <field name="sequence">10</field>
+    </record>
+    <record id="mudon_commission_type_invoice" model="mudon.commission.type">
+        <field name="name">Invoice</field>
+        <field name="code">invoice</field>
+        <field name="sequence">20</field>
+    </record>
 </odoo>

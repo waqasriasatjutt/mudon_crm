@@ -99,12 +99,15 @@ $mudon-stage-colors: (
 // fields there is nothing showing WHERE to type. Give every editable input
 // a real box.
 .o_form_view:has(.mudon_form_marker) .o_form_editable {
+    // Only real form controls, named by element. A bare `.o_input` here
+    // would be wrong: Odoo puts that class on non-input elements too —
+    // see the monetary and tags carve-outs below, both of which were
+    // drawing extra boxes because of it.
     .o_field_widget {
-        .o_input:not([type="checkbox"]):not([type="radio"]),
-        input.o_input,
+        input.o_input:not([type="checkbox"]):not([type="radio"]),
         textarea.o_input,
-        .o_input_dropdown > .o_input,
-        select.o_input {
+        select.o_input,
+        > div.o_tags_input.o_input {
             border: 1px solid #ced4da !important;
             border-radius: 4px;
             padding: 4px 8px;
@@ -113,28 +116,69 @@ $mudon-stage-colors: (
             transition: border-color .15s ease, box-shadow .15s ease;
 
             &:hover { border-color: #adb5bd !important; }
-            &:focus {
+            &:focus, &:focus-within {
                 border-color: #1b2b44 !important;
                 box-shadow: 0 0 0 .18rem rgba(27, 43, 68, .15);
                 outline: none;
             }
         }
+    }
 
-        // Tag widgets (Purpose, Property Type) get the same box so the
-        // form reads consistently.
-        &.o_field_many2many_tags .o_input_dropdown,
-        &.o_field_many2many_tags > div {
-            border: 1px solid #ced4da;
-            border-radius: 4px;
-            padding: 2px 4px;
-            min-height: 32px;
-            background-color: #fff;
+    // ── Monetary ──────────────────────────────────────────────────────
+    // `web.MonetaryField` draws the currency symbol in an absolutely
+    // positioned span that ALSO carries `o_input`, sitting on top of the
+    // real input. Giving that span a box laid an opaque white panel over
+    // the field, which is what "the placeholder can't be accessed to
+    // enter number" was describing on Closing Amount, Commission,
+    // Invoiced, Collected and Property Budget. Box the wrapper instead,
+    // so the symbol and the input share one border.
+    .o_field_monetary > div {
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        padding: 4px 8px;
+        background-color: #fff;
+        min-height: 32px;
+        transition: border-color .15s ease, box-shadow .15s ease;
+
+        &:hover { border-color: #adb5bd; }
+        &:focus-within {
+            border-color: #1b2b44;
+            box-shadow: 0 0 0 .18rem rgba(27, 43, 68, .15);
+        }
+
+        > input.o_input,
+        > span.o_input {
+            border: 0 !important;
+            background: transparent !important;
+            padding: 0 !important;
+            min-height: 0 !important;
+            box-shadow: none !important;
+        }
+    }
+
+    // ── Tags (Purpose, Property Type, Property Area) ───────────────────
+    // The outer container already carries `o_input`, so it takes the box
+    // from the rule above. Everything nested inside has to stay bare, or
+    // the field draws three borders inside one another.
+    .o_field_many2many_tags {
+        .o_field_many2many_selection,
+        .o_input_dropdown,
+        input.o_input {
+            border: 0 !important;
+            background: transparent !important;
+            padding: 0 !important;
+            min-height: 0 !important;
+            box-shadow: none !important;
         }
     }
 
     // An empty required field should be obvious before you hit save.
-    .o_field_widget.o_required_modifier .o_input:placeholder-shown {
+    .o_field_widget.o_required_modifier input.o_input:placeholder-shown {
         border-color: #f0ad4e !important;
+        background-color: #fffdf7;
+    }
+    .o_field_widget.o_required_modifier.o_field_monetary > div:has(input:placeholder-shown) {
+        border-color: #f0ad4e;
         background-color: #fffdf7;
     }
 
