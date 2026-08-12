@@ -19,8 +19,19 @@
                             <field name="mudon_wa_access_token" password="True"
                                    placeholder="EAAG..."/>
                         </setting>
-                        <setting string="Sending phone-number ID"
-                                 help="From Meta &gt; WhatsApp &gt; API Setup — the number agent/business flows send from.">
+                        <setting string="WhatsApp Business Account ID"
+                                 help="From Meta &gt; WhatsApp &gt; API Setup. The account your numbers sit under. The token above covers every number in it.">
+                            <field name="mudon_wa_waba_id"
+                                   placeholder="e.g. 987654321098765"/>
+                        </setting>
+                        <setting string="One number per funnel"
+                                 help="Dubai and Turkey each sending from their own number is set up under Mudon CRM &gt; Configuration &gt; WhatsApp Numbers — one row per number. The default below is only used for a pipeline that has no number of its own.">
+                            <button name="%(mudon_crm.mudon_wa_sender_action)d"
+                                    type="action" string="WhatsApp Numbers"
+                                    class="btn-link" icon="fa-arrow-right"/>
+                        </setting>
+                        <setting string="Default phone-number ID"
+                                 help="Fallback only. From Meta &gt; WhatsApp &gt; API Setup.">
                             <field name="mudon_wa_phone_number_id"
                                    placeholder="e.g. 123456789012345"/>
                         </setting>

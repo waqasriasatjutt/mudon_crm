@@ -98,3 +98,5 @@ role_masters_viewer_comm_type,ROLE Viewer/Auditor: commission types,model_mudon_
 role_masters_sysadmin_living_city,ROLE System Admin: living cities,model_mudon_living_city,mudon_crm.group_mudon_system_admin,1,1,1,1
 role_masters_sysadmin_prop_area,ROLE System Admin: property areas,model_mudon_property_area,mudon_crm.group_mudon_system_admin,1,1,1,1
 role_masters_sysadmin_comm_type,ROLE System Admin: commission types,model_mudon_commission_type,mudon_crm.group_mudon_system_admin,1,1,1,1
+access_mudon_wa_sender_manager,mudon.wa.sender manager,model_mudon_wa_sender,sales_team.group_sale_manager,1,1,1,1
+role_wa_sender_sysadmin,ROLE System Admin: whatsapp numbers,model_mudon_wa_sender,mudon_crm.group_mudon_system_admin,1,1,1,1

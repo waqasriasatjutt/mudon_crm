@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <record id="mudon_wa_sender_view_tree" model="ir.ui.view">
+        <field name="name">mudon.wa.sender.list</field>
+        <field name="model">mudon.wa.sender</field>
+        <field name="arch" type="xml">
+            <list string="WhatsApp Numbers">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="display_number"/>
+                <field name="pipeline_kind"/>
+                <field name="role"/>
+                <field name="phone_number_id"/>
+                <field name="waba_id" optional="hide"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="mudon_wa_sender_view_form" model="ir.ui.view">
+        <field name="name">mudon.wa.sender.form</field>
+        <field name="model">mudon.wa.sender</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1><field name="name" placeholder="e.g. Mudon Dubai"/></h1>
+                    </div>
+                    <group>
+                        <group string="Which leads use it">
+                            <field name="display_number" placeholder="+971 50 289 0693"/>
+                            <field name="pipeline_kind"/>
+                            <field name="role"/>
+                            <field name="active"/>
+                        </group>
+                        <group string="From Meta &gt; WhatsApp &gt; API Setup">
+                            <field name="phone_number_id" placeholder="e.g. 123456789012345"/>
+                            <field name="waba_id" placeholder="e.g. 987654321098765"/>
+                            <field name="access_token" password="True"
+                                   placeholder="leave blank unless this number is on a different business account"/>
+                        </group>
+                    </group>
+                    <div class="alert alert-info" role="alert">
+                        <p class="mb-1"><b>Where these come from.</b> In Meta, an App holds a
+                            WhatsApp Business Account, and that account holds your numbers:</p>
+                        <p class="mb-1 ps-3">
+                            WhatsApp Business Account<br/>
+                            &#160;&#160;&#160;&#160;+90 ... Turkey &#8594; its own Phone number ID<br/>
+                            &#160;&#160;&#160;&#160;+971 ... Dubai &#8594; its own Phone number ID
+                        </p>
+                        <p class="mb-0">The access token belongs to the account, not to a number,
+                            so when both numbers sit under the same account you enter the token
+                            once in Settings and leave it blank here. Only the Phone number ID
+                            differs per number. Both numbers can share one webhook.</p>
+                    </div>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="mudon_wa_sender_action" model="ir.actions.act_window">
+        <field name="name">WhatsApp Numbers</field>
+        <field name="res_model">mudon.wa.sender</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Add the number each funnel sends from</p>
+            <p>One row per WhatsApp number. Set its Pipeline and leads on that
+               board will message from it. With nothing here, everything sends
+               from the single number in Settings.</p>
+        </field>
+    </record>
+
+    <menuitem id="mudon_menu_wa_senders"
+              name="WhatsApp Numbers"
+              parent="mudon_menu_config_root"
+              action="mudon_wa_sender_action"
+              sequence="39"/>
+
+</odoo>

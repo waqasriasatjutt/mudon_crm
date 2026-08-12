@@ -25,11 +25,18 @@ class ResConfigSettings(models.TransientModel):
              "(whatsapp_business_messaging scope). Live-only — never "
              "committed to code.",
     )
+    mudon_wa_waba_id = fields.Char(
+        string="WhatsApp Business Account ID",
+        config_parameter="mudon_crm.wa_waba_id",
+        help="From Meta > WhatsApp > API Setup. The account both numbers "
+             "sit under. Recorded for reference; sending does not need it.",
+    )
     mudon_wa_phone_number_id = fields.Char(
-        string="Sending phone-number ID",
+        string="Default phone-number ID",
         config_parameter="mudon_crm.wa_phone_number_id",
-        help="The WhatsApp phone-number id agents / business flows send "
-             "from (from Meta > WhatsApp > API Setup).",
+        help="Used only when no number is configured for the lead's "
+             "pipeline. For one number per funnel, use Configuration > "
+             "WhatsApp Numbers instead.",
     )
     mudon_wa_company_phone_number_id = fields.Char(
         string="Company phone-number ID",

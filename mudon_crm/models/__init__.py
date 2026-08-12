@@ -18,6 +18,7 @@ from . import mudon_property_area
 from . import mudon_commission_type
 from . import mudon_project
 from . import mudon_wa_message
+from . import mudon_wa_sender
 from . import res_config_settings
 from . import res_users
 from . import mudon_meta_leadgen

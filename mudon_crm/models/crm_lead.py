@@ -1732,10 +1732,19 @@ class CrmLead(models.Model):
         provider = ICP.get_param("mudon_crm.wa_provider", "stub")
         company_no = ICP.get_param("mudon_crm.wa_company_number", "")
         normalized = self._mudon_phone_normalize(phone)
-        sender_label = (
-            "COMPANY (%s)" % (company_no or "no-number-configured")
-            if from_company else "AGENT"
-        )
+        # Name the line the message went out on. With a number per funnel
+        # this is the only way to tell from the chatter whether a lead was
+        # contacted on the Dubai or the Turkey line.
+        sender = self.env["mudon.wa.sender"]._mudon_resolve(
+            self.mudon_pipeline_kind, from_company=from_company)
+        if sender:
+            sender_label = "%s (%s)" % (
+                sender.name, sender.display_number or sender.phone_number_id)
+        elif from_company:
+            sender_label = "COMPANY (%s)" % (
+                company_no or "no-number-configured")
+        else:
+            sender_label = "AGENT"
         if provider == "stub":
             stub_body = Markup(
                 "<p><b>[WA STUB · %s → %s]</b></p>%s"
@@ -1791,7 +1800,20 @@ class CrmLead(models.Model):
         ICP = self.env["ir.config_parameter"].sudo()
         token = ICP.get_param("mudon_crm.wa_access_token", "")
         api_version = ICP.get_param("mudon_crm.wa_api_version", "v21.0") or "v21.0"
-        if from_company:
+
+        # One number per funnel, per the client's "1 for Dubai, 1 for
+        # Turkey". A configured sender wins; with none configured this
+        # falls through to the original single-number settings, so an
+        # existing setup keeps working untouched.
+        sender = self.env["mudon.wa.sender"]._mudon_resolve(
+            self.mudon_pipeline_kind, from_company=from_company)
+        if sender:
+            phone_number_id = sender.phone_number_id
+            # A per-number token only exists when that number sits under a
+            # different business account; otherwise the WABA-wide token
+            # in Settings covers it.
+            token = sender.access_token or token
+        elif from_company:
             phone_number_id = (
                 ICP.get_param("mudon_crm.wa_company_phone_number_id", "")
                 or ICP.get_param("mudon_crm.wa_phone_number_id", "")
