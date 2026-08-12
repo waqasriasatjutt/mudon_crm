@@ -61,6 +61,17 @@ class ResConfigSettings(models.TransientModel):
         config_parameter="mudon_crm.wa_api_version",
         default="v21.0",
     )
+    # Comment 16 — "For lost card, what happens to them when they
+    # accumulate? Can I archive?" They can, by hand, at any time. This
+    # makes it automatic so the Lost column does not grow forever.
+    mudon_lost_archive_days = fields.Integer(
+        string="Auto-archive lost leads after (days)",
+        config_parameter="mudon_crm.lost_archive_days",
+        help="Lost leads older than this are archived automatically each "
+             "night. Archived means hidden from the pipeline, not deleted "
+             "— they stay searchable under the Archived filter and in "
+             "reporting. Set 0 to switch it off.",
+    )
     mudon_marketing_user_id = fields.Many2one(
         "res.users",
         string="Marketing user (Lost alerts)",

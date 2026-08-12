@@ -68,6 +68,10 @@
                         </setting>
                     </block>
                     <block title="Notifications" name="mudon_notif_setting_container">
+                        <setting string="Auto-archive lost leads after (days)"
+                                 help="Lost leads untouched for this long are archived each night. Archived is hidden, not deleted — still searchable and still in reporting. 0 switches it off.">
+                            <field name="mudon_lost_archive_days"/>
+                        </setting>
                         <setting string="Marketing user (Lost alerts)"
                                  help="Receives the WhatsApp alert when a lead is marked Lost. Falls back to the sales-team manager if unset.">
                             <field name="mudon_marketing_user_id"/>

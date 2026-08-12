@@ -1071,6 +1071,29 @@ class CrmLead(models.Model):
                         out.append(label)
                 else:
                     out.append(fname)
+
+        # The tick that advanced the card OUT of the stage we are landing
+        # on must go too. It is registered under that stage, not under the
+        # ones being abandoned, so the loop above never reaches it — which
+        # is why a card dragged from Meeting back to Offer Sent kept Visit
+        # Confirmed ticked, and Offer Sent back to Qualified kept the Offer
+        # Sent tick. Left set, the card either re-advances immediately or
+        # claims a milestone it no longer has.
+        nxt = order[ti + 1] if ti + 1 < len(order) else None
+        gate = MUDON_STAGE_REQUIRED.get(nxt, ()) if nxt else ()
+        # New Lead's gate is the intake data (service / city / priority /
+        # budget), which is the lead's own information rather than a
+        # milestone. Moving a card back must never wipe that.
+        if gate and gate != MUDON_QUALIFY_DATA:
+            labels_here = dict(
+                self.MUDON_STAGE_OWNED_FIELDS.get(target_kind, ()))
+            for fname in gate:
+                if labels_only:
+                    label = labels_here.get(fname)
+                    if label and self[fname]:
+                        out.append(label)
+                elif fname not in out:
+                    out.append(fname)
         # Reopening a Lost card must also drop the reason that closed it.
         if self.mudon_stage_kind_current == "lost":
             if labels_only:
@@ -1079,6 +1102,32 @@ class CrmLead(models.Model):
             else:
                 out.append("mudon_lost_reason_id")
         return out
+
+    @api.model
+    def _mudon_cron_archive_lost(self):
+        """Archive long-dead Lost cards (client comment 16).
+
+        Archiving, never deleting: the lead stays in the database and in
+        reporting, it just stops filling the Lost column. Off unless the
+        client sets a number of days in Settings.
+        """
+        days = int(self.env["ir.config_parameter"].sudo().get_param(
+            "mudon_crm.lost_archive_days", 0) or 0)
+        if days <= 0:
+            return 0
+        cutoff = fields.Datetime.subtract(
+            fields.Datetime.now(), days=days)
+        leads = self.sudo().search([
+            ("mudon_stage_kind_current", "=", "lost"),
+            ("active", "=", True),
+            ("write_date", "<", cutoff),
+        ])
+        if leads:
+            leads.write({"active": False})
+            _logger.info(
+                "mudon_crm: archived %s lost lead(s) untouched for %s days",
+                len(leads), days)
+        return len(leads)
 
     def _mudon_check_move_back(self, new_stage):
         """Ask before a backward move, per the client's requested dialog."""

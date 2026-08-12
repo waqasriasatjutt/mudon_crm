@@ -131,4 +131,16 @@
         <field name="interval_type">minutes</field>
         <field name="active">True</field>
     </record>
+
+    <!-- Comment 16: keep the Lost column from growing forever. Archives,
+         never deletes, and does nothing until a day count is set. -->
+    <record id="mudon_cron_archive_lost" model="ir.cron">
+        <field name="name">Mudon — archive old lost leads</field>
+        <field name="model_id" ref="crm.model_crm_lead"/>
+        <field name="state">code</field>
+        <field name="code">model._mudon_cron_archive_lost()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="active">True</field>
+    </record>
 </odoo>
