@@ -319,6 +319,17 @@
             <xpath expr="//field[@name='priority'][@nolabel='1']" position="attributes">
                 <attribute name="invisible">mudon_pipeline_kind</attribute>
             </xpath>
+            <!--
+                The two fields above sit inside a wrapping <div>, and that div
+                is a grid cell in its own right. Hiding only the label and the
+                fields left an empty cell behind with no label cell to pair
+                with, which knocked every following field in this group one
+                column out of step — Call Status and Source rendered with
+                their labels above and beside their inputs. Hide the cell too.
+            -->
+            <xpath expr="//field[@name='date_deadline']/parent::div" position="attributes">
+                <attribute name="invisible">mudon_pipeline_kind</attribute>
+            </xpath>
 
             <!--
                 Comment 21 — "What is Tags?". Odoo's generic CRM tags are
