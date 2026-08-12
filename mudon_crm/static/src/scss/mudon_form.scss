@@ -99,15 +99,16 @@ $mudon-stage-colors: (
 // fields there is nothing showing WHERE to type. Give every editable input
 // a real box.
 .o_form_view:has(.mudon_form_marker) .o_form_editable {
-    // Only real form controls, named by element. A bare `.o_input` here
-    // would be wrong: Odoo puts that class on non-input elements too —
-    // see the monetary and tags carve-outs below, both of which were
-    // drawing extra boxes because of it.
-    .o_field_widget {
+    // Plain controls only. Monetary and tags are EXCLUDED here and given
+    // their own single box below, because both wrap their real input in
+    // extra markup that also carries `o_input` — a rule broad enough to
+    // catch them draws a box inside a box. Excluding them beats trying to
+    // reset the inner elements afterwards: this selector carries
+    // `!important` and out-specifies any reset, so the reset never won.
+    .o_field_widget:not(.o_field_monetary):not(.o_field_many2many_tags) {
         input.o_input:not([type="checkbox"]):not([type="radio"]),
         textarea.o_input,
-        select.o_input,
-        > div.o_tags_input.o_input {
+        select.o_input {
             border: 1px solid #ced4da !important;
             border-radius: 4px;
             padding: 4px 8px;
@@ -157,12 +158,26 @@ $mudon-stage-colors: (
     }
 
     // ── Tags (Purpose, Property Type, Property Area) ───────────────────
-    // The outer container already carries `o_input`, so it takes the box
-    // from the rule above. Everything nested inside has to stay bare, or
-    // the field draws three borders inside one another.
-    .o_field_many2many_tags {
+    // One box on the outer container, which already carries `o_input`.
+    // Everything nested inside stays bare — the tag chips and the
+    // autocomplete input must not draw borders of their own.
+    .o_field_many2many_tags > div.o_tags_input.o_input {
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        padding: 2px 6px;
+        background-color: #fff;
+        min-height: 32px;
+        transition: border-color .15s ease, box-shadow .15s ease;
+
+        &:hover { border-color: #adb5bd; }
+        &:focus-within {
+            border-color: #1b2b44;
+            box-shadow: 0 0 0 .18rem rgba(27, 43, 68, .15);
+        }
+
         .o_field_many2many_selection,
         .o_input_dropdown,
+        .o-autocomplete,
         input.o_input {
             border: 0 !important;
             background: transparent !important;
@@ -173,11 +188,16 @@ $mudon-stage-colors: (
     }
 
     // An empty required field should be obvious before you hit save.
-    .o_field_widget.o_required_modifier input.o_input:placeholder-shown {
+    // Same exclusion as above: on a monetary or tags field the highlight
+    // has to go on the box, not on the bare input inside it, or it paints
+    // a second coloured rectangle within the box.
+    .o_field_widget:not(.o_field_monetary):not(.o_field_many2many_tags).o_required_modifier
+        input.o_input:placeholder-shown {
         border-color: #f0ad4e !important;
         background-color: #fffdf7;
     }
-    .o_field_widget.o_required_modifier.o_field_monetary > div:has(input:placeholder-shown) {
+    .o_field_widget.o_required_modifier.o_field_monetary > div:has(input:placeholder-shown),
+    .o_field_widget.o_required_modifier.o_field_many2many_tags > div.o_tags_input:has(input:placeholder-shown) {
         border-color: #f0ad4e;
         background-color: #fffdf7;
     }
