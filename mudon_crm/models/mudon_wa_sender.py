@@ -86,20 +86,28 @@ class MudonWaSender(models.Model):
     def _mudon_resolve(self, pipeline_kind, from_company=False):
         """Pick the number to send from.
 
-        Most specific first: a sender for this exact pipeline, then one
-        marked 'Any pipeline'. Within each, one dedicated to the role
-        beats one marked Both, so a real company line wins over a
-        general-purpose number. Returns an empty recordset when nothing
-        matches, and the caller falls back to the single-number settings.
+        Role is matched before pipeline, deliberately. The 3rd-offer
+        client survey is specified to go out from the company line, so a
+        number dedicated to that role must beat a general-purpose
+        pipeline number — otherwise setting up a company line and a
+        Dubai line would silently send the survey from Dubai.
+
+        Order tried:
+          1. this pipeline, dedicated to this role
+          2. any pipeline, dedicated to this role
+          3. this pipeline, marked Both
+          4. any pipeline, marked Both
+
+        Returns an empty recordset when nothing matches; the caller then
+        falls back to the single-number settings.
         """
         role = "company" if from_company else "agent"
-        base = [("role", "in", (role, "both"))]
-        for domain in (
-            base + [("pipeline_kind", "=", pipeline_kind or "any")],
-            base + [("pipeline_kind", "=", "any")],
-        ):
-            found = self.sudo().search(domain, order="sequence, id")
-            if found:
-                exact = found.filtered(lambda s: s.role == role)
-                return (exact or found)[0]
+        this = pipeline_kind or "any"
+        for role_domain in ([("role", "=", role)], [("role", "=", "both")]):
+            for pipeline in (this, "any"):
+                found = self.sudo().search(
+                    role_domain + [("pipeline_kind", "=", pipeline)],
+                    order="sequence, id", limit=1)
+                if found:
+                    return found
         return self.browse()
