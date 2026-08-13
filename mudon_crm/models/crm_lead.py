@@ -1770,7 +1770,8 @@ class CrmLead(models.Model):
             })
 
     # ─── WhatsApp messaging (provider-agnostic) ─────────────────────
-    def _mudon_send_whatsapp(self, phone, body, from_company=False):
+    def _mudon_send_whatsapp(self, phone, body, from_company=False,
+                             template_key=None, template_params=None):
         """Send a WA message. Provider chosen via
         `mudon_crm.wa_provider`. `from_company=True` uses the company
         number stored at `mudon_crm.wa_company_number` (Stage 3 client
@@ -1811,7 +1812,8 @@ class CrmLead(models.Model):
             return True
         if provider == "meta":
             return self._mudon_send_whatsapp_meta(
-                phone, body, from_company=from_company)
+                phone, body, from_company=from_company,
+                template_key=template_key, template_params=template_params)
         _logger.warning(
             "mudon_crm: unknown WA provider '%s' — message NOT sent for "
             "lead %s.", provider, self.id,
@@ -1842,8 +1844,16 @@ class CrmLead(models.Model):
             _logger.warning("mudon_crm: WA log write failed: %s", exc)
             return self.env["mudon.wa.message"]
 
-    def _mudon_wa_meta_post(self, to_digits, text, from_company=False):
-        """Low-level POST of one text message to the Meta Cloud API.
+    def _mudon_wa_meta_post(self, to_digits, text, from_company=False,
+                            template=None, template_params=None):
+        """Low-level POST of one message to the Meta Cloud API.
+
+        Sends an approved template when one is given, otherwise plain
+        text. Plain text only reaches people who messaged the business
+        in the last 24 hours; outside that window Meta accepts it,
+        returns a message id, and drops it. So a template is the only
+        reliable way to start a conversation.
+
         Returns (ok, wamid, error, permanent). No DB writes — callers
         log the result."""
         ICP = self.env["ir.config_parameter"].sudo()
@@ -1878,12 +1888,38 @@ class CrmLead(models.Model):
             return (False, "", "Python 'requests' library not available.", True)
         url = "https://graph.facebook.com/%s/%s/messages" % (
             api_version, phone_number_id)
-        payload = {
-            "messaging_product": "whatsapp",
-            "to": to_digits,
-            "type": "text",
-            "text": {"preview_url": True, "body": text or ""},
-        }
+        if template:
+            components = []
+            if template_params:
+                components.append({
+                    "type": "body",
+                    # Meta rejects a parameter containing a newline or a
+                    # tab, and every one of ours is a single line, so
+                    # flatten defensively rather than fail the send.
+                    "parameters": [
+                        {"type": "text",
+                         "text": " ".join(str(p or "").split())}
+                        for p in template_params
+                    ],
+                })
+            payload = {
+                "messaging_product": "whatsapp",
+                "to": to_digits,
+                "type": "template",
+                "template": {
+                    "name": template.template_name,
+                    "language": {"code": template.lang_code or "en"},
+                },
+            }
+            if components:
+                payload["template"]["components"] = components
+        else:
+            payload = {
+                "messaging_product": "whatsapp",
+                "to": to_digits,
+                "type": "text",
+                "text": {"preview_url": True, "body": text or ""},
+            }
         headers = {
             "Authorization": "Bearer %s" % token,
             "Content-Type": "application/json",
@@ -1904,17 +1940,25 @@ class CrmLead(models.Model):
         return (False, "", "HTTP %s: %s" % (resp.status_code, resp.text[:400]),
                 permanent)
 
-    def _mudon_send_whatsapp_meta(self, phone, body, from_company=False):
+    def _mudon_send_whatsapp_meta(self, phone, body, from_company=False,
+                                  template_key=None, template_params=None):
         """Send via Meta Cloud API + log the result. Keeps a chatter copy
-        on success so the CRM card still shows what went out."""
+        on success so the CRM card still shows what went out.
+
+        `body` stays the source of truth for the chatter and the log even
+        when a template carries the actual send — the two say the same
+        thing, and the reader wants the readable version.
+        """
         self.ensure_one()
         to_digits = (self._mudon_phone_normalize(phone) or "").lstrip("+")
         try:
             text = html2plaintext(body) if body else ""
         except Exception:
             text = str(body or "")
+        template = self.env["mudon.wa.template"]._mudon_for(template_key)
         ok, wamid, error, permanent = self._mudon_wa_meta_post(
-            to_digits, text, from_company=from_company)
+            to_digits, text, from_company=from_company,
+            template=template, template_params=template_params)
         status = "sent" if ok else ("failed_permanent" if permanent else "failed")
         self._mudon_wa_log(to_digits, body, status=status, wamid=wamid,
                            error=error, from_company=from_company)
@@ -1967,7 +2011,10 @@ class CrmLead(models.Model):
             "<p dir=\"rtl\" lang=\"ar\">شكراً لتواصلكم مع مدن<br/>"
             "سيقوم مستشار عقاري بالتواصل معكم قريباً.</p>"
         )
-        self._mudon_send_whatsapp(self.phone, body)
+        # A brand-new lead has never messaged Mudon, so there is no
+        # 24-hour window and only a template will reach them.
+        self._mudon_send_whatsapp(
+            self.phone, body, template_key="new_lead_greeting")
 
     def _mudon_notify_assigned_agent(
         self, kind, to_manager=False, to_agent=True, to_marketing=False,
@@ -2020,11 +2067,23 @@ class CrmLead(models.Model):
             escape(wa_link), escape(wa_link),
             escape(card_link), escape(card_link),
         )
+        # One template serves every agent/manager alert: they share this
+        # body and differ only by the headline, which is parameter 1.
+        tparams = [
+            headline,
+            self.contact_name or self.name or "(no name)",
+            wa_link,
+            card_link,
+        ]
         if to_agent and self.user_id and self.user_id.phone:
-            self._mudon_send_whatsapp(self.user_id.phone, body)
+            self._mudon_send_whatsapp(
+                self.user_id.phone, body,
+                template_key="agent_alert", template_params=tparams)
         if to_manager and self.team_id.user_id \
                 and self.team_id.user_id.phone:
-            self._mudon_send_whatsapp(self.team_id.user_id.phone, body)
+            self._mudon_send_whatsapp(
+                self.team_id.user_id.phone, body,
+                template_key="agent_alert", template_params=tparams)
         if to_marketing:
             # Marketing role = team manager fallback; client to configure
             # a dedicated marketing user via ir.config_parameter later.
@@ -2033,9 +2092,13 @@ class CrmLead(models.Model):
             ) or 0)
             mkt = self.env["res.users"].browse(mkt_uid) if mkt_uid else False
             if mkt and mkt.phone:
-                self._mudon_send_whatsapp(mkt.phone, body)
+                self._mudon_send_whatsapp(
+                    mkt.phone, body,
+                    template_key="agent_alert", template_params=tparams)
             elif self.team_id.user_id and self.team_id.user_id.phone:
-                self._mudon_send_whatsapp(self.team_id.user_id.phone, body)
+                self._mudon_send_whatsapp(
+                    self.team_id.user_id.phone, body,
+                    template_key="agent_alert", template_params=tparams)
 
     def _mudon_notify_marketing_lost(self):
         self.ensure_one()
@@ -2070,7 +2133,23 @@ class CrmLead(models.Model):
         if not target:
             target = self.team_id.user_id
         if target and target.phone:
-            self._mudon_send_whatsapp(target.phone, body)
+            # Reuses the agent template — this also goes to a staff member
+            # and needs a window they will not have. The reason travels in
+            # the headline so nothing is lost against the plain-text body.
+            base_url = self.env["ir.config_parameter"].sudo().get_param(
+                "web.base.url", "")
+            self._mudon_send_whatsapp(
+                target.phone, body,
+                template_key="agent_alert",
+                template_params=[
+                    "%s — %s" % (_("Client Lost"), reason_label),
+                    self.contact_name or self.name or "(no name)",
+                    "https://wa.me/%s" % (
+                        self._mudon_phone_normalize(self.phone).lstrip("+")
+                        or ""),
+                    "%s/odoo/action-crm.crm_lead_action_pipeline/%s" % (
+                        base_url, self.id),
+                ])
 
     def _mudon_send_3rd_offer_survey(self):
         """Stage 3: after 3rd offer, WA the client from the COMPANY
@@ -2091,7 +2170,10 @@ class CrmLead(models.Model):
             "<p><b>Preferred support</b><br/>"
             "☐ Same Agent ☐ Different Agent ☐ Manager</p>"
         )
-        self._mudon_send_whatsapp(self.phone, body, from_company=True)
+        self._mudon_send_whatsapp(
+            self.phone, body, from_company=True,
+            template_key="client_survey",
+            template_params=[self.contact_name or self.name or "(no name)"])
 
     # ─── SLA cron handlers ──────────────────────────────────────────
     # Every delay below is read from Settings at run time (client comment

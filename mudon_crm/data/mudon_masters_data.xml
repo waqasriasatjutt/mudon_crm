@@ -445,4 +445,15 @@
         <field name="code">invoice</field>
         <field name="sequence">20</field>
     </record>
+
+    <record id="mudon_wa_template_greeting" model="mudon.wa.template">
+        <field name="message_key">new_lead_greeting</field>
+        <field name="template_name">mudon_new_lead_greeting</field>
+        <field name="lang_code">en</field>
+    </record>
+    <record id="mudon_wa_template_agent_alert" model="mudon.wa.template">
+        <field name="message_key">agent_alert</field>
+        <field name="template_name">mudon_agent_alert</field>
+        <field name="lang_code">en</field>
+    </record>
 </odoo>

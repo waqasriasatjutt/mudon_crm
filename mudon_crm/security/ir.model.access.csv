@@ -100,3 +100,5 @@ role_masters_sysadmin_prop_area,ROLE System Admin: property areas,model_mudon_pr
 role_masters_sysadmin_comm_type,ROLE System Admin: commission types,model_mudon_commission_type,mudon_crm.group_mudon_system_admin,1,1,1,1
 access_mudon_wa_sender_manager,mudon.wa.sender manager,model_mudon_wa_sender,sales_team.group_sale_manager,1,1,1,1
 role_wa_sender_sysadmin,ROLE System Admin: whatsapp numbers,model_mudon_wa_sender,mudon_crm.group_mudon_system_admin,1,1,1,1
+access_mudon_wa_template_manager,mudon.wa.template manager,model_mudon_wa_template,sales_team.group_sale_manager,1,1,1,1
+role_wa_template_sysadmin,ROLE System Admin: whatsapp templates,model_mudon_wa_template,mudon_crm.group_mudon_system_admin,1,1,1,1

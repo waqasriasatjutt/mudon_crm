@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="mudon_wa_template_view_tree" model="ir.ui.view">
+        <field name="name">mudon.wa.template.list</field>
+        <field name="model">mudon.wa.template</field>
+        <field name="arch" type="xml">
+            <list editable="bottom" string="WhatsApp Templates">
+                <field name="message_key"/>
+                <field name="template_name"/>
+                <field name="lang_code"/>
+                <field name="note"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="mudon_wa_template_action" model="ir.actions.act_window">
+        <field name="name">WhatsApp Templates</field>
+        <field name="res_model">mudon.wa.template</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Point each message at an approved template</p>
+            <p>WhatsApp only accepts free text within 24 hours of the customer
+               messaging you. Everything the CRM sends starts the conversation,
+               so it has to go as a template Meta has approved.</p>
+            <p>A message with no template here falls back to plain text, which
+               only reaches someone who messaged you recently.</p>
+        </field>
+    </record>
+
+    <menuitem id="mudon_menu_wa_templates"
+              name="WhatsApp Templates"
+              parent="mudon_menu_config_root"
+              action="mudon_wa_template_action"
+              sequence="40"/>
+</odoo>
