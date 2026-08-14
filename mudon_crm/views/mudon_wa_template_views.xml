@@ -1,16 +1,134 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
+
+    <!-- List: NOT inline-editable, so a click opens the record. The old
+         editable="bottom" meant there was nothing to open, which is why
+         the screen looked read-only. -->
     <record id="mudon_wa_template_view_tree" model="ir.ui.view">
         <field name="name">mudon.wa.template.list</field>
         <field name="model">mudon.wa.template</field>
         <field name="arch" type="xml">
-            <list editable="bottom" string="WhatsApp Templates">
+            <list string="WhatsApp Templates"
+                  decoration-success="is_ready"
+                  decoration-warning="meta_status == 'PENDING'"
+                  decoration-danger="meta_status in ('REJECTED', 'NOT FOUND')">
                 <field name="message_key"/>
                 <field name="template_name"/>
                 <field name="lang_code"/>
-                <field name="note"/>
+                <field name="meta_status"/>
+                <field name="meta_category"/>
+                <field name="is_ready" string="Working"/>
+                <field name="meta_checked_on" optional="hide"/>
                 <field name="active" widget="boolean_toggle"/>
+                <button name="action_check_meta" type="object" icon="fa-refresh"
+                        title="Check this template's status with Meta"/>
             </list>
+        </field>
+    </record>
+
+    <record id="mudon_wa_template_view_form" model="ir.ui.view">
+        <field name="name">mudon.wa.template.form</field>
+        <field name="model">mudon.wa.template</field>
+        <field name="arch" type="xml">
+            <form string="WhatsApp Template">
+                <header>
+                    <button name="action_check_meta" type="object"
+                            string="Check status with Meta"
+                            class="btn-primary" icon="fa-refresh"/>
+                    <field name="is_ready" invisible="1"/>
+                </header>
+                <sheet>
+                    <!-- Status banners: the single most useful thing on this
+                         screen. Turning a template on before Meta approved it
+                         is what silently stopped the agent alerts. -->
+                    <div class="alert alert-success d-flex align-items-center"
+                         role="alert" invisible="not is_ready">
+                        <i class="fa fa-check-circle fa-2x me-3"/>
+                        <div><b>Working.</b> Meta has approved this template and it is
+                            switched on, so these messages will reach people even if
+                            they have never written to you.</div>
+                    </div>
+                    <div class="alert alert-warning d-flex align-items-center"
+                         role="alert" invisible="meta_status != 'PENDING'">
+                        <i class="fa fa-clock-o fa-2x me-3"/>
+                        <div><b>Meta is still reviewing this.</b> Leave it switched
+                            off until the status says APPROVED — sending a template
+                            under review fails and the message never arrives.
+                            Review usually takes minutes to a few hours.</div>
+                    </div>
+                    <div class="alert alert-danger d-flex align-items-center"
+                         role="alert" invisible="meta_status not in ('REJECTED', 'NOT FOUND')">
+                        <i class="fa fa-exclamation-triangle fa-2x me-3"/>
+                        <div><b>Not usable.</b> Either Meta rejected it, or no template
+                            with this exact name and language exists on your account.
+                            Check the spelling against WhatsApp Manager — the name is
+                            case-sensitive and the language must match too.</div>
+                    </div>
+                    <div class="alert alert-info" role="alert"
+                         invisible="meta_category != 'MARKETING'">
+                        <b>Meta has classified this as MARKETING.</b> Marketing
+                        messages are not delivered to anyone who has switched off
+                        marketing messages in WhatsApp, so some people will not
+                        receive it. Templates that read as a reply to the customer
+                        are usually classified UTILITY, which always gets through.
+                    </div>
+
+                    <div class="oe_title">
+                        <label for="message_key" string="This template is used for"/>
+                        <h1><field name="message_key" placeholder="Pick a message"/></h1>
+                    </div>
+
+                    <group>
+                        <group string="Copy these from WhatsApp Manager">
+                            <field name="template_name"
+                                   placeholder="e.g. mudon_new_lead_greeting"/>
+                            <field name="lang_code" placeholder="en"/>
+                            <field name="active" widget="boolean_toggle"/>
+                        </group>
+                        <group string="Status at Meta">
+                            <field name="meta_status" placeholder="press Check status"/>
+                            <field name="meta_category"/>
+                            <field name="meta_checked_on"/>
+                        </group>
+                    </group>
+
+                    <group string="What gets filled in">
+                        <field name="note" nolabel="1"/>
+                    </group>
+
+                    <group string="Exactly what Meta will send"
+                           invisible="not meta_body">
+                        <field name="meta_body" nolabel="1" readonly="1"/>
+                    </group>
+
+                    <!-- Short course for whoever opens this screen next. -->
+                    <div class="alert alert-secondary mt-3" role="alert">
+                        <h4 class="alert-heading">How this works, in short</h4>
+                        <p>WhatsApp does not let a business send whatever it likes.
+                           Free typing is only allowed for 24 hours after the
+                           <i>customer</i> writes to you. Every message this CRM
+                           sends starts the conversation, so it has to use wording
+                           Meta approved in advance. That approved wording is a
+                           <b>template</b>.</p>
+                        <p class="mb-1"><b>To set one up:</b></p>
+                        <ol class="mb-2">
+                            <li>In Meta, open <b>WhatsApp Manager &gt; Message
+                                templates</b> and create the wording. Put
+                                <code>{{1}}</code>, <code>{{2}}</code> where the
+                                lead's details should appear.</li>
+                            <li>Wait for Meta to approve it.</li>
+                            <li>Come back here, type its name and language exactly
+                                as Meta shows them, and press
+                                <b>Check status with Meta</b>.</li>
+                            <li>When the status reads APPROVED, switch it on.</li>
+                        </ol>
+                        <p class="mb-0"><b>If a message has no template here</b>, it is
+                           sent as ordinary text instead. That still works for someone
+                           who wrote to you in the last 24 hours, and quietly reaches
+                           nobody otherwise.</p>
+                    </div>
+                </sheet>
+            </form>
         </field>
     </record>
 
@@ -20,12 +138,22 @@
         <field name="view_mode">list,form</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">Point each message at an approved template</p>
-            <p>WhatsApp only accepts free text within 24 hours of the customer
-               messaging you. Everything the CRM sends starts the conversation,
-               so it has to go as a template Meta has approved.</p>
-            <p>A message with no template here falls back to plain text, which
-               only reaches someone who messaged you recently.</p>
+            <p>WhatsApp only allows free typing for 24 hours after a customer
+               writes to you. Everything the CRM sends starts the conversation,
+               so it must use wording Meta approved beforehand.</p>
+            <p>Open any row to set it up — the form explains each field and can
+               check the approval status with Meta for you.</p>
         </field>
+    </record>
+
+    <!-- Refresh every row's status in one go. -->
+    <record id="action_mudon_wa_template_check_all" model="ir.actions.server">
+        <field name="name">Check all statuses with Meta</field>
+        <field name="model_id" ref="model_mudon_wa_template"/>
+        <field name="binding_model_id" ref="model_mudon_wa_template"/>
+        <field name="binding_view_types">list</field>
+        <field name="state">code</field>
+        <field name="code">action = model.action_check_all_meta()</field>
     </record>
 
     <menuitem id="mudon_menu_wa_templates"
@@ -33,4 +161,5 @@
               parent="mudon_menu_config_root"
               action="mudon_wa_template_action"
               sequence="40"/>
+
 </odoo>
