@@ -497,7 +497,8 @@ class MudonDashboard(models.TransientModel):
                 c["leads"] += 1
                 if lead.mudon_stage_kind_current == "won":
                     c["won"] += 1
-                    c["revenue"] += lead.expected_revenue or 0.0
+                    c["revenue"] += self._to_display_amount(
+                        lead, lead.expected_revenue or 0.0, pipeline)
             crows = []
             for c in countries.values():
                 c["conv"] = round(100.0 * c["won"] / c["leads"], 1) if c["leads"] else 0.0
@@ -520,7 +521,8 @@ class MudonDashboard(models.TransientModel):
                 s["leads"] += 1
                 if lead.mudon_stage_kind_current == "won":
                     s["won"] += 1
-                    s["commission"] += lead.mudon_commission or 0.0
+                    s["commission"] += self._to_display_amount(
+                        lead, lead.mudon_commission or 0.0, pipeline)
             srows = []
             for s in sources.values():
                 s["conv"] = round(100.0 * s["won"] / s["leads"], 1) if s["leads"] else 0.0
@@ -545,7 +547,8 @@ class MudonDashboard(models.TransientModel):
                 if not dclose:
                     continue
                 dd = dclose.date() if hasattr(dclose, "date") else dclose
-                comm = lead.mudon_commission or 0.0
+                comm = self._to_display_amount(
+                    lead, lead.mudon_commission or 0.0, pipeline)
                 if dd.year == y:
                     this_year[dd.month - 1] += comm
                 elif dd.year == y - 1:
@@ -655,9 +658,12 @@ class MudonDashboard(models.TransientModel):
             won_period = inv_crm = col_crm = 0.0
             unbilled = collect_gap = 0.0
             for lead in won_leads:
-                comm = lead.mudon_commission or 0.0
-                inv = lead.mudon_invoiced_amount or 0.0
-                col = lead.mudon_collected_amount or 0.0
+                comm = self._to_display_amount(
+                    lead, lead.mudon_commission or 0.0, pipeline)
+                inv = self._to_display_amount(
+                    lead, lead.mudon_invoiced_amount or 0.0, pipeline)
+                col = self._to_display_amount(
+                    lead, lead.mudon_collected_amount or 0.0, pipeline)
                 dcl = _d(lead.date_closed)
                 idt = _d(lead.mudon_invoiced_date)
                 cdt = _d(lead.mudon_collected_date)
@@ -707,7 +713,8 @@ class MudonDashboard(models.TransientModel):
         def _agg(keyfn):
             buckets = {}
             for lead in won_leads:
-                amt = lead[amount_field] or 0.0
+                amt = self._to_display_amount(
+                    lead, lead[amount_field] or 0.0, pipeline)
                 if not amt:
                     continue
                 dd = _d(lead[date_field])
@@ -753,13 +760,16 @@ class MudonDashboard(models.TransientModel):
             for lead in won_leads:
                 dcl = _d(lead.date_closed)
                 if dcl and dcl.year == y:
-                    won_m[dcl.month - 1] += lead.mudon_commission or 0.0
+                    won_m[dcl.month - 1] += self._to_display_amount(
+                        lead, lead.mudon_commission or 0.0, pipeline)
                 idt = _d(lead.mudon_invoiced_date)
                 if idt and idt.year == y:
-                    inv_m[idt.month - 1] += lead.mudon_invoiced_amount or 0.0
+                    inv_m[idt.month - 1] += self._to_display_amount(
+                        lead, lead.mudon_invoiced_amount or 0.0, pipeline)
                 cdt = _d(lead.mudon_collected_date)
                 if cdt and cdt.year == y:
-                    col_m[cdt.month - 1] += lead.mudon_collected_amount or 0.0
+                    col_m[cdt.month - 1] += self._to_display_amount(
+                        lead, lead.mudon_collected_amount or 0.0, pipeline)
             if source == "accounting":
                 acc = self._fin_accounting(d_from, d_to, y)
                 if acc is not None:
@@ -793,12 +803,16 @@ class MudonDashboard(models.TransientModel):
                     "country": self._country_label(lead.phone),
                     "nationality": lead.mudon_nationality_id.name or "Unknown",
                     "source": lead.mudon_source_id.name or "Manual / None",
-                    "expected_revenue": round(lead.expected_revenue or 0.0, 2),
-                    "commission": round(lead.mudon_commission or 0.0, 2),
-                    "invoiced": round(lead.mudon_invoiced_amount or 0.0, 2),
+                    "expected_revenue": round(self._to_display_amount(
+                        lead, lead.expected_revenue or 0.0, pipeline), 2),
+                    "commission": round(self._to_display_amount(
+                        lead, lead.mudon_commission or 0.0, pipeline), 2),
+                    "invoiced": round(self._to_display_amount(
+                        lead, lead.mudon_invoiced_amount or 0.0, pipeline), 2),
                     "invoiced_date": (_d(lead.mudon_invoiced_date).isoformat()
                                       if lead.mudon_invoiced_date else ""),
-                    "collected": round(lead.mudon_collected_amount or 0.0, 2),
+                    "collected": round(self._to_display_amount(
+                        lead, lead.mudon_collected_amount or 0.0, pipeline), 2),
                     "collected_date": (_d(lead.mudon_collected_date).isoformat()
                                        if lead.mudon_collected_date else ""),
                     "closed": (_d(lead.date_closed).isoformat()
@@ -909,12 +923,16 @@ class MudonDashboard(models.TransientModel):
                 "country": self._country_label(l.phone),
                 "nationality": l.mudon_nationality_id.name or "",
                 "source": l.mudon_source_id.name or "",
-                "expected_revenue": round(l.expected_revenue or 0.0, 2),
-                "commission": round(l.mudon_commission or 0.0, 2),
-                "invoiced": round(l.mudon_invoiced_amount or 0.0, 2),
+                "expected_revenue": round(self._to_display_amount(
+                    l, l.expected_revenue or 0.0, pipeline), 2),
+                "commission": round(self._to_display_amount(
+                    l, l.mudon_commission or 0.0, pipeline), 2),
+                "invoiced": round(self._to_display_amount(
+                    l, l.mudon_invoiced_amount or 0.0, pipeline), 2),
                 "invoiced_date": (_d(l.mudon_invoiced_date).isoformat()
                                   if l.mudon_invoiced_date else ""),
-                "collected": round(l.mudon_collected_amount or 0.0, 2),
+                "collected": round(self._to_display_amount(
+                    l, l.mudon_collected_amount or 0.0, pipeline), 2),
                 "collected_date": (_d(l.mudon_collected_date).isoformat()
                                    if l.mudon_collected_date else ""),
                 "created": (_d(l.create_date).isoformat() if l.create_date else ""),
