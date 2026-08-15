@@ -2409,7 +2409,7 @@ class CrmLead(models.Model):
 
         Cost: one indexed search_count per kanban load. Negligible.
         """
-        team_id = self._context.get("default_team_id")
+        team_id = self.env.context.get("default_team_id")
         if team_id:
             Stage = self.env["crm.stage"].sudo()
             has_custom_stages = Stage.search_count(
