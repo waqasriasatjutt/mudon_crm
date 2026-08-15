@@ -1844,6 +1844,24 @@ class CrmLead(models.Model):
             _logger.warning("mudon_crm: WA log write failed: %s", exc)
             return self.env["mudon.wa.message"]
 
+    @staticmethod
+    def _mudon_html_to_wa_text(body):
+        """HTML to the plain text WhatsApp shows.
+
+        `html2plaintext` turns links into academic-style footnotes — the
+        agent alert went out reading "Link to WhatsApp Chat:
+        https://wa.me/92... [1]" with a numbered list underneath. The URL
+        is already visible inline, so the markers and the footnote block
+        are noise. Strip both.
+        """
+        import re
+        text = html2plaintext(body or "")
+        # Trailing reference list: lines that are just "[1] http://..."
+        text = re.sub(r"(?m)^\s*\[\d+\]\s+\S+\s*$", "", text)
+        # Inline markers left behind next to the link itself.
+        text = re.sub(r"\s*\[\d+\]", "", text)
+        return re.sub(r"\n{3,}", "\n\n", text).strip()
+
     def _mudon_wa_meta_post(self, to_digits, text, from_company=False,
                             template=None, template_params=None):
         """Low-level POST of one message to the Meta Cloud API.
@@ -1952,7 +1970,7 @@ class CrmLead(models.Model):
         self.ensure_one()
         to_digits = (self._mudon_phone_normalize(phone) or "").lstrip("+")
         try:
-            text = html2plaintext(body) if body else ""
+            text = self._mudon_html_to_wa_text(body) if body else ""
         except Exception:
             text = str(body or "")
         template = self.env["mudon.wa.template"]._mudon_for(template_key)

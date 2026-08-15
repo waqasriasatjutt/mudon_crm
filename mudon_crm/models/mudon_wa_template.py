@@ -61,6 +61,27 @@ class MudonWaTemplate(models.Model):
              "These are not interchangeable; copy what Meta shows.",
     )
     active = fields.Boolean(default=True)
+
+    # ─── Authoring ──────────────────────────────────────────────────────
+    # The wording is written here and submitted to Meta from here. Making
+    # the client author it in WhatsApp Manager and then copy the name back
+    # was the wrong way round: two screens, a name to mistype, and no way
+    # to tell whether what was approved is what the CRM will send.
+    category = fields.Selection(
+        [("UTILITY", "Utility — a reply or an update (cheaper, always delivered)"),
+         ("MARKETING", "Marketing — promotional (dearer, blocked for opted-out people)")],
+        default="UTILITY", required=True,
+        help="Meta has the final say and may reclassify it. Wording that "
+             "reads as a reply to the customer usually stays Utility.",
+    )
+    body_text = fields.Text(
+        string="Message wording",
+        help="Write the message. Use {{1}}, {{2}} where the lead's details "
+             "should appear — the list above the box tells you which is which.",
+    )
+    submitted = fields.Boolean(readonly=True, copy=False,
+                               help="Sent to Meta for approval at least once.")
+
     note = fields.Char(
         string="Parameters",
         compute="_compute_note",
@@ -156,6 +177,108 @@ class MudonWaTemplate(models.Model):
             raise UserError(
                 _("Could not reach Meta: %s %s") % (exc, detail))
         return {t.get("name"): t for t in data.get("data") or []}
+
+    # Example values Meta requires alongside a template that has {{n}}
+    # placeholders — it reviews the wording with these filled in.
+    MUDON_WA_EXAMPLES = {
+        "new_lead_greeting": [],
+        "agent_alert": ["You have new client!", "Ahmed Al Mansoori",
+                        "https://wa.me/971502890693",
+                        "https://example.com/odoo/lead/42"],
+        "client_survey": ["Ahmed Al Mansoori"],
+    }
+
+    @api.onchange("message_key")
+    def _onchange_message_key_defaults(self):
+        """Fill the name and a starting wording so the page is never blank."""
+        starters = {
+            "new_lead_greeting": (
+                "Thank you for contacting Mudon.\n"
+                "One of our property advisors will contact you shortly."),
+            "agent_alert": (
+                "Mudon CRM notification: {{1}}\n\n"
+                "Client name: {{2}}\n"
+                "Open the WhatsApp conversation with this client here: {{3}}\n"
+                "Open the full client record in the CRM here: {{4}}\n\n"
+                "This message was sent automatically by the Mudon CRM system "
+                "to the sales colleague responsible for this client."),
+            "client_survey": (
+                "Hello {{1}}, we have sent you a few property options from "
+                "Mudon. Could you let us know whether any of them suit you, "
+                "and whether you would like the same advisor to continue "
+                "helping you? Your answer helps us send you better options."),
+        }
+        for rec in self:
+            if rec.message_key and not rec.template_name:
+                rec.template_name = "mudon_%s" % rec.message_key
+            if rec.message_key and not rec.body_text:
+                rec.body_text = starters.get(rec.message_key, "")
+
+    def _mudon_placeholder_count(self):
+        """How many distinct {{n}} the wording uses."""
+        self.ensure_one()
+        import re
+        return len(set(re.findall(r"\{\{(\d+)\}\}", self.body_text or "")))
+
+    def action_submit_to_meta(self):
+        """Create this template on the business account and await review."""
+        self.ensure_one()
+        if not self.body_text:
+            raise UserError(_("Write the message wording first."))
+        needed = MUDON_WA_PARAM_COUNT.get(self.message_key, 0)
+        found = self._mudon_placeholder_count()
+        if found != needed:
+            raise UserError(_(
+                "This message fills in %(needed)s detail(s), but the wording "
+                "uses %(found)s. Use exactly %(needed)s placeholders: %(legend)s",
+                needed=needed, found=found, legend=self.note or "none"))
+        name = (self.template_name or "").strip().lower()
+        if not name.replace("_", "").isalnum():
+            raise UserError(_(
+                "The name may only contain lower-case letters, numbers and "
+                "underscores. No spaces."))
+        token, waba, version = self._mudon_meta_credentials()
+        if not (token and waba):
+            raise UserError(_(
+                "No WhatsApp credentials yet. Add the access token in "
+                "Settings > Mudon CRM and a number with its Business "
+                "Account ID under Configuration > WhatsApp Numbers."))
+        component = {"type": "BODY", "text": self.body_text}
+        example = self.MUDON_WA_EXAMPLES.get(self.message_key) or []
+        if needed and example:
+            component["example"] = {"body_text": [example[:needed]]}
+        payload = {
+            "name": name,
+            "language": self.lang_code or "en",
+            "category": self.category or "UTILITY",
+            "components": [component],
+        }
+        req = urllib.request.Request(
+            "https://graph.facebook.com/%s/%s/message_templates" % (
+                version, waba),
+            data=json.dumps(payload).encode(),
+            headers={"Authorization": "Bearer %s" % token,
+                     "Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                json.loads(resp.read().decode())
+        except Exception as exc:
+            detail = ""
+            reader = getattr(exc, "read", None)
+            if reader:
+                try:
+                    detail = json.loads(reader().decode()).get(
+                        "error", {}).get("error_user_msg", "") or ""
+                except Exception:
+                    detail = ""
+            raise UserError(_(
+                "Meta would not accept this template.\n\n%s\n\nA common cause "
+                "is too many placeholders for the amount of wording — add more "
+                "plain words, or a template with this name already exists, in "
+                "which case press Check status instead.") % (detail or exc))
+        self.write({"template_name": name, "submitted": True})
+        self.action_check_meta()
+        return {"type": "ir.actions.client", "tag": "soft_reload"}
 
     def action_check_meta(self):
         """Refresh approval status for these rows (button on the form)."""

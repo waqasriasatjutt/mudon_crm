@@ -32,10 +32,16 @@
         <field name="arch" type="xml">
             <form string="WhatsApp Template">
                 <header>
+                    <button name="action_submit_to_meta" type="object"
+                            string="Send to Meta for approval"
+                            class="btn-primary" icon="fa-paper-plane"
+                            invisible="meta_status == 'APPROVED'"
+                            confirm="Send this wording to Meta for approval? Review usually takes a few minutes. You cannot change the wording afterwards — you would create a new one."/>
                     <button name="action_check_meta" type="object"
                             string="Check status with Meta"
-                            class="btn-primary" icon="fa-refresh"/>
+                            class="btn-secondary" icon="fa-refresh"/>
                     <field name="is_ready" invisible="1"/>
+                    <field name="submitted" invisible="1"/>
                 </header>
                 <sheet>
                     <!-- Status banners: the single most useful thing on this
@@ -79,24 +85,39 @@
                     </div>
 
                     <group>
-                        <group string="Copy these from WhatsApp Manager">
+                        <group string="Settings">
                             <field name="template_name"
-                                   placeholder="e.g. mudon_new_lead_greeting"/>
-                            <field name="lang_code" placeholder="en"/>
+                                   placeholder="e.g. mudon_new_lead_greeting"
+                                   readonly="meta_status == 'APPROVED'"/>
+                            <field name="lang_code" placeholder="en"
+                                   readonly="meta_status == 'APPROVED'"/>
+                            <field name="category"
+                                   readonly="meta_status == 'APPROVED'"/>
                             <field name="active" widget="boolean_toggle"/>
                         </group>
                         <group string="Status at Meta">
-                            <field name="meta_status" placeholder="press Check status"/>
+                            <field name="meta_status" placeholder="not sent yet"/>
                             <field name="meta_category"/>
                             <field name="meta_checked_on"/>
                         </group>
                     </group>
 
-                    <group string="What gets filled in">
-                        <field name="note" nolabel="1"/>
-                    </group>
+                    <separator string="Write the message"/>
+                    <div class="text-muted mb-2">
+                        Type the wording customers or staff will receive. Where a
+                        detail from the lead should appear, put a placeholder:
+                        <field name="note" nolabel="1" readonly="1" class="fw-bold d-inline"/>
+                    </div>
+                    <field name="body_text" nolabel="1"
+                           readonly="meta_status == 'APPROVED'"
+                           placeholder="Pick a message above and a starting wording appears here, ready to edit."/>
+                    <div class="text-muted small mt-1"
+                         invisible="meta_status == 'APPROVED'">
+                        When it reads the way you want, press
+                        <b>Send to Meta for approval</b> at the top.
+                    </div>
 
-                    <group string="Exactly what Meta will send"
+                    <group string="Approved wording, as Meta stored it"
                            invisible="not meta_body">
                         <field name="meta_body" nolabel="1" readonly="1"/>
                     </group>
@@ -110,18 +131,18 @@
                            sends starts the conversation, so it has to use wording
                            Meta approved in advance. That approved wording is a
                            <b>template</b>.</p>
-                        <p class="mb-1"><b>To set one up:</b></p>
+                        <p class="mb-1"><b>To set one up, all from this page:</b></p>
                         <ol class="mb-2">
-                            <li>In Meta, open <b>WhatsApp Manager &gt; Message
-                                templates</b> and create the wording. Put
-                                <code>{{1}}</code>, <code>{{2}}</code> where the
-                                lead's details should appear.</li>
-                            <li>Wait for Meta to approve it.</li>
-                            <li>Come back here, type its name and language exactly
-                                as Meta shows them, and press
-                                <b>Check status with Meta</b>.</li>
-                            <li>When the status reads APPROVED, switch it on.</li>
+                            <li>Choose which message it is, at the top. A starting
+                                wording appears, already correct — edit it freely.</li>
+                            <li>Press <b>Send to Meta for approval</b>.</li>
+                            <li>Wait for the banner to turn green. Press
+                                <b>Check status with Meta</b> to refresh it.</li>
+                            <li>Switch it on with the Active toggle.</li>
                         </ol>
+                        <p class="mb-2">You do not need to open WhatsApp Manager.
+                           If you already made a template there, just type its exact
+                           name and language here and press Check status instead.</p>
                         <p class="mb-0"><b>If a message has no template here</b>, it is
                            sent as ordinary text instead. That still works for someone
                            who wrote to you in the last 24 hours, and quietly reaches
