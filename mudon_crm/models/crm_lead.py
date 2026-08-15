@@ -397,7 +397,11 @@ class CrmLead(models.Model):
     )
     mudon_commission = fields.Monetary(
         string="Commission", currency_field="mudon_budget_currency_id",
-        compute="_compute_mudon_commission", store=True, readonly=True,
+        compute="_compute_mudon_commission", store=True, readonly=False,
+        tracking=True,
+        help="Worked out from the percentage and the Closing Amount, but you "
+             "can also type it in directly. Changing either of those two "
+             "recalculates it.",
     )
     mudon_commission_type_id = fields.Many2one(
         "mudon.commission.type", string="Commission Type",

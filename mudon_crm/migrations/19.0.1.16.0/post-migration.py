@@ -63,8 +63,41 @@ def migrate(cr, version):
                 "amount, so no percentage could be derived. Re-enter the "
                 "percentage on those deals.", orphaned)
         _logger.info("mudon_crm: derived %s commission percentages", derived)
-        cr.execute(
-            "ALTER TABLE crm_lead DROP COLUMN mudon_commission_old_amount")
+
+        # Carry across any amount that could not be turned into a
+        # percentage, rather than losing it. The field is computed but
+        # overridable, so a value written here survives until someone
+        # edits the closing amount or the percentage.
+        cr.execute("""
+            UPDATE crm_lead
+               SET mudon_commission = mudon_commission_old_amount
+             WHERE COALESCE(mudon_commission_old_amount, 0) != 0
+               AND COALESCE(mudon_closing_amount, 0) = 0
+        """)
+        carried = cr.rowcount
+        if carried:
+            _logger.warning(
+                "mudon_crm: %s lead(s) kept their commission amount but have "
+                "no percentage, because there is no closing amount to derive "
+                "one from. Enter a closing amount on those deals.", carried)
+
+        # Only drop the parked copy once nothing is left to rescue. An
+        # earlier version dropped it unconditionally, which destroyed the
+        # amounts on any deal without a closing amount.
+        cr.execute("""
+            SELECT count(*) FROM crm_lead
+             WHERE COALESCE(mudon_commission_old_amount, 0) != 0
+               AND COALESCE(mudon_commission, 0) = 0
+        """)
+        unrescued = cr.fetchone()[0]
+        if unrescued:
+            _logger.error(
+                "mudon_crm: %s commission amount(s) could not be carried "
+                "across. Keeping column mudon_commission_old_amount so the "
+                "figures are recoverable.", unrescued)
+        else:
+            cr.execute(
+                "ALTER TABLE crm_lead DROP COLUMN mudon_commission_old_amount")
 
     # The compute is stored, so existing rows need it run once.
     cr.execute("""
