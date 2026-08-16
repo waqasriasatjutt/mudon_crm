@@ -1828,9 +1828,14 @@ class CrmLead(models.Model):
     def _mudon_wa_log(self, to_number, body, status="sent", wamid="",
                       error="", from_company=False, direction="out"):
         """Append one row to the WhatsApp message log (audit + retry
-        queue). Body is stored as plain text."""
+        queue). Body is stored as plain text.
+
+        Uses the same converter as the send path, so the log shows exactly
+        what the recipient got — otherwise the log carries the footnote
+        markers that were stripped before sending.
+        """
         try:
-            text = html2plaintext(body) if body else ""
+            text = self._mudon_html_to_wa_text(body) if body else ""
         except Exception:
             text = str(body or "")
         try:
