@@ -2559,6 +2559,19 @@ class CrmLead(models.Model):
         res = super().message_post(**kwargs)
         if self.env.context.get("mudon_skip_first_contact"):
             return res
+        # Only a deliberate message from the agent counts as contact.
+        #
+        # Odoo posts its own "Opportunity Created" and "you have been
+        # assigned" entries DURING create, while user_id still points at
+        # whoever keyed the lead in — so the author test below matched and
+        # every new lead was marked contacted before the agent had even
+        # seen it. Routing then moved the lead to the real agent, hiding
+        # the cause. The effect was that no SLA chase and no manager
+        # escalation ever fired: 31 of 59 existing leads are stuck that
+        # way. Those automatic entries are notes and system notifications;
+        # a real agent message is a comment.
+        if kwargs.get("subtype_xmlid") != "mail.mt_comment":
+            return res
         if self.mudon_pipeline_kind and not self.mudon_first_contact_logged:
             author = kwargs.get("author_id") or self.env.user.partner_id.id
             if self.user_id and self.user_id.partner_id.id == author:
