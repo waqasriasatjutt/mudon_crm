@@ -1,6 +1,6 @@
 {
     "name": "Mudon Property — CRM",
-    "version": "19.0.1.23.1",
+    "version": "19.0.1.24.0",
     "summary": "Mudon Property real-estate CRM — Turkey CBI + UAE Dubai "
                "Golden-Visa pipelines, 7-stage flow, country-code & "
                "branch routing, WhatsApp greetings + agent + company "
@@ -14,6 +14,8 @@
     "depends": [
         "crm",
         "mail",
+        # Escalation follows the Employees org chart, at the client's request.
+        "hr",
     ],
     "data": [
         # Groups and record rules first — the ACL table below refers to them.

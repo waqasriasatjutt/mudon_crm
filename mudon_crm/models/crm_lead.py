@@ -2043,6 +2043,43 @@ class CrmLead(models.Model):
         self._mudon_send_whatsapp(
             self.phone, body, template_key="new_lead_greeting")
 
+    # Escalation climbs the Employees app hierarchy, at the client's
+    # request: the org chart people already maintain in Employees decides
+    # who hears that a lead has gone cold, rather than a second structure
+    # kept only inside the CRM.
+    MUDON_ESCALATION_LEVELS = 3
+
+    def _mudon_escalation_managers(self):
+        """Managers to alert, nearest first.
+
+        Walks Employees > Manager upward from the assigned agent, so a
+        lead nobody touches surfaces past the first manager rather than
+        stopping with them. Anyone without a phone is skipped but still
+        walked through, since their own manager should still hear.
+
+        Falls back to the pipeline's Sales Team Leader when the agent has
+        no employee record or no manager above them — which is also what
+        the spec means by "assign to Sales Manager".
+        """
+        self.ensure_one()
+        seen, out = set(), self.env["res.users"]
+        employee = self.user_id.employee_id if self.user_id else False
+        depth = 0
+        while employee and employee.parent_id and depth < self.MUDON_ESCALATION_LEVELS:
+            employee = employee.parent_id
+            depth += 1
+            user = employee.user_id
+            if not user or user.id in seen:
+                continue
+            seen.add(user.id)
+            if user.phone:
+                out |= user
+        if not out:
+            leader = self.team_id.user_id
+            if leader and leader.phone:
+                out = leader
+        return out
+
     def _mudon_notify_assigned_agent(
         self, kind, to_manager=False, to_agent=True, to_marketing=False,
     ):
@@ -2106,11 +2143,11 @@ class CrmLead(models.Model):
             self._mudon_send_whatsapp(
                 self.user_id.phone, body,
                 template_key="agent_alert", template_params=tparams)
-        if to_manager and self.team_id.user_id \
-                and self.team_id.user_id.phone:
-            self._mudon_send_whatsapp(
-                self.team_id.user_id.phone, body,
-                template_key="agent_alert", template_params=tparams)
+        if to_manager:
+            for mgr in self._mudon_escalation_managers():
+                self._mudon_send_whatsapp(
+                    mgr.phone, body,
+                    template_key="agent_alert", template_params=tparams)
         if to_marketing:
             # Marketing role = team manager fallback; client to configure
             # a dedicated marketing user via ir.config_parameter later.
