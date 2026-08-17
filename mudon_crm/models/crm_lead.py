@@ -866,6 +866,12 @@ class CrmLead(models.Model):
         if any(not self[f] for f in MUDON_QUALIFY_DATA):
             return False
         self._mudon_advance_stage("qualified")
+        # _mudon_advance_stage writes with mudon_in_write=True, which
+        # skips the after-write hook, so the entry side effects have to be
+        # run by hand here. Without this the lead lands on Qualified with
+        # no alert and a null entry date, and both Stage-2 chase crons
+        # compare against that date, so it is never chased.
+        self._mudon_on_qualified_entry()
         return True
 
     # v19.0.1.4.0 — `mudon_city_ids` (Many2many tags) reduced to
@@ -1302,19 +1308,60 @@ class CrmLead(models.Model):
                 "mudon_offer_3hr_reminder_idx": old_counter,
             })
 
+        # After-sales boxes are only reachable once the card is on WON,
+        # i.e. after the Fully Paid flip above. Spawn on the tick too, or
+        # the funnel stays empty forever.
+        for flag in ("mudon_title_deed_required", "mudon_citizenship_required",
+                     "mudon_residence_required", "mudon_furniture_required"):
+            if self[flag] and not prev.get(flag):
+                self._mudon_spawn_after_sales_funnel()
+                break
+
+        # A lead reassigned to someone else must tell its new owner.
+        if self.user_id and self.user_id.id != prev.get("user_id"):
+            self._mudon_notify_assigned_agent("new_lead")
+
         # Stage 2 entry: fire qualified-client WA + reset SLA flags
         # so the 30-min / 2-hour Qualified crons restart their clock.
         prev_stage = prev.get("stage_id")
         if (self.stage_id
                 and self.stage_id.id != prev_stage
                 and self.stage_id.id in self._mudon_stage_ids("qualified")):
+            self._mudon_on_qualified_entry()
+
+        # Stage 3 entry: start the stay-in-touch clock here, otherwise it
+        # is empty and the first nudge goes out on the next daily sweep
+        # instead of a fortnight later.
+        if (self.stage_id
+                and self.stage_id.id != prev_stage
+                and self.stage_id.id in self._mudon_stage_ids("offer_sent")
+                and not self.mudon_last_15day_reminder_date):
             self.sudo().with_context(mudon_in_write=True).write({
-                "mudon_qualified_entry_date": fields.Datetime.now(),
-                "mudon_sla_30min_fired": False,
-                "mudon_sla_2hour_fired": False,
-                "mudon_first_contact_logged": False,
+                "mudon_last_15day_reminder_date": fields.Date.context_today(self),
             })
-            self._mudon_notify_assigned_agent("qualified_entry")
+
+    def _mudon_on_qualified_entry(self):
+        """Side effects of landing on Qualified.
+
+        Its own method because a lead can reach Qualified two ways: by a
+        normal write, and by the auto-qualify that runs during create.
+        The second writes with `mudon_in_write=True`, which skips the
+        after-write hook entirely — so those leads used to arrive with no
+        "new qualified client" alert AND a null entry date, which the two
+        Stage-2 SLA crons compare against, so they were never chased.
+        """
+        self.ensure_one()
+        # The spec routes by city branch at THIS stage, and city is a
+        # Stage-2 field, so the original creation-time routing could not
+        # have known it. Re-run it now that the city is known.
+        self._mudon_auto_assign_agent(force=True)
+        self.sudo().with_context(mudon_in_write=True).write({
+            "mudon_qualified_entry_date": fields.Datetime.now(),
+            "mudon_sla_30min_fired": False,
+            "mudon_sla_2hour_fired": False,
+            "mudon_first_contact_logged": False,
+        })
+        self._mudon_notify_assigned_agent("qualified_entry")
 
     def _mudon_advance_stage(self, kind):
         """Move the lead to the stage in THIS lead's team whose
@@ -1592,12 +1639,17 @@ class CrmLead(models.Model):
         # Import mode: route the lead to an agent, but do not fire the
         # client greeting or push it off New Lead. A Meta lead has not
         # consented to WhatsApp yet, and the requirement is New Lead.
-        return self.with_context(
+        lead = self.with_context(
             mudon_import_mode=True,
             mudon_import_pipeline=mapping.team_id == self.env.ref(
                 "mudon_crm.mudon_team_turkey", raise_if_not_found=False)
             and "turkey" or "uae",
         ).create(vals)
+        # The agent alert is a different matter: the agent is staff, not a
+        # customer, and a paid Meta lead that lands with nobody told sits
+        # unworked. Import mode suppresses it, so fire it explicitly.
+        lead._mudon_notify_assigned_agent("new_lead")
+        return lead
 
     # ─── Branch + country-code routing ──────────────────────────────
     def _mudon_auto_assign_agent(self, force=False):
@@ -1742,36 +1794,38 @@ class CrmLead(models.Model):
         })
 
     def _mudon_spawn_after_sales_funnel(self):
+        """Create the after-sales tasks whose box is ticked.
+
+        Safe to call repeatedly: each kind is created once per lead. That
+        matters because the boxes only appear once the card is already on
+        WON, which is AFTER the Fully Paid flip that used to be the only
+        trigger — so every box was still unticked at the one moment this
+        ran, and the After-Sales funnel could never receive anything.
+        It is now called again whenever one of the boxes is ticked.
+        """
         self.ensure_one()
         Task = self.env["mudon.after.sales.task"].sudo()
         owner = self.team_id.user_id.id or False
         leadname = self.name or self.contact_name or self.id
-        if self.mudon_title_deed_required:
-            Task.create({
-                "name": _("Title Deed: %s") % leadname,
-                "lead_id": self.id, "kind": "title_deed",
-                "assigned_user_id": owner,
-            })
-        if (self.mudon_pipeline_kind == "turkey"
-                and self.mudon_citizenship_required):
-            Task.create({
-                "name": _("Citizenship: %s") % leadname,
-                "lead_id": self.id, "kind": "citizenship",
-                "assigned_user_id": owner,
-            })
-        if (self.mudon_pipeline_kind == "uae"
-                and self.mudon_residence_required):
-            Task.create({
-                "name": _("Residence: %s") % leadname,
-                "lead_id": self.id, "kind": "residence",
-                "assigned_user_id": owner,
-            })
-        if self.mudon_furniture_required:
-            Task.create({
-                "name": _("Furniture / Other: %s") % leadname,
-                "lead_id": self.id, "kind": "furniture",
-                "assigned_user_id": owner,
-            })
+        wanted = [
+            ("title_deed", self.mudon_title_deed_required,
+             _("Title Deed: %s") % leadname),
+            ("citizenship", self.mudon_pipeline_kind == "turkey"
+             and self.mudon_citizenship_required,
+             _("Citizenship: %s") % leadname),
+            ("residence", self.mudon_pipeline_kind == "uae"
+             and self.mudon_residence_required,
+             _("Residence: %s") % leadname),
+            ("furniture", self.mudon_furniture_required,
+             _("Furniture / Other: %s") % leadname),
+        ]
+        existing = set(Task.search([("lead_id", "=", self.id)]).mapped("kind"))
+        for kind, ticked, name in wanted:
+            if ticked and kind not in existing:
+                Task.create({
+                    "name": name, "lead_id": self.id, "kind": kind,
+                    "assigned_user_id": owner,
+                })
 
     # ─── WhatsApp messaging (provider-agnostic) ─────────────────────
     def _mudon_send_whatsapp(self, phone, body, from_company=False,

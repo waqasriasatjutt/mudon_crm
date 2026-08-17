@@ -192,9 +192,19 @@ class MudonWaTemplate(models.Model):
     def _onchange_message_key_defaults(self):
         """Fill the name and a starting wording so the page is never blank."""
         starters = {
+            # Bilingual, because the client specified both languages. The
+            # wording that reaches a customer is whatever Meta approved,
+            # not the Python body used for the chatter copy — so if the
+            # Arabic is missing HERE it never reaches anybody.
             "new_lead_greeting": (
                 "Thank you for contacting Mudon.\n"
-                "One of our property advisors will contact you shortly."),
+                "One of our property advisors will contact you shortly.\n\n"
+                "شكراً لتوا"
+                "صلكم مع مدن\n"
+                "سيقوم مستش"
+                "ار عقاري "
+                "بالتواصل "
+                "معكم قريباً."),
             "agent_alert": (
                 "Mudon CRM notification: {{1}}\n\n"
                 "Client name: {{2}}\n"
