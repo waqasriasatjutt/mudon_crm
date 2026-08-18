@@ -1233,6 +1233,15 @@ class CrmLead(models.Model):
                 "mudon_fully_paid": r.mudon_fully_paid,
                 "mudon_lost_reason_id": r.mudon_lost_reason_id.id,
                 "mudon_offer_counter": r.mudon_offer_counter,
+                # Anything compared against `prev` after the write MUST be
+                # captured here. A key that is missing reads back as None,
+                # so the comparison is true on every single write — which
+                # is what made the new-owner alert fire on every edit.
+                "user_id": r.user_id.id,
+                "mudon_title_deed_required": r.mudon_title_deed_required,
+                "mudon_citizenship_required": r.mudon_citizenship_required,
+                "mudon_residence_required": r.mudon_residence_required,
+                "mudon_furniture_required": r.mudon_furniture_required,
             }
             for r in self
         }
