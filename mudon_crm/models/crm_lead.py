@@ -840,7 +840,7 @@ class CrmLead(models.Model):
                     lead._mudon_notify_assigned_agent("new_lead")
                     # A lead captured with all four qualifying fields already
                     # filled belongs on Qualified, not New Lead (comment 17).
-                    lead._mudon_try_auto_qualify()
+                    lead._mudon_try_auto_qualify(fire_entry=True)
             except Exception as exc:
                 _logger.warning(
                     "mudon_crm: post-create hook failed for lead %s: %s",
@@ -848,7 +848,7 @@ class CrmLead(models.Model):
                 )
         return leads
 
-    def _mudon_try_auto_qualify(self):
+    def _mudon_try_auto_qualify(self, fire_entry=False):
         """Advance New Lead → Qualified once the intake data is complete.
 
         Client comment 17: "If agent opens a card and fills the required
@@ -866,12 +866,14 @@ class CrmLead(models.Model):
         if any(not self[f] for f in MUDON_QUALIFY_DATA):
             return False
         self._mudon_advance_stage("qualified")
-        # _mudon_advance_stage writes with mudon_in_write=True, which
-        # skips the after-write hook, so the entry side effects have to be
-        # run by hand here. Without this the lead lands on Qualified with
-        # no alert and a null entry date, and both Stage-2 chase crons
-        # compare against that date, so it is never chased.
-        self._mudon_on_qualified_entry()
+        # `_mudon_advance_stage` writes with mudon_in_write=True, so that
+        # write skips the after-write hook. On a normal edit the OUTER
+        # write still runs the hook, which sees the stage change and fires
+        # the entry side effects itself — calling them here as well sent
+        # the "new qualified client" message twice. During create there is
+        # no outer write, so create() asks for them explicitly.
+        if fire_entry:
+            self._mudon_on_qualified_entry()
         return True
 
     # v19.0.1.4.0 — `mudon_city_ids` (Many2many tags) reduced to
