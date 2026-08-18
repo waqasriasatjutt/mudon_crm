@@ -880,12 +880,10 @@ class CrmLead(models.Model):
     # `mudon_city_id` (Many2one) so branch round-robin routing has one
     # definitive city per lead. Client feedback: multi-city selection
     # broke the routing logic.
-    MUDON_REQUIRED_TO_QUALIFY = (
-        "mudon_service_id",
-        "mudon_city_id",
-        "mudon_priority",
-        "mudon_budget",
-    )
+    # (The old MUDON_REQUIRED_TO_QUALIFY constant lived here. It named
+    # `mudon_budget`, which the budget rename superseded, and it had no
+    # callers. MUDON_QUALIFY_DATA at the top of this file is the single
+    # definition of the qualifying fields.)
 
     def _mudon_crossed_required(self, current_kind, target_kind):
         """Ordered mandatory field names for every funnel stage strictly
@@ -1244,6 +1242,7 @@ class CrmLead(models.Model):
                 "mudon_citizenship_required": r.mudon_citizenship_required,
                 "mudon_residence_required": r.mudon_residence_required,
                 "mudon_furniture_required": r.mudon_furniture_required,
+                "mudon_need_invoice": r.mudon_need_invoice,
             }
             for r in self
         }
@@ -1286,7 +1285,11 @@ class CrmLead(models.Model):
         if (self.mudon_visit_confirmed
                 and not prev.get("mudon_visit_confirmed")):
             self._mudon_advance_stage("meeting")
-            self._mudon_notify_assigned_agent("meeting_entry", to_manager=True)
+            # Spec: "WA on stage entry -> Manager". The agent just set
+            # Visit Confirmed themselves, so telling them costs a billed
+            # message to say something they already know.
+            self._mudon_notify_assigned_agent(
+                "meeting_entry", to_manager=True, to_agent=False)
 
         # Stage 4 → Stage 5: EOI / Booking
         if self.mudon_paid_booking and not prev.get("mudon_paid_booking"):
@@ -1327,6 +1330,8 @@ class CrmLead(models.Model):
             if self[flag] and not prev.get(flag):
                 self._mudon_spawn_after_sales_funnel()
                 break
+        if self.mudon_need_invoice != prev.get("mudon_need_invoice"):
+            self._mudon_spawn_admin_funnel()
 
         # A lead reassigned to someone else must tell its new owner.
         if self.user_id and self.user_id.id != prev.get("user_id"):
@@ -1795,9 +1800,21 @@ class CrmLead(models.Model):
 
     # ─── Funnel spawn on WON ────────────────────────────────────────
     def _mudon_spawn_admin_funnel(self):
+        """Raise the admin task, and keep its Need Invoice answer true.
+
+        "Need invoice?" is only on screen once the card is already on WON,
+        which is after the Fully Paid flip that creates this task — so the
+        answer copied at creation was always No. Same trap as the
+        after-sales boxes. The task is created once, and ticking the box
+        afterwards updates the answer rather than doing nothing.
+        """
         self.ensure_one()
         AdminTask = self.env["mudon.admin.task"].sudo()
-        AdminTask.create({
+        task = AdminTask.search([("lead_id", "=", self.id)], limit=1)
+        if task:
+            task.need_invoice = self.mudon_need_invoice
+            return task
+        return AdminTask.create({
             "name": _("Admin: lead %s") % (self.name or self.contact_name or self.id),
             "lead_id": self.id,
             "need_invoice": self.mudon_need_invoice,
@@ -2572,6 +2589,14 @@ class CrmLead(models.Model):
                 from odoo.exceptions import UserError
                 raise UserError(_(
                     "This action only applies on the Offer Sent stage."
+                ))
+            if (rec.mudon_offer_counter or 0) >= 10:
+                from odoo.exceptions import UserError
+                raise UserError(_(
+                    "This client has already been sent the maximum of 10 "
+                    "offers, so the counter cannot go higher and no further "
+                    "reminder can be scheduled. Keep talking to them as "
+                    "normal, or move the card forward."
                 ))
             new_counter = min((rec.mudon_offer_counter or 0) + 1, 10)
             rec.sudo().with_context(mudon_in_write=True).write({
