@@ -274,6 +274,12 @@ class CrmLead(models.Model):
     mudon_sla_30min_fired = fields.Boolean(copy=False)
     mudon_sla_1hour_fired = fields.Boolean(copy=False)
     mudon_first_contact_logged = fields.Boolean(copy=False)
+    mudon_agent_auto_assigned = fields.Boolean(
+        copy=False, default=False,
+        help="True while the salesperson is the one routing picked. Set to "
+             "False the moment a person chooses someone themselves, which "
+             "stops later routing from overriding their choice.",
+    )
 
     # ─── STAGE 2: Qualified ─────────────────────────────────────────
     mudon_tick_offer_sent = fields.Boolean(
@@ -1333,8 +1339,14 @@ class CrmLead(models.Model):
         if self.mudon_need_invoice != prev.get("mudon_need_invoice"):
             self._mudon_spawn_admin_funnel()
 
-        # A lead reassigned to someone else must tell its new owner.
+        # A lead reassigned to someone else must tell its new owner. This
+        # branch only runs for writes a person made, because internal
+        # routing writes carry mudon_in_write and skip this hook entirely —
+        # so reaching here means somebody chose this salesperson, and
+        # routing must not overrule them later.
         if self.user_id and self.user_id.id != prev.get("user_id"):
+            self.sudo().with_context(mudon_in_write=True).write(
+                {"mudon_agent_auto_assigned": False})
             self._mudon_notify_assigned_agent("new_lead")
 
         # Stage 2 entry: fire qualified-client WA + reset SLA flags
@@ -1368,9 +1380,13 @@ class CrmLead(models.Model):
         """
         self.ensure_one()
         # The spec routes by city branch at THIS stage, and city is a
-        # Stage-2 field, so the original creation-time routing could not
-        # have known it. Re-run it now that the city is known.
-        self._mudon_auto_assign_agent(force=True)
+        # Stage-2 field, so the creation-time routing could not have known
+        # it. Re-run it now the city is known — but ONLY if the current
+        # salesperson is the one routing picked. When a manager has chosen
+        # somebody, changing it here would silently take their lead away,
+        # which is exactly what the client reported.
+        if self.mudon_agent_auto_assigned or not self.user_id:
+            self._mudon_auto_assign_agent(force=True)
         self.sudo().with_context(mudon_in_write=True).write({
             "mudon_qualified_entry_date": fields.Datetime.now(),
             "mudon_sla_30min_fired": False,
@@ -1682,8 +1698,10 @@ class CrmLead(models.Model):
             return
         agent = self._mudon_route_agent()
         if agent and agent.id != self.user_id.id:
-            self.sudo().with_context(mudon_in_write=True).write(
-                {"user_id": agent.id})
+            self.sudo().with_context(mudon_in_write=True).write({
+                "user_id": agent.id,
+                "mudon_agent_auto_assigned": True,
+            })
 
     def _mudon_route_agent(self):
         """Pick the agent per the client's routing rules.
