@@ -70,9 +70,17 @@
             margin-top: 4px; font-size: 13px; overflow-wrap: anywhere;
             color: #c9d2e0;                     // muted-white on navy
         }
-        .mudon_head_actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+        // `wrap` matters: without it the buttons keep their width and run
+        // off the right edge of a phone instead of moving to a new line.
+        .mudon_head_actions {
+            display: flex; align-items: center; gap: 8px;
+            flex: 0 1 auto; flex-wrap: wrap; justify-content: flex-end;
+            min-width: 0;
+        }
         .btn {
-            --bs-btn-color: #dfe4ea; --bs-btn-border-color: #45566f;
+            --bs-btn-color: #ffffff; --bs-btn-border-color: #45566f;
+            --bs-btn-hover-color: #12213a; --bs-btn-hover-bg: #ffffff;
+            color: #ffffff;
             flex: 0 0 auto; white-space: nowrap;
         }
         .btn.btn-primary { --bs-btn-color: #fff; }
@@ -314,7 +322,14 @@
             align-items: stretch;
             gap: 10px;
             h1 { font-size: 18px; }
-            .mudon_head_actions { width: 100%; .btn { flex: 1 1 auto; } }
+            .mudon_head_actions {
+                width: 100%; justify-content: stretch;
+                .mudon_ccy_toggle { flex: 1 1 100%; display: flex; .btn { flex: 1 1 50%; } }
+                > .btn { flex: 1 1 0; min-width: 0; }
+                // The download label is the widest thing in the bar; let it
+                // shrink rather than push the button off screen.
+                > .btn:last-child { overflow: hidden; text-overflow: ellipsis; }
+            }
         }
 
         .mudon_dash_filters {

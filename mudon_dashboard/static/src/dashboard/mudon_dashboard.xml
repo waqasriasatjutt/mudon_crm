@@ -33,7 +33,7 @@
                             USD @ 3.67
                         </button>
                     </div>
-                    <button class="btn btn-outline-secondary btn-sm" t-on-click="() => this.refresh()">
+                    <button class="btn btn-outline-light btn-sm" t-on-click="() => this.refresh()">
                         <i class="fa fa-refresh me-1"/>Refresh
                     </button>
                     <button class="btn btn-primary btn-sm" t-on-click="() => this.downloadReport()">
