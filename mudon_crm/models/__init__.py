@@ -15,6 +15,7 @@ from . import mudon_lost_reason
 # 2026-08-10 field-change round — three more admin-managed lists
 from . import mudon_living_city
 from . import mudon_property_area
+from . import mudon_bed_count
 from . import mudon_commission_type
 from . import mudon_project
 from . import mudon_wa_message

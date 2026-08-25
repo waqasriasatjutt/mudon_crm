@@ -156,6 +156,11 @@
               parent="mudon_menu_config_root"
               action="mudon_living_city_action"
               sequence="36"/>
+    <menuitem id="mudon_menu_bed_counts"
+              name="Bed Counts"
+              parent="mudon_menu_config_root"
+              action="mudon_bed_count_action"
+              sequence="36"/>
     <menuitem id="mudon_menu_property_areas"
               name="Property Areas"
               parent="mudon_menu_config_root"

@@ -456,4 +456,41 @@
         <field name="template_name">mudon_agent_alert</field>
         <field name="lang_code">en</field>
     </record>
+
+    <!-- Bed counts, multi-select like Property Type (client, 2026-08-23) -->
+    <record id="mudon_bed_studio" model="mudon.bed.count">
+        <field name="name">Studio</field>
+        <field name="code">studio</field>
+        <field name="sequence">5</field>
+    </record>
+    <record id="mudon_bed_1" model="mudon.bed.count">
+        <field name="name">1</field>
+        <field name="code">1</field>
+        <field name="sequence">11</field>
+    </record>
+    <record id="mudon_bed_2" model="mudon.bed.count">
+        <field name="name">2</field>
+        <field name="code">2</field>
+        <field name="sequence">12</field>
+    </record>
+    <record id="mudon_bed_3" model="mudon.bed.count">
+        <field name="name">3</field>
+        <field name="code">3</field>
+        <field name="sequence">13</field>
+    </record>
+    <record id="mudon_bed_4" model="mudon.bed.count">
+        <field name="name">4</field>
+        <field name="code">4</field>
+        <field name="sequence">14</field>
+    </record>
+    <record id="mudon_bed_5" model="mudon.bed.count">
+        <field name="name">5</field>
+        <field name="code">5</field>
+        <field name="sequence">15</field>
+    </record>
+    <record id="mudon_bed_6" model="mudon.bed.count">
+        <field name="name">6</field>
+        <field name="code">6</field>
+        <field name="sequence">16</field>
+    </record>
 </odoo>

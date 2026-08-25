@@ -198,11 +198,9 @@
                         <field name="mudon_full_amount_ready" widget="radio"
                                options="{'horizontal': true}"/>
                         <field name="mudon_ready_amount"
-                               options="{'currency_field': 'mudon_budget_currency_id'}"
-                               invisible="mudon_full_amount_ready == 'yes'"/>
+                               options="{'currency_field': 'mudon_budget_currency_id'}"/>
                         <field name="mudon_monthly_amount"
-                               options="{'currency_field': 'mudon_budget_currency_id'}"
-                               invisible="mudon_full_amount_ready == 'yes'"/>
+                               options="{'currency_field': 'mudon_budget_currency_id'}"/>
                     </group>
                     <group>
                         <field name="mudon_nationality_id" options="{'no_create': True}"/>
@@ -229,8 +227,8 @@
                                domain="[('pipeline_kind', 'in', [mudon_pipeline_kind, 'any'])]"/>
                         <!-- Qty first, then Beds under it, as the client drew it. -->
                         <field name="mudon_property_qty"/>
-                        <field name="mudon_beds" widget="radio"
-                               options="{'horizontal': true}"/>
+                        <field name="mudon_beds_ids" widget="many2many_tags"
+                               options="{'no_create_edit': True, 'color_field': 'color'}"/>
                         <field name="mudon_other_specs"/>
                         <field name="mudon_notes"/>
                     </group>
@@ -468,8 +466,16 @@
             <xpath expr="//field[@name='partner_id'][@widget='many2one_avatar']/.." position="attributes">
                 <attribute name="invisible">mudon_pipeline_kind or not partner_id</attribute>
             </xpath>
+            <!--
+                Client question: "What is this contact field? Is this the
+                sales agent or the customer name?" It was `partner_id`, the
+                link to an address-book record, which the Mudon team never
+                creates, so it always looked empty. Show the customer's own
+                name instead, and keep the address-book link out of the way.
+            -->
             <xpath expr="//field[@name='contact_name']" position="attributes">
-                <attribute name="invisible">mudon_pipeline_kind or partner_id</attribute>
+                <attribute name="invisible">not mudon_pipeline_kind and partner_id</attribute>
+                <attribute name="string">Customer Name</attribute>
             </xpath>
             <xpath expr="//field[@name='partner_name']" position="attributes">
                 <attribute name="invisible">mudon_pipeline_kind or partner_id or contact_name</attribute>
@@ -658,7 +664,7 @@
                 <field name="mudon_living_in_id" string="Living Country"/>
                 <field name="mudon_living_city_id" string="Living City"/>
                 <field name="mudon_branch_id" string="Branch"/>
-                <field name="mudon_beds" string="No. of Beds"/>
+                <field name="mudon_beds_ids" string="No. of Beds"/>
                 <field name="mudon_property_qty" string="Property Qty"/>
                 <field name="mudon_property_area_ids" string="Property Area"/>
                 <field name="mudon_full_amount_ready" string="Full Amount Ready"/>

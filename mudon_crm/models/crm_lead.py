@@ -245,7 +245,14 @@ class CrmLead(models.Model):
     # Was an Integer. The client asked for the button row in the
     # screenshot, and "Studio" is not a number, so it had to become a
     # Selection. The 19.0.1.16.0 migration carries the old counts over.
-    mudon_beds = fields.Selection(BEDS_SELECTION, string="No. of Beds")
+    mudon_beds = fields.Selection(
+        BEDS_SELECTION, string="No. of Beds (old, single choice)")
+    mudon_beds_ids = fields.Many2many(
+        "mudon.bed.count", "crm_lead_mudon_bed_count_rel",
+        "lead_id", "bed_id", string="No. of Beds",
+        help="A client will often consider more than one size, so this "
+             "works like Property Type and accepts several.",
+    )
     mudon_other_specs = fields.Text(string="Other Specifications")
     mudon_visit_date = fields.Date(string="Expected Visit Date")
     mudon_notes = fields.Text(string="Notes")
@@ -812,6 +819,12 @@ class CrmLead(models.Model):
         for vals in vals_list:
             if vals.get("name"):
                 vals["name"] = self._mudon_clean_name(vals["name"])
+            # Odoo keeps the card title and the customer's name in two
+            # different fields. The kanban quick-add only fills the title,
+            # which left Customer Name blank and looked like the client had
+            # not been entered at all.
+            if vals.get("name") and not vals.get("contact_name")                     and not vals.get("partner_id"):
+                vals["contact_name"] = vals["name"]
             # The dial-code onchange only runs in the UI. Imported rows come
             # straight through create(), so apply it here as well.
             if self.env.context.get("mudon_import_mode") and vals.get("phone"):
