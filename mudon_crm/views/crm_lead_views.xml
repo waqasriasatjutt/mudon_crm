@@ -418,6 +418,27 @@
         4-tier sort (P1 → P4) is visible without touching the upstream
         kanban template structure.
     -->
+    <!--
+        Client: "Turkey card is showing AED while must show USD".
+        The stock list renders the budget with `company_currency`, and the
+        company currency is AED, so every list - including the dashboard
+        drill-throughs - showed Turkey amounts in dirhams. The kanban and
+        the form were corrected long ago; the list was missed.
+    -->
+    <record id="mudon_crm_lead_view_list" model="ir.ui.view">
+        <field name="name">crm.lead.list.mudon</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_case_tree_view_oppor"/>
+        <field name="arch" type="xml">
+            <field name="expected_revenue" position="attributes">
+                <attribute name="options">{'currency_field': 'mudon_budget_currency_id'}</attribute>
+            </field>
+            <field name="expected_revenue" position="before">
+                <field name="mudon_budget_currency_id" column_invisible="1"/>
+            </field>
+        </field>
+    </record>
+
     <record id="mudon_crm_lead_view_kanban" model="ir.ui.view">
         <field name="name">crm.lead.kanban.mudon</field>
         <field name="model">crm.lead</field>
@@ -586,7 +607,7 @@
                     <div class="mudon_cardfoot d-flex align-items-center justify-content-between mt-1 px-2 pb-1">
                         <div class="d-flex align-items-center gap-1">
                             <field name="user_id" widget="many2one_avatar_user"/>
-                            <span t-if="!record.mudon_first_contact_logged.raw_value"
+                            <span t-if="!record.mudon_first_contact_logged.raw_value and ['new_lead','qualified'].includes(record.mudon_stage_kind_current.raw_value)"
                                   class="badge text-bg-danger">Not contacted</span>
                         </div>
                         <a t-if="record.mudon_wa_phone.raw_value"
