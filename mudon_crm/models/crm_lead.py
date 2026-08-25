@@ -54,7 +54,7 @@ MUDON_QUALIFY_DATA = (
 MUDON_STAGE_REQUIRED = {
     "qualified": MUDON_QUALIFY_DATA,
     "offer_sent": ("mudon_tick_offer_sent",),
-    "meeting": ("mudon_visit_confirmed",),
+    "meeting": ("mudon_visit_confirmed", "mudon_visit_date"),
     "eoi": ("mudon_paid_booking",),
     "won": ("mudon_fully_paid",),
 }
@@ -72,6 +72,7 @@ MUDON_STAGE_FIELD_LABELS = {
     "expected_revenue": "Property Budget",
     "mudon_tick_offer_sent": "Offer Sent",
     "mudon_visit_confirmed": "Visit Confirmed",
+    "mudon_visit_date": "Expected Visit Date",
     "mudon_paid_booking": "Paid Booking",
     "mudon_fully_paid": "Fully Paid",
 }
@@ -1307,8 +1308,15 @@ class CrmLead(models.Model):
             # Spec: "WA on stage entry -> Manager". The agent just set
             # Visit Confirmed themselves, so telling them costs a billed
             # message to say something they already know.
+            # Manager per the requirement doc. But if no manager can be
+            # reached - none set in Employees, or no phone on any of them -
+            # the message used to vanish, which is what the client reported
+            # as "meeting stage, no WA msg at all". Fall back to the agent
+            # so a stage entry is never silently unannounced.
+            reachable = self._mudon_escalation_managers()
             self._mudon_notify_assigned_agent(
-                "meeting_entry", to_manager=True, to_agent=False)
+                "meeting_entry", to_manager=True,
+                to_agent=not reachable)
 
         # Stage 4 → Stage 5: EOI / Booking
         if self.mudon_paid_booking and not prev.get("mudon_paid_booking"):

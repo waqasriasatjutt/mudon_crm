@@ -205,13 +205,17 @@ class MudonWaTemplate(models.Model):
                 "ار عقاري "
                 "بالتواصل "
                 "معكم قريباً."),
+            # No "Mudon CRM notification" prefix: the client asked the
+            # message to open with what actually happened, not a system
+            # label. Meta needs enough plain wording around the
+            # placeholders, so the explanation moved to the end.
             "agent_alert": (
-                "Mudon CRM notification: {{1}}\n\n"
+                "{{1}}\n\n"
                 "Client name: {{2}}\n"
                 "Open the WhatsApp conversation with this client here: {{3}}\n"
                 "Open the full client record in the CRM here: {{4}}\n\n"
-                "This message was sent automatically by the Mudon CRM system "
-                "to the sales colleague responsible for this client."),
+                "Sent automatically to the sales colleague responsible for "
+                "this client at Mudon Property."),
             "client_survey": (
                 "Hello {{1}}, we have sent you a few property options from "
                 "Mudon. Could you let us know whether any of them suit you, "
