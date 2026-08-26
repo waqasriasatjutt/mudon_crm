@@ -39,6 +39,31 @@ class MudonCountryAgentMapping(models.Model):
     )
     active = fields.Boolean(default=True)
 
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if vals.get("country_code"):
+                vals["country_code"] = self._mudon_clean_code(vals["country_code"])
+        return super().create(vals_list)
+
+    def write(self, vals):
+        if vals.get("country_code"):
+            vals["country_code"] = self._mudon_clean_code(vals["country_code"])
+        return super().write(vals)
+
+    @staticmethod
+    def _mudon_clean_code(code):
+        """Keep only the digits of a dialling code.
+
+        Routing compares this against the digits of the lead's phone, so a
+        code saved as "+966" or "00966" could never match anything and the
+        rule silently did nothing. Writing the plus is the natural way for
+        a person to type a dialling code, so accept it and store what the
+        matching actually needs.
+        """
+        digits = "".join(ch for ch in (code or "") if ch.isdigit())
+        return digits.lstrip("0") or digits
+
     # Strict unique on (country_code, team_id). Archived rows stay
     # in the table; admin un-archives the existing row rather than
     # creating a duplicate. Including `active` only lets ONE
