@@ -755,6 +755,16 @@ class CrmLead(models.Model):
             phone, self.MUDON_PIPELINE_DIAL_CODE.get(self.mudon_pipeline_kind))
 
     @api.model
+    def _mudon_kind_for_team(self, team_id):
+        """Which pipeline a team id belongs to, without a record to read."""
+        for xmlid, kind in (("mudon_crm.mudon_team_turkey", "turkey"),
+                            ("mudon_crm.mudon_team_uae", "uae")):
+            team = self.env.ref(xmlid, raise_if_not_found=False)
+            if team and team.id == team_id:
+                return kind
+        return False
+
+    @api.model
     def _mudon_known_dial_codes(self):
         """Dial codes this database recognises as international."""
         codes = {c.lstrip("+") for c in self.MUDON_PIPELINE_DIAL_CODE.values()}
@@ -909,10 +919,17 @@ class CrmLead(models.Model):
             # The dial-code onchange only runs in the UI. Imported rows come
             # straight through create(), so apply it here as well.
             if self.env.context.get("mudon_import_mode") and vals.get("phone"):
+                # The importing wizard names the pipeline in context, but a
+                # lead created any other way (a script, another module) does
+                # not, and the dial code was then quietly skipped even though
+                # the team on the record says which country it is. Fall back
+                # to the team.
+                kind = self.env.context.get("mudon_import_pipeline")
+                if not kind and vals.get("team_id"):
+                    kind = self._mudon_kind_for_team(vals["team_id"])
                 vals["phone"] = self._mudon_stamp_dial_code(
                     str(vals["phone"]),
-                    self.MUDON_PIPELINE_DIAL_CODE.get(
-                        self.env.context.get("mudon_import_pipeline")),
+                    self.MUDON_PIPELINE_DIAL_CODE.get(kind),
                 )
         leads = super().create(vals_list)
         for lead, vals in zip(leads, vals_list):
