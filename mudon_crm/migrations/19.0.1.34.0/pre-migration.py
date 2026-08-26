@@ -21,10 +21,15 @@ def migrate(cr, version):
                         "whatsapp link", "card link"],
         "client_survey": ["client name"],
     }
+    # Fall back to the wording Meta has on file. A template approved
+    # before this screen could author it has an empty local body and the
+    # real wording only in `meta_body`, so copying `body_text` alone left
+    # the box blank on exactly the templates that are live.
     cr.execute("""
-        SELECT id, message_key, body_text
+        SELECT id, message_key,
+               COALESCE(NULLIF(body_text, ''), meta_body)
           FROM mudon_wa_template
-         WHERE body_text IS NOT NULL AND body_text != ''
+         WHERE COALESCE(NULLIF(body_text, ''), meta_body) IS NOT NULL
     """)
     for rec_id, key, body in cr.fetchall():
         wording = body

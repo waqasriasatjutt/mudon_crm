@@ -537,6 +537,17 @@
                 <field name="contact_name"/>
             </xpath>
             <!--
+                The card printed the person's name twice. Odoo shows
+                `contact_name` under the title whenever there is no linked
+                contact, and for a Mudon lead the two are the same value:
+                create() copies the title into the contact field so the
+                Customer Name is never blank, which is what the client
+                asked for. Keep that, and just stop the card repeating it.
+            -->
+            <xpath expr="//field[@name='contact_name']" position="attributes">
+                <attribute name="invisible">partner_id or contact_name == name</attribute>
+            </xpath>
+            <!--
                 v19.0.1.2.0 — styled Mudon card block: a stage-coloured
                 band header + a priority-coloured left accent + native
                 coloured tags for City / Property Type. The block carries
