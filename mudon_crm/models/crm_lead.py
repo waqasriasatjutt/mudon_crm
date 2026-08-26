@@ -956,6 +956,21 @@ class CrmLead(models.Model):
                 # creator counts as a deliberate assignment.
                 chosen = vals.get("user_id")
                 explicit = bool(chosen) and chosen != self.env.uid
+                # An AGENT who enters a lead keeps it. Their own walk-in or
+                # referral is not something to hand to the next person in the
+                # branch, and having it vanish to a colleague on save is what
+                # the client objected to.
+                #
+                # A MANAGER entering a lead still has it distributed: they are
+                # putting work into the team rather than claiming it, and that
+                # is also how round-robin gets tested.
+                if (not explicit and chosen == self.env.uid
+                        and not self.env.context.get("mudon_import_mode")
+                        and self.env.user.has_group(
+                            "mudon_crm.group_mudon_sales_agent")
+                        and not self.env.user.has_group(
+                            "mudon_crm.group_mudon_team_leader")):
+                    explicit = True
                 lead._mudon_auto_assign_agent(force=not explicit)
                 # A bulk import must still be ROUTED, but it must not greet
                 # every client, page every agent, or push leads off New Lead.
