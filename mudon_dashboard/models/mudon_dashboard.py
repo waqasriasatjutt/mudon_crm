@@ -16,7 +16,8 @@ whole dashboard.
 import calendar
 from datetime import date, datetime, time
 
-from odoo import api, fields, models
+from odoo.exceptions import AccessError
+from odoo import _, api, fields, models
 
 # Funnel order — a lead that reached a later stage also passed the earlier
 # ones, so "reached qualified" == current stage index >= qualified index.
@@ -594,6 +595,22 @@ class MudonDashboard(models.TransientModel):
         return value.date() if hasattr(value, "date") else value
 
     @api.model
+    def _mudon_check_financial_access(self):
+        """Refuse the money to anyone who is not allowed the money.
+
+        The board reads leads with sudo() so its aggregates work regardless
+        of record rules, which also means the field-level restriction on
+        commission and closing amount does NOT apply here. Hiding the menu
+        is not enough either: the method is callable directly. So check the
+        same group the fields are gated on.
+        """
+        if self.env.su or self.env.user.has_group(
+                "mudon_crm.group_mudon_financial_data"):
+            return
+        raise AccessError(_(
+            "You do not have access to financial data. Ask an administrator "
+            "for Financial Data Access if you need it."))
+
     def get_financial_data(self, pipeline="all", period="this_month",
                            basis="won", source="crm", filters=None):
         """Won / Invoiced / Collected / Unbilled + breakdowns + trend.
@@ -607,6 +624,7 @@ class MudonDashboard(models.TransientModel):
                   country_prefix, date_from, date_to}. stage_kind is ignored
                   here (this board is won-only).
         """
+        self._mudon_check_financial_access()
         Lead = self.env["crm.lead"].sudo()
         if basis not in self._FIN_BASIS:
             basis = "won"
