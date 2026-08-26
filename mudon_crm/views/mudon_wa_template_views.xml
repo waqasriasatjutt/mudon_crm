@@ -103,19 +103,53 @@
                     </group>
 
                     <separator string="Write the message"/>
-                    <div class="text-muted mb-2">
-                        Type the wording customers or staff will receive. Where a
-                        detail from the lead should appear, put a placeholder:
-                        <field name="note" nolabel="1" readonly="1" class="fw-bold d-inline"/>
+                    <field name="has_problems" invisible="1"/>
+                    <div class="row">
+                        <div class="col-lg-7">
+                            <div class="text-muted mb-2">
+                                Type the message exactly as it should arrive.
+                                Where a detail from the lead belongs, type it in
+                                curly brackets, for example
+                                <code>{client name}</code>.
+                            </div>
+                            <field name="body_wording" nolabel="1"
+                                   readonly="meta_status == 'APPROVED'"
+                                   placeholder="Pick a message above and a starting wording appears here, ready to edit."/>
+                        </div>
+                        <div class="col-lg-5">
+                            <div class="border rounded p-2 bg-light">
+                                <b>You can use</b>
+                                <field name="token_help" nolabel="1" readonly="1"/>
+                            </div>
+                        </div>
                     </div>
-                    <field name="body_text" nolabel="1"
-                           readonly="meta_status == 'APPROVED'"
-                           placeholder="Pick a message above and a starting wording appears here, ready to edit."/>
-                    <div class="text-muted small mt-1"
+
+                    <!-- Meta refuses wording for reasons it only reveals hours
+                         later, so every rule we have been refused for is shown
+                         here as the wording is typed. -->
+                    <div class="alert alert-warning mt-3" role="alert"
+                         invisible="not has_problems">
+                        <b>Meta would refuse this as it stands.</b>
+                        <field name="problems" nolabel="1" readonly="1"/>
+                    </div>
+
+                    <separator string="What they will receive"/>
+                    <div class="border rounded p-3 bg-white">
+                        <field name="preview_text" nolabel="1" readonly="1"
+                               class="mb-0"
+                               placeholder="The message appears here as the client will read it, with real details filled in."/>
+                    </div>
+
+                    <div class="text-muted small mt-2"
                          invisible="meta_status == 'APPROVED'">
-                        When it reads the way you want, press
-                        <b>Send to Meta for approval</b> at the top.
+                        When it reads the way you want and there are no warnings
+                        above, press <b>Send to Meta for approval</b> at the top.
                     </div>
+
+                    <group string="The numbered form Meta receives"
+                           invisible="not body_text">
+                        <field name="body_text" nolabel="1" readonly="1"/>
+                    </group>
 
                     <group string="Approved wording, as Meta stored it"
                            invisible="not meta_body">
