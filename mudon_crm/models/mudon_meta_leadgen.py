@@ -105,16 +105,23 @@ class MudonMetaLeadForm(models.Model):
                 ids.append(team.id)
         return ids
 
+    @api.depends("form_id")
     def _compute_lead_count(self):
+        # Counted on the FORM ID rather than the link back to this record.
+        # An event created outside the webhook path (a bulk pull of leads
+        # that already existed, say) carries the form id but never got the
+        # link set, and this screen then reported 0 leads for a form that
+        # had plainly delivered some.
         Event = self.env["mudon.meta.leadgen.event"]
         for rec in self:
             rec.lead_count = Event.search_count([
-                ("form_mapping_id", "=", rec.id), ("lead_id", "!=", False)])
+                ("form_id", "=", rec.form_id), ("lead_id", "!=", False)
+            ]) if rec.form_id else 0
 
     def action_view_leads(self):
         self.ensure_one()
         leads = self.env["mudon.meta.leadgen.event"].search(
-            [("form_mapping_id", "=", self.id)]).mapped("lead_id")
+            [("form_id", "=", self.form_id)]).mapped("lead_id")
         return {
             "type": "ir.actions.act_window",
             "name": _("Leads from %s", self.name),
