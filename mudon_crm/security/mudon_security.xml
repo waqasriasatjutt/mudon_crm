@@ -101,6 +101,29 @@
     </record>
 
     <!--
+        ═══ FINANCIAL VISIBILITY (comment 12) ════════════════════════════
+        "Control access to financial and sales data by user role." The
+        commission, the closing amount and what has been invoiced or
+        collected are management figures. This is its OWN privilege, not a
+        rung on the role ladder, because it has to be grantable to an
+        accountant without also making them a sales director.
+
+        Management holds it implicitly, so nobody has to remember to tick
+        it: Sales Director and Accountant imply it below.
+    -->
+    <record id="res_groups_privilege_mudon_financial" model="res.groups.privilege">
+        <field name="name">Mudon Financial Data</field>
+        <field name="category_id" ref="base.module_category_sales_sales"/>
+        <field name="sequence">45</field>
+    </record>
+
+    <record id="group_mudon_financial_data" model="res.groups">
+        <field name="name">Financial Data Access</field>
+        <field name="privilege_id" ref="res_groups_privilege_mudon_financial"/>
+        <field name="comment">Sees the money on a deal: closing amount, commission, invoiced and collected. Without this a user still works the pipeline but the financial figures are hidden.</field>
+    </record>
+
+    <!--
         ═══ SCOPE LADDER ═════════════════════════════════════
         Ordered low to high; each implies the one below it. `sequence`
         controls the order they appear in the selector.
@@ -195,29 +218,6 @@
         <field name="name">Document Controller</field>
         <field name="privilege_id" ref="res_groups_privilege_mudon_compliance"/>
         <field name="comment">Reviews and approves customer, legal and transaction documents.</field>
-    </record>
-
-    <!--
-        ═══ FINANCIAL VISIBILITY (comment 12) ════════════════════════════
-        "Control access to financial and sales data by user role." The
-        commission, the closing amount and what has been invoiced or
-        collected are management figures. This is its OWN privilege, not a
-        rung on the role ladder, because it has to be grantable to an
-        accountant without also making them a sales director.
-
-        Management holds it implicitly, so nobody has to remember to tick
-        it: Sales Director and Accountant imply it below.
-    -->
-    <record id="res_groups_privilege_mudon_financial" model="res.groups.privilege">
-        <field name="name">Mudon Financial Data</field>
-        <field name="category_id" ref="base.module_category_sales_sales"/>
-        <field name="sequence">45</field>
-    </record>
-
-    <record id="group_mudon_financial_data" model="res.groups">
-        <field name="name">Financial Data Access</field>
-        <field name="privilege_id" ref="res_groups_privilege_mudon_financial"/>
-        <field name="comment">Sees the money on a deal: closing amount, commission, invoiced and collected. Without this a user still works the pipeline but the financial figures are hidden.</field>
     </record>
 
     <!--
