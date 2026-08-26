@@ -371,9 +371,23 @@
                 <button name="action_mudon_back_to_pipeline" type="object"
                         string="← Back to Pipeline" class="btn-link mudon_btn_back"
                         invisible="not mudon_pipeline_kind"/>
+                <!--
+                    Comment 8 — the client did not want cards deleted, he
+                    wanted them put away. Delete is already Super Admin
+                    only; what was missing was the thing to do INSTEAD, so
+                    Archive now sits next to it for everyone.
+                -->
+                <field name="active" invisible="1"/>
+                <button name="toggle_active" type="object"
+                        string="Archive" class="btn-outline-secondary"
+                        confirm="Archive this lead? It leaves the pipeline but is kept, and you can find it again with the Archived filter."
+                        invisible="not mudon_pipeline_kind or not active"/>
+                <button name="toggle_active" type="object"
+                        string="Restore" class="btn-outline-secondary"
+                        invisible="not mudon_pipeline_kind or active"/>
                 <button name="action_mudon_delete_lead" type="object"
                         string="Delete" class="btn-outline-danger mudon_btn_delete"
-                        confirm="Delete this lead permanently? This action cannot be undone."
+                        confirm="Delete this lead permanently? The card and its Admin and After-Sales tasks go for good and cannot be brought back. The customer's contact record is NOT deleted. Archive instead if you only want it out of the pipeline."
                         invisible="not mudon_pipeline_kind"
                         groups="mudon_crm.group_mudon_super_admin"/>
                 <button name="action_mudon_mark_lost" type="object"
