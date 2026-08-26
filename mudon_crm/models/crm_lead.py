@@ -964,7 +964,11 @@ class CrmLead(models.Model):
                 # A MANAGER entering a lead still has it distributed: they are
                 # putting work into the team rather than claiming it, and that
                 # is also how round-robin gets tested.
-                if (not explicit and chosen == self.env.uid
+                # `chosen` is empty when the caller did not pass user_id at
+                # all: Odoo fills its default AFTER this dict is built, and
+                # that default is the creator either way.
+                if (not explicit
+                        and (not chosen or chosen == self.env.uid)
                         and not self.env.context.get("mudon_import_mode")
                         and self.env.user.has_group(
                             "mudon_crm.group_mudon_sales_agent")
