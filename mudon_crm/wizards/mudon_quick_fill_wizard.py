@@ -47,11 +47,16 @@ class MudonQuickFillWizard(models.TransientModel):
         [("urgent", "Urgent"), ("normal", "Normal")],
         string="Priority",
     )
+    # Follow the LEAD's pipeline currency, not the company's. A Turkey
+    # lead is quoted in USD and a Dubai one in AED, so billing the wizard
+    # against the company currency showed the wrong symbol on one of the
+    # two pipelines whichever way the company was set up.
     expected_revenue = fields.Monetary(
-        string="Expected Revenue", currency_field="company_currency",
+        string="Expected Revenue",
+        currency_field="mudon_budget_currency_id",
     )
-    company_currency = fields.Many2one(
-        "res.currency", related="lead_id.company_currency",
+    mudon_budget_currency_id = fields.Many2one(
+        "res.currency", related="lead_id.mudon_budget_currency_id",
     )
     mudon_lost_reason_id = fields.Many2one(
         "mudon.lost.reason", string="Lost Reason",

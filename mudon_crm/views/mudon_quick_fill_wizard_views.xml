@@ -31,7 +31,7 @@
                         <field name="mudon_priority"
                                required="mudon_need_qualify"
                                invisible="not mudon_need_qualify"/>
-                        <field name="company_currency" invisible="1"/>
+                        <field name="mudon_budget_currency_id" invisible="1"/>
                         <field name="expected_revenue"
                                required="mudon_need_qualify"
                                invisible="not mudon_need_qualify"/>

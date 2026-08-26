@@ -56,7 +56,7 @@
                 <!-- WON / SPA Signed -->
                 <group invisible="mudon_stage_kind_current != 'won'">
                     <group string="WON — closing details" class="mudon_sec mudon_sec_won">
-                        <field name="mudon_closing_amount"/>
+                        <field name="mudon_closing_amount" groups="mudon_crm.group_mudon_financial_data"/>
                         <field name="mudon_developer_id"
                                options="{'no_create_edit': True}"/>
                         <field name="mudon_project_id"
@@ -68,18 +68,18 @@
                             screen, read-only, because that is the number the
                             dashboards and the deal register report.
                         -->
-                        <field name="mudon_commission_pct"/>
-                        <field name="mudon_commission"/>
+                        <field name="mudon_commission_pct" groups="mudon_crm.group_mudon_financial_data"/>
+                        <field name="mudon_commission" groups="mudon_crm.group_mudon_financial_data"/>
                         <field name="mudon_commission_type_id"
                                options="{'no_create_edit': True}"/>
                         <field name="mudon_handover_type"/>
                         <field name="mudon_reason_to_win"/>
                     </group>
                     <group string="Billing &amp; collection" class="mudon_sec mudon_sec_won">
-                        <field name="mudon_invoiced_amount"/>
-                        <field name="mudon_invoiced_date"/>
-                        <field name="mudon_collected_amount"/>
-                        <field name="mudon_collected_date"/>
+                        <field name="mudon_invoiced_amount" groups="mudon_crm.group_mudon_financial_data"/>
+                        <field name="mudon_invoiced_date" groups="mudon_crm.group_mudon_financial_data"/>
+                        <field name="mudon_collected_amount" groups="mudon_crm.group_mudon_financial_data"/>
+                        <field name="mudon_collected_date" groups="mudon_crm.group_mudon_financial_data"/>
                     </group>
                     <group string="Funnel triggers" class="mudon_sec mudon_sec_won">
                         <field name="mudon_need_invoice"/>
@@ -732,17 +732,17 @@
                 <field name="mudon_last_offer_date" string="Last Offer Sent At"/>
                 <field name="mudon_client_type" string="Client Type"/>
                 <field name="mudon_property_requirements" string="Property Requirements"/>
-                <field name="mudon_closing_amount" string="Closing Amount"/>
+                <field name="mudon_closing_amount" string="Closing Amount" groups="mudon_crm.group_mudon_financial_data"/>
                 <field name="mudon_developer_id" string="Developer"/>
                 <field name="mudon_project_id" string="Project"/>
-                <field name="mudon_commission" string="Commission"/>
-                <field name="mudon_commission_pct" string="Commission %"/>
+                <field name="mudon_commission" string="Commission" groups="mudon_crm.group_mudon_financial_data"/>
+                <field name="mudon_commission_pct" string="Commission %" groups="mudon_crm.group_mudon_financial_data"/>
                 <field name="mudon_commission_type_id" string="Commission Type"/>
                 <field name="mudon_handover_type" string="Handover Type"/>
                 <field name="mudon_reason_to_win" string="Reason to Win"/>
-                <field name="mudon_invoiced_amount" string="Invoiced / Commission Billed"/>
+                <field name="mudon_invoiced_amount" string="Invoiced / Commission Billed" groups="mudon_crm.group_mudon_financial_data"/>
                 <field name="mudon_invoiced_date" string="Invoice Date"/>
-                <field name="mudon_collected_amount" string="Collected / Cash In"/>
+                <field name="mudon_collected_amount" string="Collected / Cash In" groups="mudon_crm.group_mudon_financial_data"/>
                 <field name="mudon_collected_date" string="Payment Received Date"/>
                 <field name="mudon_lost_reason_id" string="Lost Reason"/>
 
