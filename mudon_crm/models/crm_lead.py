@@ -1704,16 +1704,34 @@ class CrmLead(models.Model):
         return self._mudon_pipeline_action()
 
     def action_mudon_delete_lead(self):
-        """Header **Delete** — remove this lead + return to the pipeline.
-
-        ACL: gated to Sales Managers via ``groups=`` in the view. If a
-        salesperson somehow reaches this method (context bypass), the
-        ORM's own security check on ``unlink`` will reject the delete.
-        """
+        """Header **Delete** — remove this lead + return to the pipeline."""
         self.ensure_one()
         action = self._mudon_pipeline_action()
         self.unlink()
         return action
+
+    def unlink(self):
+        """Only a Super Admin may destroy a Mudon card.
+
+        The header button is hidden from everyone else, but hiding a
+        button is not a permission: the list view's own menu still offered
+        Delete, and a Sales Director inherits Odoo's Sales Administrator
+        rights, which carry delete on crm.lead. So the card the client
+        asked us to protect could still be destroyed by someone the screen
+        told he could not. Enforce it where it cannot be walked around,
+        and point at Archive, which is what he wanted instead.
+        """
+        from odoo.exceptions import AccessError
+        protected = self.filtered("mudon_pipeline_kind")
+        if (protected and not self.env.su
+                and not self.env.user.has_group(
+                    "mudon_crm.group_mudon_super_admin")):
+            raise AccessError(_(
+                "Mudon lead cards cannot be deleted. Use Archive instead: "
+                "the card leaves the pipeline but is kept, and you can find "
+                "it again with the Archived filter. Only a Super Admin can "
+                "delete a card outright."))
+        return super().unlink()
 
     # ─── Meta Lead Ads intake ───────────────────────────────────────────
     mudon_meta_leadgen_id = fields.Char(
