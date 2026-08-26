@@ -1801,6 +1801,16 @@ class CrmLead(models.Model):
         self.ensure_one()
         members = self.team_id.member_ids.sorted("id")
         if not members:
+            # Agents are maintained on the Branch form, which is the list
+            # the client actually keeps up to date; Odoo's own team-member
+            # list is a second place holding the same people and is easy to
+            # leave empty. Rather than send every un-citied lead to the
+            # Sales Manager, round-robin across the agents of this team's
+            # branches.
+            members = self.env["mudon.branch"].sudo().search([
+                ("team_id", "=", self.team_id.id),
+            ]).member_ids.sorted("id")
+        if not members:
             return self.env["res.users"]
         last = self.env["crm.lead"].sudo().search([
             ("team_id", "=", self.team_id.id),
