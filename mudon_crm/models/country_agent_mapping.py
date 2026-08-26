@@ -1,4 +1,5 @@
-from odoo import api, fields, models
+from odoo import _, api, fields, models
+from odoo.exceptions import ValidationError
 
 
 class MudonCountryAgentMapping(models.Model):
@@ -73,6 +74,36 @@ class MudonCountryAgentMapping(models.Model):
         "unique(country_code, team_id)",
         "A mapping for this country code already exists on this team.",
     )
+
+    @api.constrains("country_code", "team_id", "active")
+    def _check_mudon_unique_code(self):
+        """Reject a second live mapping for the same code and team.
+
+        The SQL constraint above cannot police the team-less rows: Postgres
+        treats every NULL as distinct, so two global mappings for 971 were
+        both accepted. Routing takes the first with `limit=1`, so the second
+        one silently never applied and the admin had no way to tell which
+        of the two was in force.
+        """
+        for rec in self:
+            if not rec.active or not rec.country_code:
+                continue
+            clash = self.search([
+                ("id", "!=", rec.id),
+                ("country_code", "=", rec.country_code),
+                ("team_id", "=", rec.team_id.id),
+            ], limit=1)
+            if clash:
+                scope = (rec.team_id.name if rec.team_id
+                         else "all Mudon pipelines")
+                raise ValidationError(_(
+                    "There is already a mapping for +%(code)s on "
+                    "%(scope)s, sending leads to %(agent)s. Edit that one "
+                    "instead of adding a second — only the first would "
+                    "ever be used.",
+                    code=rec.country_code, scope=scope,
+                    agent=clash.agent_user_id.name,
+                ))
 
     @api.depends("country_code", "agent_user_id")
     def _compute_name(self):

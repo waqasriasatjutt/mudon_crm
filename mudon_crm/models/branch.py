@@ -59,6 +59,51 @@ class MudonBranch(models.Model):
         "A branch for this city already exists on this team.",
     )
 
+    def _mudon_refresh_lead_branches(self):
+        self._mudon_refresh_lead_branches_for(
+            self.with_context(active_test=False).mapped("team_id"))
+
+    @api.model
+    def _mudon_refresh_lead_branches_for(self, teams):
+        """Recompute `crm.lead.mudon_branch_id` for the teams we touched.
+
+        The lead's branch is a STORED compute that depends only on the
+        lead's own team and city, so nothing tells it that a branch was
+        added, archived or moved to another city. Leads created before a
+        new branch existed kept `mudon_branch_id = False` forever, which
+        meant opening a new office quietly did nothing for the existing
+        backlog and the manager's "Re-run automatic assignment" could not
+        repair it either.
+        """
+        if not teams:
+            return
+        leads = self.env["crm.lead"].sudo().with_context(
+            active_test=False).search([("team_id", "in", teams.ids)])
+        if leads:
+            self.env.add_to_compute(
+                leads._fields["mudon_branch_id"], leads)
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        branches = super().create(vals_list)
+        branches._mudon_refresh_lead_branches()
+        return branches
+
+    def write(self, vals):
+        # Collect the team the branch is moving AWAY from as well as the one
+        # it lands on, so leads on both sides are re-evaluated.
+        before = self.with_context(active_test=False).mapped("team_id")
+        res = super().write(vals)
+        after = self.with_context(active_test=False).mapped("team_id")
+        self._mudon_refresh_lead_branches_for(before | after)
+        return res
+
+    def unlink(self):
+        teams = self.with_context(active_test=False).mapped("team_id")
+        res = super().unlink()
+        self._mudon_refresh_lead_branches_for(teams)
+        return res
+
     def _pick_next_agent(self, exclude_lead_id=False):
         """Round-robin within this branch. Picks the member who comes
         AFTER the most-recently-assigned member on the branch's team.

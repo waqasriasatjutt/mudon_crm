@@ -40,6 +40,18 @@ class MudonWaMessage(models.Model):
         ],
         string="Status", default="sent", index=True,
     )
+    template_key = fields.Char(
+        string="Template Key",
+        help="Which registered template this message went out as. Kept so "
+             "a retry can re-send it as the SAME approved template — "
+             "retrying it as plain text would be dropped by Meta outside "
+             "the 24-hour window.",
+    )
+    template_params = fields.Char(
+        string="Template Parameters",
+        help="Internal. JSON list of the values substituted into the "
+             "template, so a retry reproduces the original message.",
+    )
     wamid = fields.Char(string="WhatsApp Message ID", index=True)
     error = fields.Text(string="Error")
     attempts = fields.Integer(string="Attempts", default=1)

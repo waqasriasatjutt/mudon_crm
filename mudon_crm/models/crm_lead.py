@@ -1,3 +1,4 @@
+import json
 import logging
 import re
 from datetime import timedelta
@@ -710,31 +711,92 @@ class CrmLead(models.Model):
         for rec in self:
             rec.phone = rec._mudon_apply_dial_code(rec.phone)
 
-    def _mudon_apply_dial_code(self, phone):
-        """Prefix a local number with the pipeline's dial code.
+    mudon_phone_digits = fields.Char(
+        compute="_compute_mudon_phone_digits",
+        store=True, index=True, readonly=True,
+        string="Phone digits",
+        help="Internal. The phone reduced to bare digits so an inbound "
+             "WhatsApp sender, which Meta gives without any formatting, "
+             "can be matched against it.",
+    )
 
-        Left alone when the number already carries any international prefix
-        (leading + or 00), when it already starts with this pipeline's code,
-        or when there is no pipeline. A local number written with a national
-        trunk zero (0532...) drops that zero, which is what the international
-        format requires.
-        """
+    @api.depends("phone")
+    def _compute_mudon_phone_digits(self):
+        for rec in self:
+            rec.mudon_phone_digits = self._mudon_phone_normalize(
+                rec.phone).lstrip("+")
+
+    # Characters a person or a spreadsheet legitimately puts inside a phone
+    # number. Anything else means the value is not a usable number.
+    MUDON_PHONE_SEPARATORS = " \t-().\u00a0\u200e\u200f/\\"
+
+    def _mudon_apply_dial_code(self, phone):
+        """Prefix a local number with the pipeline's dial code."""
         self.ensure_one()
+        return self._mudon_stamp_dial_code(
+            phone, self.MUDON_PIPELINE_DIAL_CODE.get(self.mudon_pipeline_kind))
+
+    @api.model
+    def _mudon_known_dial_codes(self):
+        """Dial codes this database recognises as international."""
+        codes = {c.lstrip("+") for c in self.MUDON_PIPELINE_DIAL_CODE.values()}
+        codes |= set(
+            self.env["mudon.country.agent.mapping"].sudo()
+            .with_context(active_test=False).search([])
+            .mapped("country_code")
+        )
+        return {c for c in codes if c}
+
+    @api.model
+    def _mudon_stamp_dial_code(self, phone, code):
+        """Put `code` in front of a LOCAL number, and only a local one.
+
+        Shared by the form onchange and the import path so both agree.
+
+        Two traps this has to avoid, both of which produced a wrong number
+        with no error at all:
+
+        * Excel evaluates a cell typed as +966501234567 down to the plain
+          number 966501234567. Blindly prefixing the pipeline's own code
+          turned a Saudi buyer on the UAE board into +971 966501234567, and
+          the admin's 966 -> agent mapping then never fired.
+        * Deleting every non-digit welded a malformed value into a
+          plausible-looking wrong number: "4*0506453533" became
+          "+971 40506453533". A number we cannot read is left exactly as it
+          arrived so a human notices it, rather than being repaired into
+          something that looks fine and dials nobody.
+        """
         raw = (phone or "").strip()
-        if not raw:
+        if not raw or not code:
             return phone
-        code = self.MUDON_PIPELINE_DIAL_CODE.get(self.mudon_pipeline_kind)
-        if not code:
+        bare = code.lstrip("+")
+        stripped = raw
+        for ch in self.MUDON_PHONE_SEPARATORS:
+            stripped = stripped.replace(ch, "")
+        if not stripped or re.search(r"[^\d+]", stripped):
+            _logger.warning(
+                "Mudon: %r is not a usable phone number, stored as entered",
+                raw)
             return phone
-        compact = re.sub(r"[^\d+]", "", raw)
-        if compact.startswith("+") or compact.startswith("00"):
-            return phone
-        digits = compact.lstrip("0")
-        if not digits:
-            return phone
-        if digits.startswith(code.lstrip("+")):
+        if stripped.startswith("+"):
+            return "+" + stripped.replace("+", "")
+        if stripped.startswith("00"):
+            return "+" + stripped[2:].lstrip("0")
+        digits = stripped
+        if digits.startswith("0"):
+            # A national trunk zero is proof this is a local number.
+            local = digits.lstrip("0")
+            return "+%s%s" % (bare, local) if local else phone
+        if digits.startswith(bare):
             return "+" + digits
-        return "%s %s" % (code, digits)
+        if any(digits.startswith(c) for c in self._mudon_known_dial_codes()):
+            return "+" + digits
+        if len(digits) >= 11:
+            # Longer than any local subscriber number in these markets, so
+            # it already carries a country code we simply do not have a
+            # mapping for. Better left alone than made 15 digits long.
+            return "+" + digits
+        return "+%s%s" % (bare, digits)
 
     # ─── Per-stage kanban sort (client comments 18 + 27) ────────────────
     mudon_sort_key = fields.Char(
@@ -829,15 +891,11 @@ class CrmLead(models.Model):
             # The dial-code onchange only runs in the UI. Imported rows come
             # straight through create(), so apply it here as well.
             if self.env.context.get("mudon_import_mode") and vals.get("phone"):
-                code = self.MUDON_PIPELINE_DIAL_CODE.get(
-                    self.env.context.get("mudon_import_pipeline"))
-                raw = re.sub(r"[^\d+]", "", str(vals["phone"]).strip())
-                if code and raw and not raw.startswith(("+", "00")):
-                    digits = raw.lstrip("0")
-                    if digits and not digits.startswith(code.lstrip("+")):
-                        vals["phone"] = "%s %s" % (code, digits)
-                    elif digits:
-                        vals["phone"] = "+" + digits
+                vals["phone"] = self._mudon_stamp_dial_code(
+                    str(vals["phone"]),
+                    self.MUDON_PIPELINE_DIAL_CODE.get(
+                        self.env.context.get("mudon_import_pipeline")),
+                )
         leads = super().create(vals_list)
         for lead, vals in zip(leads, vals_list):
             try:
@@ -1718,11 +1776,17 @@ class CrmLead(models.Model):
         if self.user_id and not force:
             return
         agent = self._mudon_route_agent()
-        if agent and agent.id != self.user_id.id:
-            self.sudo().with_context(mudon_in_write=True).write({
-                "user_id": agent.id,
-                "mudon_agent_auto_assigned": True,
-            })
+        if not agent:
+            return
+        vals = {"mudon_agent_auto_assigned": True}
+        if agent.id != self.user_id.id:
+            vals["user_id"] = agent.id
+        # The flag records that ROUTING chose this owner, so it has to be set
+        # even when routing lands on whoever already held the lead. Skipping
+        # it there marked the lead "assigned by hand", and the Stage 2
+        # re-route into the city branch was then skipped for good — which
+        # hit every lead an agent keyed in themselves.
+        self.sudo().with_context(mudon_in_write=True).write(vals)
 
     def _mudon_route_agent(self):
         """Pick the agent per the client's routing rules.
@@ -1757,6 +1821,13 @@ class CrmLead(models.Model):
         Lets a manager fix the leads that were created before the routing
         bug was found, without re-keying each salesperson by hand.
         """
+        # Refresh the stored branch first. It is a compute that only depends
+        # on the lead's own team and city, so a branch added after the lead
+        # was created is invisible to it and this action would otherwise
+        # re-run routing against a stale branch.
+        if self:
+            self.env.add_to_compute(self._fields["mudon_branch_id"], self)
+            self.flush_recordset(["mudon_branch_id"])
         for rec in self:
             if rec.mudon_pipeline_kind:
                 rec._mudon_auto_assign_agent(force=True)
@@ -1957,7 +2028,8 @@ class CrmLead(models.Model):
 
     # ─── Meta Cloud API send + delivery log + retry ─────────────────
     def _mudon_wa_log(self, to_number, body, status="sent", wamid="",
-                      error="", from_company=False, direction="out"):
+                      error="", from_company=False, direction="out",
+                      template_key=None, template_params=None):
         """Append one row to the WhatsApp message log (audit + retry
         queue). Body is stored as plain text.
 
@@ -1979,6 +2051,9 @@ class CrmLead(models.Model):
                 "status": status,
                 "wamid": wamid or False,
                 "error": error or False,
+                "template_key": template_key or False,
+                "template_params": (
+                    json.dumps(template_params) if template_params else False),
             })
         except Exception as exc:
             _logger.warning("mudon_crm: WA log write failed: %s", exc)
@@ -2119,7 +2194,9 @@ class CrmLead(models.Model):
             template=template, template_params=template_params)
         status = "sent" if ok else ("failed_permanent" if permanent else "failed")
         self._mudon_wa_log(to_digits, body, status=status, wamid=wamid,
-                           error=error, from_company=from_company)
+                           error=error, from_company=from_company,
+                           template_key=template_key,
+                           template_params=template_params)
         if ok:
             self.with_context(mudon_skip_first_contact=True).message_post(
                 body=Markup("<p><b>[WhatsApp → %s]</b></p>%s")
@@ -2135,7 +2212,15 @@ class CrmLead(models.Model):
         """Re-send outbound WA messages that failed with a transient error
         (< 3 attempts). Permanent failures (bad number / unapproved
         template) are left as-is."""
+        provider = self.env["ir.config_parameter"].sudo().get_param(
+            "mudon_crm.wa_provider", "stub")
+        if provider != "meta":
+            # The admin has taken WhatsApp off live sending. The retry queue
+            # posted straight to Meta regardless, so choosing the safe mode
+            # did not actually stop messages going out.
+            return
         Msg = self.env["mudon.wa.message"].sudo()
+        Template = self.env["mudon.wa.template"]
         for msg in Msg.search([
             ("direction", "=", "out"),
             ("status", "=", "failed"),
@@ -2147,8 +2232,26 @@ class CrmLead(models.Model):
                 continue
             to_digits = (lead._mudon_phone_normalize(msg.to_number)
                          or "").lstrip("+")
+            template = Template._mudon_for(msg.template_key)
+            try:
+                params = json.loads(msg.template_params or "null")
+            except ValueError:
+                params = None
+            if msg.template_key and not template:
+                # Re-sending a template message as plain text is not a
+                # retry: outside the 24-hour window Meta accepts it, drops
+                # it, and hands back a message id, so the row would go
+                # green as "Sent" for a message nobody received.
+                msg.write({
+                    "status": "failed_permanent",
+                    "error": _("Template %s is no longer available, so this "
+                               "message cannot be re-sent as sent "
+                               "originally.") % msg.template_key,
+                })
+                continue
             ok, wamid, error, permanent = lead._mudon_wa_meta_post(
-                to_digits, msg.body or "", from_company=msg.from_company)
+                to_digits, msg.body or "", from_company=msg.from_company,
+                template=template, template_params=params)
             msg.attempts += 1
             if ok:
                 msg.write({"status": "sent", "wamid": wamid or False,
@@ -2679,9 +2782,7 @@ class CrmLead(models.Model):
         body_l = (body or "").strip().lower()
 
         # Sender = Agent?
-        agent = self.env["res.users"].sudo().search([
-            ("phone", "ilike", sender_norm.lstrip("+")),
-        ], limit=1) if sender_norm else False
+        agent = self._mudon_user_by_phone(sender_norm)
         if agent:
             lead = self.sudo().search([
                 ("user_id", "=", agent.id),
@@ -2709,7 +2810,7 @@ class CrmLead(models.Model):
 
         # Sender = Lead phone?
         lead = self.sudo().search([
-            ("phone", "ilike", sender_norm.lstrip("+")),
+            ("mudon_phone_digits", "=", sender_norm.lstrip("+")),
             ("mudon_pipeline_kind", "in", ("turkey", "uae")),
         ], limit=1) if sender_norm else False
         if lead:
@@ -2725,6 +2826,25 @@ class CrmLead(models.Model):
             "(body=%r)", sender_phone, body,
         )
         return False
+
+    @api.model
+    def _mudon_user_by_phone(self, sender_norm):
+        """Find the agent behind an inbound WhatsApp sender.
+
+        Meta gives the sender as bare digits ("971502890693") while a user's
+        phone is whatever was typed in Settings, spaces and all. A substring
+        match between the two never succeeds, which silently cost us every
+        "Offer Sent" reply. There are few users, so compare on normalised
+        digits instead of trying to express that in SQL.
+        """
+        wanted = (sender_norm or "").lstrip("+")
+        if not wanted:
+            return self.env["res.users"]
+        users = self.env["res.users"].sudo().search([("phone", "!=", False)])
+        for user in users:
+            if self._mudon_phone_normalize(user.phone).lstrip("+") == wanted:
+                return user
+        return self.env["res.users"]
 
     @staticmethod
     def _mudon_is_offer_sent_command(body_l):

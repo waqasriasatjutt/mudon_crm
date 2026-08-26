@@ -176,7 +176,14 @@ class MudonWaTemplate(models.Model):
                     detail = ""
             raise UserError(
                 _("Could not reach Meta: %s %s") % (exc, detail))
-        return {t.get("name"): t for t in data.get("data") or []}
+        # Meta returns one row per (name, language). Keying on the name
+        # alone collapsed them, so a record whose language does not exist at
+        # Meta was stamped APPROVED from a different language's row — the
+        # list went green while every send failed with 132001.
+        return {
+            (t.get("name"), (t.get("language") or "").lower()): t
+            for t in data.get("data") or []
+        }
 
     # Example values Meta requires alongside a template that has {{n}}
     # placeholders — it reviews the wording with these filled in.
@@ -298,10 +305,18 @@ class MudonWaTemplate(models.Model):
         """Refresh approval status for these rows (button on the form)."""
         found = self._mudon_fetch_meta_templates()
         for rec in self:
-            meta = found.get(rec.template_name)
+            lang = (rec.lang_code or "").lower()
+            meta = found.get((rec.template_name, lang))
             if not meta:
+                # Say which languages DO exist, so "approved at Meta but not
+                # in the language this record asks for" is obvious rather
+                # than looking like the template was never submitted.
+                others = sorted(
+                    l for (n, l) in found if n == rec.template_name)
                 rec.write({
-                    "meta_status": "NOT FOUND",
+                    "meta_status": (
+                        "WRONG LANGUAGE (Meta has: %s)" % ", ".join(others)
+                        if others else "NOT FOUND"),
                     "meta_category": False,
                     "meta_body": False,
                     "meta_checked_on": fields.Datetime.now(),
