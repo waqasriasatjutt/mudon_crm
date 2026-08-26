@@ -1748,7 +1748,16 @@ class CrmLead(models.Model):
         advance the stage and fire the qualified-entry WhatsApp at a client
         whose card was being put away.
         """
-        return self.with_context(mudon_in_write=True).toggle_active()
+        # toggle_active is deprecated in Odoo 19; split the set instead so
+        # one button can serve both directions.
+        ctx = self.with_context(mudon_in_write=True)
+        to_archive = ctx.filtered("active")
+        to_restore = ctx - to_archive
+        if to_archive:
+            to_archive.action_archive()
+        if to_restore:
+            to_restore.action_unarchive()
+        return True
 
     def unlink(self):
         """Only a Super Admin may destroy a Mudon card.
