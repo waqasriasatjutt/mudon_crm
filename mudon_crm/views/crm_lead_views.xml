@@ -378,12 +378,12 @@
                     Archive now sits next to it for everyone.
                 -->
                 <field name="active" invisible="1"/>
-                <button name="toggle_active" type="object"
+                <button name="action_mudon_archive" type="object"
                         string="Archive" class="btn-outline-secondary"
                         confirm="Archive this lead? It leaves the pipeline but is kept, and you can find it again with the Archived filter."
                         invisible="not mudon_pipeline_kind or not active"/>
-                <button name="toggle_active" type="object"
-                        string="Restore" class="btn-outline-secondary"
+                <button name="action_mudon_archive" type="object"
+                        string="Unarchive" class="btn-outline-secondary"
                         invisible="not mudon_pipeline_kind or active"/>
                 <button name="action_mudon_delete_lead" type="object"
                         string="Delete" class="btn-outline-danger mudon_btn_delete"
@@ -509,7 +509,13 @@
                 name instead, and keep the address-book link out of the way.
             -->
             <xpath expr="//field[@name='contact_name']" position="attributes">
-                <attribute name="invisible">not mudon_pipeline_kind and partner_id</attribute>
+                <!--
+                    Second condition: the card printed the person's name
+                    twice. create() copies the title into the contact field
+                    so Customer Name is never blank, which the client asked
+                    for, and for a Meta lead the two are the same person.
+                -->
+                <attribute name="invisible">(not mudon_pipeline_kind and partner_id) or contact_name == name</attribute>
                 <attribute name="string">Customer Name</attribute>
             </xpath>
             <xpath expr="//field[@name='partner_name']" position="attributes">
@@ -549,17 +555,6 @@
                 <field name="mudon_pipeline_revenue"/>
                 <field name="partner_id"/>
                 <field name="contact_name"/>
-            </xpath>
-            <!--
-                The card printed the person's name twice. Odoo shows
-                `contact_name` under the title whenever there is no linked
-                contact, and for a Mudon lead the two are the same value:
-                create() copies the title into the contact field so the
-                Customer Name is never blank, which is what the client
-                asked for. Keep that, and just stop the card repeating it.
-            -->
-            <xpath expr="//field[@name='contact_name']" position="attributes">
-                <attribute name="invisible">partner_id or contact_name == name</attribute>
             </xpath>
             <!--
                 v19.0.1.2.0 — styled Mudon card block: a stage-coloured

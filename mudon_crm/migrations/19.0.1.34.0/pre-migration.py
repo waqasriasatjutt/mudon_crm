@@ -11,6 +11,19 @@ def migrate(cr, version):
     recompute to nothing. Reading the old value has to happen before that,
     which means creating the new column here by hand.
     """
+    # A database old enough to predate the template model has no table to
+    # alter, and one at exactly 19.0.1.19.0 has the table but neither
+    # body_text nor meta_body. Either way this must not abort the upgrade.
+    cr.execute("SELECT to_regclass('mudon_wa_template')")
+    if not cr.fetchone()[0]:
+        return
+    cr.execute("""
+        SELECT column_name FROM information_schema.columns
+         WHERE table_name = 'mudon_wa_template'
+           AND column_name IN ('body_text', 'meta_body')
+    """)
+    if not cr.fetchall():
+        return
     cr.execute("""
         ALTER TABLE mudon_wa_template
           ADD COLUMN IF NOT EXISTS body_wording text

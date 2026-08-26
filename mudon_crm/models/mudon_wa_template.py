@@ -248,7 +248,7 @@ class MudonWaTemplate(models.Model):
             # label. Meta needs enough plain wording around the
             # placeholders, so the explanation moved to the end.
             "agent_alert": (
-                "{what happened}\n\n"
+                "Mudon update.\n{what happened}\n\n"
                 "Client name: {client name}\n"
                 "Open the WhatsApp conversation with this client here: "
                 "{whatsapp link}\n"

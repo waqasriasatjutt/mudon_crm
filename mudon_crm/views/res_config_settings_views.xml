@@ -86,10 +86,17 @@
                         any of them. The crons read these at run time, so a
                         change applies on the next sweep with no upgrade.
                     -->
+                    <!--
+                        A 0 in any of these is discarded by Odoo's config
+                        parameter handling and the field reads back as the
+                        default, so the help says what "off" actually is
+                        rather than letting someone think they switched a
+                        reminder off when they did not.
+                    -->
                     <block title="Automation timers"
                            name="mudon_timer_setting_container">
                         <setting string="New Lead — remind the agent after"
-                                 help="Minutes after a new lead arrives before the assigned agent is reminded on WhatsApp that the client has not been contacted.">
+                                 help="Minutes after a new lead arrives before the assigned agent is reminded on WhatsApp that the client has not been contacted. Set a large number to effectively switch it off; 0 is not saved.">
                             <field name="mudon_sla_new_lead_first"/> minutes
                         </setting>
                         <setting string="New Lead — tell the manager after"

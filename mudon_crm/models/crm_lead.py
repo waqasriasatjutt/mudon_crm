@@ -394,6 +394,7 @@ class CrmLead(models.Model):
     # ─── STAGE 6: WON (SPA Signed) ──────────────────────────────────
     mudon_closing_amount = fields.Monetary(
         string="Closing Amount", currency_field="mudon_budget_currency_id",
+        groups="mudon_crm.group_mudon_financial_data",
     )
     mudon_developer_id = fields.Many2one(
         "mudon.developer", string="Developer",
@@ -409,6 +410,7 @@ class CrmLead(models.Model):
     mudon_commission_pct = fields.Float(
         string="Commission %", digits=(5, 2),
         help="Percentage of the Closing Amount.",
+        groups="mudon_crm.group_mudon_financial_data",
     )
     mudon_commission = fields.Monetary(
         string="Commission", currency_field="mudon_budget_currency_id",
@@ -417,6 +419,7 @@ class CrmLead(models.Model):
         help="Worked out from the percentage and the Closing Amount, but you "
              "can also type it in directly. Changing either of those two "
              "recalculates it.",
+        groups="mudon_crm.group_mudon_financial_data",
     )
     mudon_commission_type_id = fields.Many2one(
         "mudon.commission.type", string="Commission Type",
@@ -431,14 +434,22 @@ class CrmLead(models.Model):
         string="Invoiced (commission billed)",
         currency_field="mudon_budget_currency_id",
         help="Commission amount invoiced to date for this deal.",
+        groups="mudon_crm.group_mudon_financial_data",
     )
-    mudon_invoiced_date = fields.Date(string="Invoice Date")
+    mudon_invoiced_date = fields.Date(
+        string="Invoice Date",
+        groups="mudon_crm.group_mudon_financial_data",
+    )
     mudon_collected_amount = fields.Monetary(
         string="Collected (cash in)",
         currency_field="mudon_budget_currency_id",
         help="Commission amount actually collected for this deal.",
+        groups="mudon_crm.group_mudon_financial_data",
     )
-    mudon_collected_date = fields.Date(string="Payment Received Date")
+    mudon_collected_date = fields.Date(
+        string="Payment Received Date",
+        groups="mudon_crm.group_mudon_financial_data",
+    )
     mudon_handover_type = fields.Selection(
         HANDOVER_TYPE_SELECTION, string="Handover Type",
     )
@@ -918,19 +929,21 @@ class CrmLead(models.Model):
                 vals["contact_name"] = vals["name"]
             # The dial-code onchange only runs in the UI. Imported rows come
             # straight through create(), so apply it here as well.
-            if self.env.context.get("mudon_import_mode") and vals.get("phone"):
-                # The importing wizard names the pipeline in context, but a
-                # lead created any other way (a script, another module) does
-                # not, and the dial code was then quietly skipped even though
-                # the team on the record says which country it is. Fall back
-                # to the team.
+            if vals.get("phone"):
+                # Not gated on import mode. The form has an onchange and the
+                # wizards name the pipeline in context, but a lead created
+                # any other way (Odoo's own Import, a mail alias, a script,
+                # another module) has neither, and the dial code was then
+                # quietly skipped even though the team on the record says
+                # which country it is.
                 kind = self.env.context.get("mudon_import_pipeline")
                 if not kind and vals.get("team_id"):
                     kind = self._mudon_kind_for_team(vals["team_id"])
-                vals["phone"] = self._mudon_stamp_dial_code(
-                    str(vals["phone"]),
-                    self.MUDON_PIPELINE_DIAL_CODE.get(kind),
-                )
+                if kind:
+                    vals["phone"] = self._mudon_stamp_dial_code(
+                        str(vals["phone"]),
+                        self.MUDON_PIPELINE_DIAL_CODE.get(kind),
+                    )
         leads = super().create(vals_list)
         for lead, vals in zip(leads, vals_list):
             try:
@@ -1727,6 +1740,16 @@ class CrmLead(models.Model):
         self.unlink()
         return action
 
+    def action_mudon_archive(self):
+        """Archive / restore without waking the stage automation.
+
+        The buttons called `toggle_active` straight, which is an ordinary
+        write, so archiving a New Lead could satisfy the auto-qualify rule,
+        advance the stage and fire the qualified-entry WhatsApp at a client
+        whose card was being put away.
+        """
+        return self.with_context(mudon_in_write=True).toggle_active()
+
     def unlink(self):
         """Only a Super Admin may destroy a Mudon card.
 
@@ -2246,10 +2269,15 @@ class CrmLead(models.Model):
             to_digits, text, from_company=from_company,
             template=template, template_params=template_params)
         status = "sent" if ok else ("failed_permanent" if permanent else "failed")
+        # Record what was actually SENT, not what was asked for. When no
+        # approved template exists the send falls back to plain text, and
+        # storing the key anyway made the retry think the template had been
+        # withdrawn and kill the message permanently.
         self._mudon_wa_log(to_digits, body, status=status, wamid=wamid,
                            error=error, from_company=from_company,
-                           template_key=template_key,
-                           template_params=template_params)
+                           template_key=(template_key if template else False),
+                           template_params=(template_params if template
+                                            else False))
         if ok:
             self.with_context(mudon_skip_first_contact=True).message_post(
                 body=Markup("<p><b>[WhatsApp → %s]</b></p>%s")
