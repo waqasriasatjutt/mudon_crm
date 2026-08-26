@@ -443,18 +443,36 @@ class CrmLead(models.Model):
         HANDOVER_TYPE_SELECTION, string="Handover Type",
     )
     mudon_reason_to_win = fields.Text(string="Reason to Win")
-    mudon_need_invoice = fields.Boolean(string="Need Invoice?")
-    mudon_title_deed_required = fields.Boolean(string="Title Deed Required?")
+    # Each of these tick boxes SPAWNS A TASK on a funnel. The client asked
+    # what they actually did ("Renting Unit?? What is need invoice"), which
+    # is a fair question of a bare tick box, so each one now says so.
+    mudon_need_invoice = fields.Boolean(
+        string="Need Invoice?",
+        help="Tick to put this deal on the Admin team's worklist to raise "
+             "the commission invoice. It does not create the invoice "
+             "itself. The amount and dates go in Billing and collection "
+             "above.",
+    )
+    mudon_title_deed_required = fields.Boolean(
+        string="Title Deed Required?",
+        help="Tick to add an After-Sales task to obtain and hand over the "
+             "title deed for this property.",
+    )
     mudon_citizenship_required = fields.Boolean(
         string="Citizenship Required?",
-        help="Turkey-only after-sales task.",
+        help="Turkey only. Tick to add an After-Sales task to take the "
+             "buyer through the citizenship-by-investment application.",
     )
     mudon_residence_required = fields.Boolean(
         string="Residence Required?",
-        help="UAE-only after-sales task.",
+        help="UAE only. Tick to add an After-Sales task to arrange the "
+             "buyer's residence visa, the Golden Visa where it applies.",
     )
     mudon_furniture_required = fields.Boolean(
         string="Furniture / Other Service Required?",
+        help="Tick to add an After-Sales task for anything the buyer wants "
+             "arranged after handover: furnishing the unit, letting it out, "
+             "property management or maintenance.",
     )
     mudon_admin_task_ids = fields.One2many(
         "mudon.admin.task", "lead_id", string="Admin Tasks",

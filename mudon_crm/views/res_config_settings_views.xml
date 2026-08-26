@@ -77,6 +77,50 @@
                             <field name="mudon_marketing_user_id"/>
                         </setting>
                     </block>
+                    <!--
+                        ══ Comment 14 — "WhatsApp automation notification
+                        timers to be added to configuration" ══════════════
+                        Every one of these already drove the SLA crons and
+                        was editable in principle, but none of them was on
+                        the screen, so the client could not actually change
+                        any of them. The crons read these at run time, so a
+                        change applies on the next sweep with no upgrade.
+                    -->
+                    <block title="Automation timers"
+                           name="mudon_timer_setting_container">
+                        <setting string="New Lead — remind the agent after"
+                                 help="Minutes after a new lead arrives before the assigned agent is reminded on WhatsApp that the client has not been contacted.">
+                            <field name="mudon_sla_new_lead_first"/> minutes
+                        </setting>
+                        <setting string="New Lead — tell the manager after"
+                                 help="Minutes before that reminder also goes to the agent's manager.">
+                            <field name="mudon_sla_new_lead_escalate"/> minutes
+                        </setting>
+                        <setting string="Qualified — remind the agent after"
+                                 help="Minutes a card may sit on Qualified without contact before the agent is reminded.">
+                            <field name="mudon_sla_qualified_first"/> minutes
+                        </setting>
+                        <setting string="Qualified — tell the manager after"
+                                 help="Minutes on Qualified without contact before the manager is copied in.">
+                            <field name="mudon_sla_qualified_escalate"/> minutes
+                        </setting>
+                        <setting string="Offer Sent — chase feedback after"
+                                 help="Hours after each offer is sent before the agent is reminded to chase the client for an answer.">
+                            <field name="mudon_sla_offer_followup"/> hours
+                        </setting>
+                        <setting string="Confirm the visit this long before"
+                                 help="Days before the Expected Visit Date that the agent is asked to confirm the visit with the client.">
+                            <field name="mudon_sla_visit_notice"/> days
+                        </setting>
+                        <setting string="Stay-in-touch nudge every"
+                                 help="How often to nudge the agent while the visit is still far off, so leads do not go cold.">
+                            <field name="mudon_sla_stay_in_touch"/> days
+                        </setting>
+                        <setting string="Send the client survey after"
+                                 help="Number of offers after which the company number sends the client the survey asking whether any suited them.">
+                            <field name="mudon_survey_after_offer"/> offers
+                        </setting>
+                    </block>
                 </app>
             </xpath>
         </field>

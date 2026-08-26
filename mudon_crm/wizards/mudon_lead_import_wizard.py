@@ -521,11 +521,17 @@ class MudonLeadImportWizard(models.TransientModel):
                 else:
                     vals["mudon_in_country"] = flag
 
-            beds, err = self._to_number(cell(row, "no. of beds"), integer=True)
+            # No. of Beds became a multi-select ("a client will often
+            # consider more than one size", and Studio is not a number), so
+            # the import has to feed the tag field the form actually shows.
+            # It was still writing a plain integer to the retired Selection,
+            # which meant an imported bed count never appeared anywhere.
+            bed_ids, err = self._match_many(
+                "mudon.bed.count", cell(row, "no. of beds"))
             if err:
                 errors.append(_("No. of Beds: %s") % err)
-            elif beds:
-                vals["mudon_beds"] = beds
+            elif bed_ids:
+                vals["mudon_beds_ids"] = [(6, 0, bed_ids)]
 
             visit, err = self._to_date(cell(row, "expected visit date"))
             if err:

@@ -654,7 +654,15 @@
     <record id="mudon_crm_lead_view_search" model="ir.ui.view">
         <field name="name">crm.lead.search.mudon</field>
         <field name="model">crm.lead</field>
-        <field name="inherit_id" ref="crm.view_crm_case_leads_filter"/>
+        <!--
+            Inherit the OPPORTUNITY filter, not the lead one. Odoo picks the
+            primary search view with the lowest priority, and
+            crm.lead.search.opportunity is priority 15 against the lead
+            filter's 16, so everything added below hung off a view the Mudon
+            menus never load. The filters were all present in the file and
+            none of them had ever appeared on screen.
+        -->
+        <field name="inherit_id" ref="crm.view_crm_case_opportunities_filter"/>
         <field name="arch" type="xml">
             <!--
                 ══ Comment 7 — stage filter leaked across pipelines ════════
@@ -671,6 +679,18 @@
                 from the search bar; crm_stage.py scopes the picker itself so
                 the custom-filter route is covered too.
             -->
+            <!--
+                ══ Comment 21 — "Can I archive?" ═══════════════════════════
+                Archiving a lost card works, but Odoo hides archived records
+                and the client had no way to see them again without knowing
+                to build a custom filter.
+            -->
+            <xpath expr="//search" position="inside">
+                <separator/>
+                <filter name="mudon_archived" string="Archived"
+                        domain="[('active', '=', False)]"/>
+            </xpath>
+
             <xpath expr="//search" position="inside">
                 <field name="stage_id" string="Stage"
                        domain="context.get('default_team_id') and [('team_ids', '=', context.get('default_team_id'))] or []"/>
