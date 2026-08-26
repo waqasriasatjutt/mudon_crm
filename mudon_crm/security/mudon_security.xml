@@ -227,6 +227,30 @@
     -->
 
     <!-- O — Sales Agent: own assigned records only. -->
+    <!--
+        An agent who enters a lead must still be able to see it.
+
+        Routing runs on create and hands the card to whoever is next in the
+        branch, which is usually somebody else. With "own leads only" as the
+        single rule, the agent lost the record the instant they saved it and
+        the form threw an Access Error at them. Hashem could not enter a
+        lead at all.
+
+        READ ONLY on purpose. Write and delete stay with the rule below, so
+        the card genuinely belongs to the agent it was routed to; the person
+        who typed it in can watch it, not work it.
+    -->
+    <record id="rule_mudon_lead_created_by_me" model="ir.rule">
+        <field name="name">Mudon: Sales Agent — leads I entered</field>
+        <field name="model_id" ref="crm.model_crm_lead"/>
+        <field name="domain_force">[('create_uid', '=', user.id)]</field>
+        <field name="groups" eval="[(4, ref('group_mudon_sales_agent'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
     <record id="rule_mudon_lead_own" model="ir.rule">
         <field name="name">Mudon: Sales Agent — own leads only</field>
         <field name="model_id" ref="crm.model_crm_lead"/>
