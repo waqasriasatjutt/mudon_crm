@@ -418,6 +418,9 @@ class MudonWaTemplate(models.Model):
                 "Settings > Mudon CRM and a number with its Business "
                 "Account ID under Configuration > WhatsApp Numbers."))
         component = {"type": "BODY", "text": self.body_text}
+        # Meta reviews the wording with sample values filled in, and wants
+        # exactly as many as the body has placeholders.
+        needed = len(self._mudon_tokens())
         example = self.MUDON_WA_EXAMPLES.get(self.message_key) or []
         if needed and example:
             component["example"] = {"body_text": [example[:needed]]}
