@@ -58,10 +58,19 @@ COLUMNS = [
     ("branch", "Branch"),
     ("no. of beds", "No. of Beds"),
     ("expected visit date", "Expected Visit Date"),
-    ("requirements", "Requirements"),
+    ("other specifications", "Other Specifications"),
     ("purpose of the property", "Purpose of the Property"),
     ("property type", "Property Type"),
 ]
+
+# Header wording that used to be in the template, or that people type by
+# hand. The value goes to the same field either way, so an older file keeps
+# working instead of failing with "does not look like the template headers".
+COLUMN_ALIASES = {
+    "requirements": "other specifications",
+    "other specification": "other specifications",
+    "specifications": "other specifications",
+}
 
 TRUE_WORDS = {"yes", "y", "true", "1", "t", "نعم"}
 FALSE_WORDS = {"no", "n", "false", "0", "f", "", "لا"}
@@ -122,7 +131,7 @@ class MudonLeadImportWizard(models.TransientModel):
             "In Turkey Now": "No",
             "No. of Beds": 3,
             "Expected Visit Date": "2026-09-15",
-            "Requirements": "Sea view, high floor",
+            "Other Specifications": "Sea view, high floor, close to metro",
         }
         for col, (_key, label) in enumerate(COLUMNS):
             if label in example:
@@ -252,7 +261,9 @@ class MudonLeadImportWizard(models.TransientModel):
         if not table:
             raise UserError(_("The file has no rows."))
 
-        headers = [self._clean(h).lower() for h in table[0]]
+        headers = [COLUMN_ALIASES.get(self._clean(h).lower(),
+                                      self._clean(h).lower())
+                   for h in table[0]]
         known = {key for key, _label in COLUMNS}
         if not (set(headers) & known):
             raise UserError(_(
@@ -539,9 +550,9 @@ class MudonLeadImportWizard(models.TransientModel):
             elif visit:
                 vals["mudon_visit_date"] = visit
 
-            requirements = self._clean(cell(row, "requirements"))
-            if requirements:
-                vals["mudon_other_specs"] = requirements
+            other_specs = self._clean(cell(row, "other specifications"))
+            if other_specs:
+                vals["mudon_other_specs"] = other_specs
 
             ids, err = self._match_many(
                 "mudon.purpose", cell(row, "purpose of the property"),
