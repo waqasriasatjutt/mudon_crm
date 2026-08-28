@@ -970,10 +970,7 @@ class CrmLead(models.Model):
                 if (not explicit
                         and (not chosen or chosen == self.env.uid)
                         and not self.env.context.get("mudon_import_mode")
-                        and self.env.user.has_group(
-                            "mudon_crm.group_mudon_sales_agent")
-                        and not self.env.user.has_group(
-                            "mudon_crm.group_mudon_team_leader")):
+                        and self._mudon_user_is_plain_agent()):
                     explicit = True
                 lead._mudon_auto_assign_agent(force=not explicit)
                 # A bulk import must still be ROUTED, but it must not greet
@@ -1531,7 +1528,17 @@ class CrmLead(models.Model):
         # salesperson is the one routing picked. When a manager has chosen
         # somebody, changing it here would silently take their lead away,
         # which is exactly what the client reported.
-        if self.mudon_agent_auto_assigned or not self.user_id:
+        #
+        # An agent advancing their OWN lead keeps it, same as when they
+        # enter one. The quick-fill wizard supplies City and the target
+        # stage in a single write, so routing fired on the very click that
+        # named the city and handed the card to the next agent in that
+        # branch. The agent's rule is user_id = me, so the read straight
+        # after the write was refused: they got a raw Access Error and the
+        # lead disappeared from their pipeline.
+        if (self.mudon_agent_auto_assigned or not self.user_id) and not (
+                self.user_id.id == self.env.uid
+                and self._mudon_user_is_plain_agent()):
             self._mudon_auto_assign_agent(force=True)
         self.sudo().with_context(mudon_in_write=True).write({
             "mudon_qualified_entry_date": fields.Datetime.now(),
@@ -1867,6 +1874,19 @@ class CrmLead(models.Model):
         return lead
 
     # ─── Branch + country-code routing ──────────────────────────────
+    def _mudon_user_is_plain_agent(self):
+        """True when the acting user is a Sales Agent holding no wider role.
+
+        A plain agent keeps the leads they hold: routing must not pass
+        their card to the next person in the branch while they are the
+        one working it. A Team Leader and above is excluded: when they
+        enter or advance a lead they are feeding the team rather than
+        claiming it, and that is also how round-robin gets exercised.
+        """
+        user = self.env.user
+        return (user.has_group("mudon_crm.group_mudon_sales_agent")
+                and not user.has_group("mudon_crm.group_mudon_team_leader"))
+
     def _mudon_auto_assign_agent(self, force=False):
         """Route the lead to an agent.
 
