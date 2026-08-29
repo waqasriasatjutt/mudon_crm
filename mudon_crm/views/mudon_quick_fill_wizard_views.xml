@@ -43,6 +43,12 @@
                                invisible="not mudon_need_offer"/>
                         <field name="mudon_visit_confirmed" widget="boolean_toggle"
                                invisible="not mudon_need_visit"/>
+                        <!-- Required with the tick for a move to Meeting, so it
+                             has to be fillable here or the dialog asks for
+                             something it never shows. -->
+                        <field name="mudon_visit_date"
+                               invisible="not mudon_need_visit"
+                               required="mudon_need_visit"/>
                         <field name="mudon_paid_booking" widget="boolean_toggle"
                                invisible="not mudon_need_booking"/>
                         <field name="mudon_fully_paid" widget="boolean_toggle"

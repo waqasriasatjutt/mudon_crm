@@ -66,6 +66,10 @@ class MudonQuickFillWizard(models.TransientModel):
     # belong to, so the user confirms each crossed milestone.
     mudon_tick_offer_sent = fields.Boolean(string="Offer Sent")
     mudon_visit_confirmed = fields.Boolean(string="Visit Confirmed")
+    # Required alongside the tick when a card moves to Meeting. Without it the
+    # loop below reads a field the wizard does not have and the whole dialog
+    # dies with KeyError: 'mudon_visit_date'.
+    mudon_visit_date = fields.Date(string="Expected Visit Date")
     mudon_paid_booking = fields.Boolean(string="Paid Booking")
     mudon_fully_paid = fields.Boolean(string="Fully Paid")
 
@@ -147,6 +151,7 @@ class MudonQuickFillWizard(models.TransientModel):
                 "mudon_city_id": _("City"),
                 "mudon_priority": _("Priority"),
                 "expected_revenue": _("Expected Revenue"),
+                "mudon_visit_date": _("Expected Visit Date"),
             }
             tick_labels = {
                 "mudon_tick_offer_sent": _("Offer Sent"),
@@ -155,6 +160,12 @@ class MudonQuickFillWizard(models.TransientModel):
                 "mudon_fully_paid": _("Fully Paid"),
             }
             for fname in crossed:
+                # A stage requirement the wizard has no field for used to raise
+                # KeyError and take the whole dialog down. Skipping it keeps the
+                # move working; the model still enforces the requirement on
+                # write, so nothing slips through.
+                if fname not in self._fields:
+                    continue
                 value = self[fname]
                 if fname in input_labels:
                     if not value:
