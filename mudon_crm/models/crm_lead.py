@@ -1799,6 +1799,7 @@ class CrmLead(models.Model):
         from odoo.exceptions import AccessError
         protected = self.filtered("mudon_pipeline_kind")
         if (protected and not self.env.su
+                and not self.env.context.get("mudon_merge")
                 and not self.env.user.has_group(
                     "mudon_crm.group_mudon_super_admin")):
             raise AccessError(_(
@@ -1807,6 +1808,26 @@ class CrmLead(models.Model):
                 "it again with the Archived filter. Only a Super Admin can "
                 "delete a card outright."))
         return super().unlink()
+
+    def _merge_opportunity(self, *args, **kwargs):
+        """Let Merge Opportunities through the delete guard.
+
+        The wizard keeps one card and unlinks the ones it merged away, as
+        the acting user, so the guard above refused it and a Sales Director
+        could not merge two Mudon cards at all. A merge is not the
+        accidental delete the guard exists to stop: nothing is lost, the
+        content lands on the surviving card. Kept to Sales Director and
+        above so merge cannot become a delete route for anyone who has no
+        delete rights by any other path.
+
+        Signature is passed straight through: Odoo has changed the
+        arguments of this method between versions and none of them matter
+        here.
+        """
+        records = self
+        if self.env.user.has_group("mudon_crm.group_mudon_sales_director"):
+            records = self.with_context(mudon_merge=True)
+        return super(CrmLead, records)._merge_opportunity(*args, **kwargs)
 
     # ─── Meta Lead Ads intake ───────────────────────────────────────────
     mudon_meta_leadgen_id = fields.Char(
