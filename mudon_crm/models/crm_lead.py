@@ -1836,6 +1836,15 @@ class CrmLead(models.Model):
              "only on leads captured from a Facebook or Instagram form.",
     )
 
+    # The last line of defence against importing the same person twice.
+    # Application checks can be raced: the intake cron and a manual Retry
+    # both looked, both saw nothing, and both created the client. Postgres
+    # cannot be raced. NULLs stay exempt, so ordinary leads are unaffected.
+    _meta_leadgen_unique = models.Constraint(
+        "unique(mudon_meta_leadgen_id)",
+        "This Meta lead has already been brought into the CRM.",
+    )
+
     @api.model
     def _mudon_create_from_meta(self, answers, mapping, leadgen_id):
         """Create a New Lead from one Meta instant-form submission.

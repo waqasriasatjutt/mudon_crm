@@ -207,6 +207,13 @@ class MudonMetaLeadgenEvent(models.Model):
 
     def _process(self):
         self.ensure_one()
+        # An event that already produced a lead must never run again. The cron
+        # and a manual Retry can pick up the same event within milliseconds of
+        # each other, and each would create its own copy of the client.
+        if self.lead_id:
+            if self.state != "done":
+                self.sudo().write({"state": "done", "error": False})
+            return
         ICP = self.env["ir.config_parameter"].sudo()
         token = ICP.get_param("mudon_crm.meta_page_token", "")
         version = ICP.get_param("mudon_crm.wa_api_version", "v21.0") or "v21.0"
@@ -242,6 +249,19 @@ class MudonMetaLeadgenEvent(models.Model):
                 answers[key] = values[0] if len(values) == 1 else ", ".join(
                     str(v) for v in values)
 
+        # Second look, as late as possible. The check above reads this
+        # event; this one reads the leads themselves, so it also catches an
+        # event whose link was lost and a race that got past the first guard.
+        Lead = self.env["crm.lead"].sudo()
+        lead = Lead.with_context(active_test=False).search(
+            [("mudon_meta_leadgen_id", "=", self.leadgen_id)], limit=1)
+        if lead:
+            self.sudo().write({
+                "state": "done", "lead_id": lead.id, "error": False,
+                "form_mapping_id": mapping.id,
+                "attempts": self.attempts + 1,
+            })
+            return
         lead = self.env["crm.lead"]._mudon_create_from_meta(
             answers, mapping, self.leadgen_id)
         self.sudo().write({
@@ -277,7 +297,13 @@ class MudonMetaLeadgenEvent(models.Model):
                 _("Could not read the lead from Meta: %s %s") % (exc, detail))
 
     def action_retry(self):
-        for rec in self:
+        """Reopen only the events that never produced a lead.
+
+        Retry used to reset every selected row to pending, so pressing it on a
+        row that had already worked created the client a second time.
+        """
+        again = self.filtered(lambda r: not r.lead_id)
+        for rec in again:
             rec.sudo().write({"state": "pending", "attempts": 0})
         return self._mudon_cron_process_leadgen()
 
