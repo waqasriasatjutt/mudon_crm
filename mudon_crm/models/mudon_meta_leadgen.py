@@ -30,6 +30,7 @@ board the lead belongs on.
 """
 import json
 import logging
+from datetime import datetime, timedelta
 
 from psycopg2 import IntegrityError, errorcodes
 
@@ -38,6 +39,10 @@ from odoo import _, api, fields, models
 _logger = logging.getLogger(__name__)
 
 GRAPH = "https://graph.facebook.com"
+
+# A lead older than this is imported silently: it is history being
+# recovered, not somebody who just pressed submit.
+STALE_LEAD_HOURS = 48
 
 # Field names Meta uses for its built-in questions. Anything not in here is
 # a custom question and is preserved verbatim in the lead's notes, so an
@@ -185,6 +190,12 @@ class MudonMetaLeadgenEvent(models.Model):
     error = fields.Text(readonly=True)
     raw_payload = fields.Text(readonly=True)
     answers = fields.Text(string="Form answers", readonly=True)
+    meta_created_time = fields.Datetime(
+        string="Submitted on Meta", readonly=True,
+        help="When the person actually filled the form. Set when the safety "
+             "net collects a lead the webhook missed, so an old lead is not "
+             "greeted as if it had just arrived.",
+    )
 
     _leadgen_id_unique = models.Constraint(
         "unique(leadgen_id)", "This Meta lead has already been received.")
@@ -297,6 +308,15 @@ class MudonMetaLeadgenEvent(models.Model):
                 if not rows:
                     break
                 ids = [str(r.get("id")) for r in rows if r.get("id")]
+                stamps = {}
+                for r in rows:
+                    raw = (r.get("created_time") or "")[:19]
+                    if r.get("id") and raw:
+                        try:
+                            stamps[str(r["id"])] = datetime.strptime(
+                                raw, "%Y-%m-%dT%H:%M:%S")
+                        except ValueError:
+                            pass
                 known = set(self.sudo().search(
                     [("leadgen_id", "in", ids)]).mapped("leadgen_id"))
                 for lead_id in ids:
@@ -307,6 +327,11 @@ class MudonMetaLeadgenEvent(models.Model):
                              "page_id": form.page_id or ""},
                             json.dumps({"source": "poll", "leadgen_id": lead_id})):
                         picked += 1
+                        stamp = stamps.get(lead_id)
+                        if stamp:
+                            self.sudo().search(
+                                [("leadgen_id", "=", lead_id)], limit=1
+                            ).write({"meta_created_time": stamp})
 
                 # Meta returns newest first. A whole page we already hold means
                 # everything older is held too, so there is nothing to gain by
@@ -385,7 +410,19 @@ class MudonMetaLeadgenEvent(models.Model):
                 "attempts": self.attempts + 1,
             })
             return
-        lead = self.env["crm.lead"]._mudon_create_from_meta(
+        # Never greet somebody who wrote in weeks ago. When the safety net
+        # picks up a backlog, the greeting and the agent alert would go out
+        # as if every one of those leads had just landed. Routing still runs;
+        # only the messaging is held back.
+        Creator = self.env["crm.lead"]
+        if self.meta_created_time and (
+                fields.Datetime.now() - self.meta_created_time
+        ) > timedelta(hours=STALE_LEAD_HOURS):
+            Creator = Creator.with_context(mudon_import_mode=True)
+            _logger.info(
+                "mudon_crm: leadgen %s submitted %s, importing quietly",
+                self.leadgen_id, self.meta_created_time)
+        lead = Creator._mudon_create_from_meta(
             answers, mapping, self.leadgen_id)
         self.sudo().write({
             "state": "done", "lead_id": lead.id, "error": False,
