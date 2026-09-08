@@ -132,6 +132,22 @@
         <field name="active">True</field>
     </record>
 
+    <!-- Safety net for Meta. The webhook is fire-and-forget: if Meta's
+         callback is misconfigured, or the site is briefly down while Meta
+         retries, that lead is gone and nobody notices until a client asks
+         where it went. This asks Meta directly for anything we have not
+         seen. It feeds the same event queue the webhook feeds, so nothing
+         can be imported twice. -->
+    <record id="mudon_cron_meta_poll" model="ir.cron">
+        <field name="name">Mudon — Meta Lead Ads safety net</field>
+        <field name="model_id" ref="model_mudon_meta_leadgen_event"/>
+        <field name="state">code</field>
+        <field name="code">model._mudon_cron_poll_forms()</field>
+        <field name="interval_number">15</field>
+        <field name="interval_type">minutes</field>
+        <field name="active">True</field>
+    </record>
+
     <!-- Comment 16: keep the Lost column from growing forever. Archives,
          never deletes, and does nothing until a day count is set. -->
     <record id="mudon_cron_archive_lost" model="ir.cron">

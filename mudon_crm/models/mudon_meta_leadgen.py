@@ -85,6 +85,18 @@ class MudonMetaLeadForm(models.Model):
     )
     active = fields.Boolean(default=True)
     lead_count = fields.Integer(compute="_compute_lead_count", string="Leads")
+    last_poll_date = fields.Datetime(
+        string="Last checked with Meta", readonly=True,
+        help="When Odoo last asked Meta whether this form had new leads. "
+             "Leads normally arrive within seconds by webhook; this is the "
+             "safety net that catches anything the webhook missed.",
+    )
+    last_poll_found = fields.Integer(
+        string="Found on last check", readonly=True,
+        help="How many leads that check picked up that had not arrived by "
+             "webhook. Anything other than zero here means the webhook is "
+             "not delivering reliably.",
+    )
 
     _form_id_unique = models.Constraint(
         "unique(form_id)", "That Meta form is already mapped.")
@@ -117,6 +129,27 @@ class MudonMetaLeadForm(models.Model):
             rec.lead_count = Event.search_count([
                 ("form_id", "=", rec.form_id), ("lead_id", "!=", False)
             ]) if rec.form_id else 0
+
+    def action_fetch_now(self):
+        """Ask Meta for this form's leads right now.
+
+        Same path as the safety-net cron, so nothing can be imported twice.
+        """
+        found = self.env["mudon.meta.leadgen.event"]._mudon_poll_forms(self)
+        self.env["mudon.meta.leadgen.event"]._mudon_cron_process_leadgen()
+        return {
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {
+                "type": "success" if found else "info",
+                "sticky": False,
+                "message": (
+                    _("%s lead(s) collected from Meta.") % found if found
+                    else _("Nothing new. Meta has no leads on this form that "
+                           "the CRM has not already got.")),
+                "next": {"type": "ir.actions.act_window_close"},
+            },
+        }
 
     def action_view_leads(self):
         self.ensure_one()
@@ -204,6 +237,96 @@ class MudonMetaLeadgenEvent(models.Model):
                     "attempts": event.attempts + 1,
                 })
         return len(events)
+
+    # ─── Safety net: ask Meta what we are missing ──────────────────────
+    @api.model
+    def _mudon_cron_poll_forms(self, limit_forms=0):
+        """Catch leads the webhook never delivered.
+
+        A webhook is fire-and-forget: if Meta's callback is misconfigured, or
+        the site is down for the seconds Meta spends retrying, that lead is
+        gone and nobody finds out until a client complains. This asks Meta
+        directly, so a missed delivery costs minutes rather than the lead.
+
+        It creates the same event rows the webhook creates and leaves the
+        processing to the existing cron, so every duplicate guard still
+        applies.
+        """
+        Form = self.env["mudon.meta.lead.form"].sudo()
+        forms = Form.search([], limit=limit_forms or None)
+        found = self._mudon_poll_forms(forms)
+        if found:
+            self._mudon_cron_process_leadgen(limit=max(found + 10, 50))
+        return found
+
+    @api.model
+    def _mudon_poll_forms(self, forms, max_pages=20):
+        """Create an event for every Meta lead we have not seen. Returns how many."""
+        import urllib.parse
+        import urllib.request
+
+        ICP = self.env["ir.config_parameter"].sudo()
+        token = ICP.get_param("mudon_crm.meta_page_token", "")
+        version = ICP.get_param("mudon_crm.wa_api_version", "v21.0") or "v21.0"
+        if not token:
+            _logger.warning("mudon_crm: Meta poll skipped, no access token")
+            return 0
+
+        total = 0
+        for form in forms:
+            if not form.form_id:
+                continue
+            url = "%s/%s/%s/leads?%s" % (
+                GRAPH, version, form.form_id,
+                urllib.parse.urlencode({
+                    "access_token": token, "fields": "id,created_time",
+                    "limit": 100,
+                }))
+            picked = 0
+            for _page in range(max_pages):
+                try:
+                    with urllib.request.urlopen(url, timeout=30) as resp:
+                        data = json.loads(resp.read().decode())
+                except Exception as exc:
+                    _logger.warning(
+                        "mudon_crm: Meta poll failed for form %s: %s",
+                        form.form_id, exc)
+                    break
+
+                rows = data.get("data") or []
+                if not rows:
+                    break
+                ids = [str(r.get("id")) for r in rows if r.get("id")]
+                known = set(self.sudo().search(
+                    [("leadgen_id", "in", ids)]).mapped("leadgen_id"))
+                for lead_id in ids:
+                    if lead_id in known:
+                        continue
+                    if self.mudon_record_event(
+                            {"leadgen_id": lead_id, "form_id": form.form_id,
+                             "page_id": form.page_id or ""},
+                            json.dumps({"source": "poll", "leadgen_id": lead_id})):
+                        picked += 1
+
+                # Meta returns newest first. A whole page we already hold means
+                # everything older is held too, so there is nothing to gain by
+                # walking the rest of the history on every run.
+                if not (set(ids) - known):
+                    break
+                url = ((data.get("paging") or {}).get("next")) or ""
+                if not url:
+                    break
+
+            form.write({
+                "last_poll_date": fields.Datetime.now(),
+                "last_poll_found": picked,
+            })
+            if picked:
+                _logger.info(
+                    "mudon_crm: Meta poll picked up %s lead(s) the webhook "
+                    "missed on form %s", picked, form.form_id)
+            total += picked
+        return total
 
     def _process(self):
         self.ensure_one()

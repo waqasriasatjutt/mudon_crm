@@ -12,6 +12,7 @@
                 <field name="team_id"/>
                 <field name="source_id"/>
                 <field name="lead_count" string="Leads"/>
+                <field name="last_poll_date" string="Last checked with Meta"/>
                 <field name="active" widget="boolean_toggle"/>
             </list>
         </field>
@@ -22,6 +23,14 @@
         <field name="model">mudon.meta.lead.form</field>
         <field name="arch" type="xml">
             <form string="Meta Lead Form">
+                <header>
+                    <button name="action_fetch_now" type="object"
+                            string="Check Meta now" class="btn-primary"
+                            invisible="not id"
+                            help="Ask Meta straight away whether this form has
+                                  leads the CRM has not received. Safe to press
+                                  at any time: nothing can be imported twice."/>
+                </header>
                 <sheet>
                     <div class="oe_button_box" name="button_box">
                         <button type="object" name="action_view_leads"
@@ -43,6 +52,9 @@
                             <field name="source_id"
                                    options="{'no_create_edit': True}"/>
                             <field name="active"/>
+                            <field name="last_poll_date"/>
+                            <field name="last_poll_found"
+                                   invisible="not last_poll_found"/>
                         </group>
                     </group>
                     <div class="alert alert-info mt-2" role="status">
