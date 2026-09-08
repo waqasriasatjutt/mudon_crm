@@ -105,3 +105,22 @@ role_wa_template_sysadmin,ROLE System Admin: whatsapp templates,model_mudon_wa_t
 access_mudon_bed_count_user,mudon.bed.count user,model_mudon_bed_count,sales_team.group_sale_salesman,1,0,0,0
 access_mudon_bed_count_manager,mudon.bed.count manager,model_mudon_bed_count,sales_team.group_sale_manager,1,1,1,1
 role_masters_sysadmin_beds,ROLE System Admin: bed counts,model_mudon_bed_count,mudon_crm.group_mudon_system_admin,1,1,1,1
+ref_read_tag,REFERENCE read: lead tags,sales_team.model_crm_tag,mudon_crm.group_mudon_reference_data,1,0,0,0
+ref_read_stage,REFERENCE read: pipeline stages,crm.model_crm_stage,mudon_crm.group_mudon_reference_data,1,0,0,0
+ref_read_lost_reason,REFERENCE read: Odoo lost reasons,crm.model_crm_lost_reason,mudon_crm.group_mudon_reference_data,1,0,0,0
+ref_read_recurring,REFERENCE read: recurring plans,crm.model_crm_recurring_plan,mudon_crm.group_mudon_reference_data,1,0,0,0
+ref_read_team,REFERENCE read: sales teams,sales_team.model_crm_team,mudon_crm.group_mudon_reference_data,1,0,0,0
+ref_read_branch,REFERENCE read: branches,model_mudon_branch,mudon_crm.group_mudon_reference_data,1,0,0,0
+ref_read_city,REFERENCE read: cities,model_mudon_city,mudon_crm.group_mudon_reference_data,1,0,0,0
+ref_read_living_city,REFERENCE read: living cities,model_mudon_living_city,mudon_crm.group_mudon_reference_data,1,0,0,0
+ref_read_developer,REFERENCE read: developers,model_mudon_developer,mudon_crm.group_mudon_reference_data,1,0,0,0
+ref_read_project,REFERENCE read: projects,model_mudon_project,mudon_crm.group_mudon_reference_data,1,0,0,0
+ref_read_ptype,REFERENCE read: property types,model_mudon_property_type,mudon_crm.group_mudon_reference_data,1,0,0,0
+ref_read_parea,REFERENCE read: property areas,model_mudon_property_area,mudon_crm.group_mudon_reference_data,1,0,0,0
+ref_read_beds,REFERENCE read: bed counts,model_mudon_bed_count,mudon_crm.group_mudon_reference_data,1,0,0,0
+ref_read_purpose,REFERENCE read: purposes,model_mudon_purpose,mudon_crm.group_mudon_reference_data,1,0,0,0
+ref_read_service,REFERENCE read: services,model_mudon_service,mudon_crm.group_mudon_reference_data,1,0,0,0
+ref_read_source,REFERENCE read: lead sources,model_mudon_source,mudon_crm.group_mudon_reference_data,1,0,0,0
+ref_read_lead_status,REFERENCE read: lead statuses,model_mudon_lead_status,mudon_crm.group_mudon_reference_data,1,0,0,0
+ref_read_mudon_lost,REFERENCE read: Mudon lost reasons,model_mudon_lost_reason,mudon_crm.group_mudon_reference_data,1,0,0,0
+ref_read_comm_type,REFERENCE read: commission types,model_mudon_commission_type,mudon_crm.group_mudon_reference_data,1,0,0,0
