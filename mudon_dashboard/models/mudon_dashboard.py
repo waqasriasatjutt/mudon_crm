@@ -664,6 +664,16 @@ class MudonDashboard(models.TransientModel):
                       **self._range_meta(period, filters))),
             "kpis": {}, "tables": {}, "charts": {}, "notes": [], "_errors": [],
         }
+        # The combined board adds UAE (AED) to Turkey (USD), which is only
+        # honest once both are in one currency, so AED is converted to USD at
+        # the peg. Without saying so, a reader sees "$" on an AED deal and
+        # concludes the AED was ignored (client comment 4, reopened). Say it.
+        if data["meta"].get("mixed_currency"):
+            data["notes"].append(
+                "Combined view: UAE amounts (AED) are shown in USD at the fixed "
+                "%.2f AED/USD rate so Turkey and UAE can be added in one "
+                "currency. Choose the \"UAE Dubai\" pipeline above to see the "
+                "figures in AED." % self.AED_PER_USD)
 
         won_leads = Lead.search(base_domain)
         if country_prefix:

@@ -19,14 +19,23 @@
                         pipeline's native currency (AED for UAE, USD elsewhere);
                         USD forces everything to USD at a fixed 3.67 AED→USD peg.
                     -->
-                    <div class="btn-group btn-group-sm mudon_ccy_toggle" role="group" aria-label="Currency mode">
+                    <!--
+                        On the combined board AED is already normalised to USD,
+                        so both options render the same figure and the toggle
+                        only does something on a single-currency pipeline.
+                        Disable it there rather than let it look broken (comment 4).
+                    -->
+                    <div class="btn-group btn-group-sm mudon_ccy_toggle" role="group" aria-label="Currency mode"
+                         t-att-title="state.data and state.data.meta.mixed_currency ? 'The combined board is always USD. Pick the UAE Dubai or Turkey pipeline to switch currency.' : ''">
                         <button class="btn btn-outline-light"
                                 t-att-class="state.currencyMode === 'native' ? 'active' : ''"
+                                t-att-disabled="state.data and state.data.meta.mixed_currency"
                                 t-on-click="() => this.setCurrencyMode('native')">
                             Native
                         </button>
                         <button class="btn btn-outline-light"
                                 t-att-class="state.currencyMode === 'usd' ? 'active' : ''"
+                                t-att-disabled="state.data and state.data.meta.mixed_currency"
                                 t-on-click="() => this.setCurrencyMode('usd')"
                                 title="Show all amounts in USD at a fixed 3.67 AED/USD rate">
                             USD @ 3.67
