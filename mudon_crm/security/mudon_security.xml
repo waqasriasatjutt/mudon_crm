@@ -283,15 +283,15 @@
     </record>
 
     <!--
-        Turn OFF Odoo's stock "Personal Leads" rule. It grants a salesman
-        `user_id = self OR user_id = False`; the False half is what leaked
-        every unassigned lead to every agent. In this database every user
-        is a Mudon user with the own-leads rule below, so nothing that
-        should see leads loses access. Reversible: set active True again.
+        Odoo's stock "Personal Leads" rule grants a salesman
+        `user_id = self OR user_id = False`; the False half leaked every
+        unassigned lead to every agent. It is turned OFF, but NOT here:
+        stock crm loads that rule with noupdate="1", so an XML override of
+        its `active` flag is silently ignored. The migration
+        `migrations/19.0.1.54.1/post-migration.py` deactivates it instead.
+        Reversible: reactivate the rule from Settings > Technical > Record
+        Rules if a plain (non-Mudon) salesman ever needs the stock scope.
     -->
-    <record id="crm.crm_rule_personal_lead" model="ir.rule">
-        <field name="active" eval="False"/>
-    </record>
 
     <record id="rule_mudon_lead_own" model="ir.rule">
         <field name="name">Mudon: Sales Agent — own leads only</field>
