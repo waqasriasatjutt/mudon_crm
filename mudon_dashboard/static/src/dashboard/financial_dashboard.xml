@@ -193,11 +193,11 @@
                     <div class="scroll"><table class="mudon_table mudon_deals">
                         <thead><tr>
                             <th t-attf-class="srt {{ state.sortKey === 'name' ? 'active' : '' }}" t-on-click="() => this.sortDeals('name')">Deal<t t-esc="sortCaret('name')"/></th>
-                            <th t-attf-class="srt {{ state.sortKey === 'agent' ? 'active' : '' }}" t-on-click="() => this.sortDeals('agent')">Agent<t t-esc="sortCaret('agent')"/></th>
-                            <th t-attf-class="srt {{ state.sortKey === 'pipeline' ? 'active' : '' }}" t-on-click="() => this.sortDeals('pipeline')">Pipeline<t t-esc="sortCaret('pipeline')"/></th>
-                            <th t-attf-class="srt {{ state.sortKey === 'country' ? 'active' : '' }}" t-on-click="() => this.sortDeals('country')">Country<t t-esc="sortCaret('country')"/></th>
-                            <th t-attf-class="srt {{ state.sortKey === 'nationality' ? 'active' : '' }}" t-on-click="() => this.sortDeals('nationality')">Nationality<t t-esc="sortCaret('nationality')"/></th>
-                            <th t-attf-class="srt {{ state.sortKey === 'source' ? 'active' : '' }}" t-on-click="() => this.sortDeals('source')">Source<t t-esc="sortCaret('source')"/></th>
+                            <th t-attf-class="srt t {{ state.sortKey === 'agent' ? 'active' : '' }}" t-on-click="() => this.sortDeals('agent')">Agent<t t-esc="sortCaret('agent')"/></th>
+                            <th t-attf-class="srt t {{ state.sortKey === 'pipeline' ? 'active' : '' }}" t-on-click="() => this.sortDeals('pipeline')">Pipeline<t t-esc="sortCaret('pipeline')"/></th>
+                            <th t-attf-class="srt t {{ state.sortKey === 'country' ? 'active' : '' }}" t-on-click="() => this.sortDeals('country')">Country<t t-esc="sortCaret('country')"/></th>
+                            <th t-attf-class="srt t {{ state.sortKey === 'nationality' ? 'active' : '' }}" t-on-click="() => this.sortDeals('nationality')">Nationality<t t-esc="sortCaret('nationality')"/></th>
+                            <th t-attf-class="srt t {{ state.sortKey === 'source' ? 'active' : '' }}" t-on-click="() => this.sortDeals('source')">Source<t t-esc="sortCaret('source')"/></th>
                             <th t-attf-class="srt {{ state.sortKey === 'expected_revenue' ? 'active' : '' }}" t-on-click="() => this.sortDeals('expected_revenue')">Expected<t t-esc="sortCaret('expected_revenue')"/></th>
                             <th t-attf-class="srt {{ state.sortKey === 'commission' ? 'active' : '' }}" t-on-click="() => this.sortDeals('commission')">Commission<t t-esc="sortCaret('commission')"/></th>
                             <th t-attf-class="srt {{ state.sortKey === 'invoiced' ? 'active' : '' }}" t-on-click="() => this.sortDeals('invoiced')">Invoiced<t t-esc="sortCaret('invoiced')"/></th>

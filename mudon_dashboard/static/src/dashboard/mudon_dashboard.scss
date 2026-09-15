@@ -233,6 +233,12 @@
             border-bottom: 1px solid var(--mline);
             white-space: nowrap;
             &:first-child { text-align: left; }
+            // Numbers read right, text reads left; a header must sit over its
+            // own column. The default right-aligns every header but the first,
+            // which is correct for the breakdown tables (one text column) but
+            // wrong for the Deals table's six text columns, whose data is
+            // left-aligned via td.t. Mirror that with th.t.
+            &.t { text-align: left; }
             &.srt { cursor: pointer; user-select: none; }
             &.srt:hover { color: var(--mnavy); }
             &.srt.active { color: var(--mnavy); }
