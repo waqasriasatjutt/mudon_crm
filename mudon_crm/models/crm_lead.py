@@ -57,7 +57,18 @@ MUDON_STAGE_REQUIRED = {
     "offer_sent": ("mudon_tick_offer_sent",),
     "meeting": ("mudon_visit_confirmed", "mudon_visit_date"),
     "eoi": ("mudon_paid_booking",),
-    "won": ("mudon_fully_paid",),
+    # Winning a deal must capture the numbers the business is actually won on
+    # (client 09-16): the closing amount, who built it and which project, the
+    # commission rate and how it hands over. Kept alongside the Fully Paid
+    # confirmation that already gated Won.
+    "won": (
+        "mudon_fully_paid",
+        "mudon_closing_amount",
+        "mudon_developer_id",
+        "mudon_project_id",
+        "mudon_commission_pct",
+        "mudon_handover_type",
+    ),
 }
 BEDS_SELECTION = [
     ("studio", "Studio"),
@@ -76,6 +87,11 @@ MUDON_STAGE_FIELD_LABELS = {
     "mudon_visit_date": "Expected Visit Date",
     "mudon_paid_booking": "Paid Booking",
     "mudon_fully_paid": "Fully Paid",
+    "mudon_closing_amount": "Closing Amount",
+    "mudon_developer_id": "Developer",
+    "mudon_project_id": "Project",
+    "mudon_commission_pct": "Commission %",
+    "mudon_handover_type": "Handover Type",
 }
 
 # Stage 3
@@ -973,6 +989,12 @@ class CrmLead(models.Model):
                         and self._mudon_user_is_plain_agent()):
                     explicit = True
                 lead._mudon_auto_assign_agent(force=not explicit)
+                # Register the customer in the Contact List (client 09-16).
+                # A Meta lead or a walk-in should leave a real res.partner
+                # behind, not just a name typed on a card, so the customer
+                # can be found, reused and reported on. Runs for imports too:
+                # that is exactly where contacts were going missing.
+                lead._mudon_ensure_partner()
                 # A bulk import must still be ROUTED, but it must not greet
                 # every client, page every agent, or push leads off New Lead.
                 # Importing 500 rows would otherwise fire 1000 WhatsApp
@@ -989,6 +1011,46 @@ class CrmLead(models.Model):
                     lead.id, exc,
                 )
         return leads
+
+    def _mudon_ensure_partner(self):
+        """Register each lead's customer in the Contact List (client 09-16).
+
+        The card keeps the customer name in `contact_name`; a real
+        res.partner is what makes the customer searchable, reusable and
+        reportable rather than a name typed once on a card. Deduplicate on
+        email, then phone, so a returning customer links to their existing
+        contact instead of spawning a second one. The card title (`name`)
+        is deliberately left untouched, so the kanban still shows the
+        customer name exactly as it does now.
+        """
+        Partner = self.env["res.partner"].sudo()
+        for lead in self:
+            if lead.partner_id:
+                continue
+            name = (lead.contact_name or lead.partner_name
+                    or lead.name or "").strip()
+            if not name:
+                continue
+            email = (lead.email_from or "").strip()
+            phone = (lead.phone or "").strip()
+            partner = Partner.browse()
+            if email:
+                partner = Partner.search([("email", "=ilike", email)], limit=1)
+            if not partner and phone:
+                partner = Partner.search(
+                    ["|", ("phone", "=", phone), ("mobile", "=", phone)],
+                    limit=1)
+            if not partner:
+                partner = Partner.create({
+                    "name": name,
+                    "phone": phone or False,
+                    "email": email or False,
+                    "company_type": "person",
+                })
+            # Link the contact WITHOUT letting Odoo's partner sync rewrite the
+            # card. Writing partner_id on its own attaches the contact; the
+            # title stays the customer name the client already sees.
+            lead.partner_id = partner.id
 
     def _mudon_try_auto_qualify(self, fire_entry=False):
         """Advance New Lead → Qualified once the intake data is complete.
@@ -1071,9 +1133,15 @@ class CrmLead(models.Model):
                 continue  # backward / same stage → no gate
             crossed = rec._mudon_crossed_required(ck, target_kind)
             # Confirm EVERY crossed field, single-step or skip. The
-            # wizard collects them all together.
+            # wizard collects them all together. Read presence via sudo:
+            # some required Won fields (Closing Amount, Commission) are
+            # financial-restricted, and a plain agent reading them here would
+            # hit AccessError before the gate could even open. Checking whether
+            # a value exists leaks nothing; the wizard still enforces who may
+            # set them.
+            rec_su = rec.sudo()
             required = [
-                f for f in crossed if not (rec[f] or vals.get(f))
+                f for f in crossed if not (rec_su[f] or vals.get(f))
             ]
             if not required:
                 continue

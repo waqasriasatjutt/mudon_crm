@@ -209,4 +209,28 @@
               parent="mudon_menu_config_root"
               action="mudon_lost_reason_action"
               sequence="100"/>
+
+    <!--
+        ═══ HIDE THE STOCK MENUS FROM NON-ADMINS (client 09-16) ═══════════
+        "Remove menu access App, Setting, CRM for any non Admin user."
+        The Mudon team works entirely inside the Mudon CRM app, so the raw
+        Apps, Settings and stock CRM menus are clutter and a footgun for
+        agents. base.group_system is exactly the administrator set here
+        (abd, waqas, the built-in admin), so gating on it hides these three
+        from everyone else while leaving real admins untouched. This only
+        hides the MENU; it changes no record or model access.
+
+        Odoo ORs a menu's groups, and re-declaring group_ids here REPLACES
+        the stock list rather than adding to it, so the stock CRM menu stops
+        showing to every salesman.
+    -->
+    <record id="base.menu_management" model="ir.ui.menu">
+        <field name="group_ids" eval="[(6, 0, [ref('base.group_system')])]"/>
+    </record>
+    <record id="base.menu_administration" model="ir.ui.menu">
+        <field name="group_ids" eval="[(6, 0, [ref('base.group_system')])]"/>
+    </record>
+    <record id="crm.crm_menu_root" model="ir.ui.menu">
+        <field name="group_ids" eval="[(6, 0, [ref('base.group_system')])]"/>
+    </record>
 </odoo>

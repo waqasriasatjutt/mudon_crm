@@ -73,6 +73,21 @@ class MudonQuickFillWizard(models.TransientModel):
     mudon_paid_booking = fields.Boolean(string="Paid Booking")
     mudon_fully_paid = fields.Boolean(string="Fully Paid")
 
+    # Won-stage deal data (client 09-16): forced when a card moves to Win.
+    # Developer / Project / Handover are open to any agent; Closing Amount and
+    # Commission carry the same financial-data restriction as the lead itself
+    # (comment 12), so a non-financial user never sees or sets them here either.
+    mudon_developer_id = fields.Many2one("mudon.developer", string="Developer")
+    mudon_project_id = fields.Many2one("mudon.project", string="Project")
+    mudon_handover_type = fields.Selection(
+        [("ready", "Ready"), ("off_plan", "Off-Plan")], string="Handover Type")
+    mudon_closing_amount = fields.Monetary(
+        string="Closing Amount", currency_field="mudon_budget_currency_id",
+        groups="mudon_crm.group_mudon_financial_data")
+    mudon_commission_pct = fields.Float(
+        string="Commission %", digits=(5, 2),
+        groups="mudon_crm.group_mudon_financial_data")
+
     # Which crossed stages this transition needs — drives form
     # visibility so only the relevant fields show.
     mudon_need_qualify = fields.Boolean(compute="_compute_mudon_needs")
@@ -80,6 +95,8 @@ class MudonQuickFillWizard(models.TransientModel):
     mudon_need_visit = fields.Boolean(compute="_compute_mudon_needs")
     mudon_need_booking = fields.Boolean(compute="_compute_mudon_needs")
     mudon_need_paid = fields.Boolean(compute="_compute_mudon_needs")
+    mudon_need_won = fields.Boolean(compute="_compute_mudon_needs")
+    mudon_has_financial = fields.Boolean(compute="_compute_mudon_needs")
 
     @api.depends("lead_id", "target_stage_id")
     def _compute_mudon_needs(self):
@@ -95,6 +112,9 @@ class MudonQuickFillWizard(models.TransientModel):
             wiz.mudon_need_visit = "mudon_visit_confirmed" in crossed
             wiz.mudon_need_booking = "mudon_paid_booking" in crossed
             wiz.mudon_need_paid = "mudon_fully_paid" in crossed
+            wiz.mudon_need_won = "mudon_developer_id" in crossed
+            wiz.mudon_has_financial = wiz.env.user.has_group(
+                "mudon_crm.group_mudon_financial_data")
 
     @api.model
     def default_get(self, fields_list):
@@ -113,10 +133,20 @@ class MudonQuickFillWizard(models.TransientModel):
                 "mudon_priority",
                 "expected_revenue",
                 "mudon_lost_reason_id",
+                "mudon_developer_id",
+                "mudon_project_id",
+                "mudon_handover_type",
             ):
                 if fname in fields_list and not res.get(fname):
                     val = lead[fname]
                     res[fname] = val.id if hasattr(val, "id") else val
+            # The two money fields are financial-restricted: only read them
+            # off the lead for a user who is allowed to see them, or the
+            # prefill itself raises AccessError.
+            if self.env.user.has_group("mudon_crm.group_mudon_financial_data"):
+                for fname in ("mudon_closing_amount", "mudon_commission_pct"):
+                    if fname in fields_list and not res.get(fname):
+                        res[fname] = lead[fname]
         return res
 
     def action_confirm(self):
@@ -152,6 +182,10 @@ class MudonQuickFillWizard(models.TransientModel):
                 "mudon_priority": _("Priority"),
                 "expected_revenue": _("Expected Revenue"),
                 "mudon_visit_date": _("Expected Visit Date"),
+                # Won-stage plain fields, open to any agent.
+                "mudon_developer_id": _("Developer"),
+                "mudon_project_id": _("Project"),
+                "mudon_handover_type": _("Handover Type"),
             }
             tick_labels = {
                 "mudon_tick_offer_sent": _("Offer Sent"),
@@ -159,12 +193,34 @@ class MudonQuickFillWizard(models.TransientModel):
                 "mudon_paid_booking": _("Paid Booking"),
                 "mudon_fully_paid": _("Fully Paid"),
             }
+            # Closing Amount and Commission are financial-restricted, so a user
+            # without Financial Data Access cannot set them and therefore cannot
+            # close a deal. Say so plainly instead of letting the write blow up
+            # with an AccessError. Reading `self[money_field]` is only safe once
+            # we know the user holds the group, so this guard runs first.
+            money_labels = {
+                "mudon_closing_amount": _("Closing Amount"),
+                "mudon_commission_pct": _("Commission %"),
+            }
+            if any(f in money_labels for f in crossed) and \
+                    not self.mudon_has_financial:
+                raise UserError(_(
+                    "Closing a deal records the Closing Amount and Commission, "
+                    "which need Financial Data Access. Ask a manager with that "
+                    "access to complete the win."))
             for fname in crossed:
                 # A stage requirement the wizard has no field for used to raise
                 # KeyError and take the whole dialog down. Skipping it keeps the
                 # move working; the model still enforces the requirement on
                 # write, so nothing slips through.
                 if fname not in self._fields:
+                    continue
+                if fname in money_labels:
+                    value = self[fname]   # safe: has-financial checked above
+                    if not value:
+                        missing.append(money_labels[fname])
+                    else:
+                        vals[fname] = value
                     continue
                 value = self[fname]
                 if fname in input_labels:

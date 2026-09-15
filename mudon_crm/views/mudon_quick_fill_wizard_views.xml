@@ -16,6 +16,8 @@
                     <field name="mudon_need_visit" invisible="1"/>
                     <field name="mudon_need_booking" invisible="1"/>
                     <field name="mudon_need_paid" invisible="1"/>
+                    <field name="mudon_need_won" invisible="1"/>
+                    <field name="mudon_has_financial" invisible="1"/>
                     <group>
                         <!-- Qualified — the 4 mandatory intake fields -->
                         <field name="mudon_service_id"
@@ -53,6 +55,33 @@
                                invisible="not mudon_need_booking"/>
                         <field name="mudon_fully_paid" widget="boolean_toggle"
                                invisible="not mudon_need_paid"/>
+
+                        <!-- Won — the deal-closing data (client 09-16) -->
+                        <separator string="Deal details required to win"
+                                   invisible="not mudon_need_won"/>
+                        <field name="mudon_developer_id"
+                               options="{'no_create_edit': True}"
+                               required="mudon_need_won"
+                               invisible="not mudon_need_won"/>
+                        <field name="mudon_project_id"
+                               options="{'no_create_edit': True}"
+                               required="mudon_need_won"
+                               invisible="not mudon_need_won"/>
+                        <field name="mudon_handover_type"
+                               required="mudon_need_won"
+                               invisible="not mudon_need_won"/>
+                        <field name="mudon_closing_amount"
+                               required="mudon_need_won and mudon_has_financial"
+                               invisible="not (mudon_need_won and mudon_has_financial)"/>
+                        <field name="mudon_commission_pct"
+                               required="mudon_need_won and mudon_has_financial"
+                               invisible="not (mudon_need_won and mudon_has_financial)"/>
+                        <div class="alert alert-warning" role="alert"
+                             invisible="not mudon_need_won or mudon_has_financial">
+                            The Closing Amount and Commission are needed to win
+                            this deal. They are financial data, so a manager with
+                            Financial Data Access has to complete the win.
+                        </div>
 
                         <!-- Lost-only field -->
                         <field name="mudon_lost_reason_id"

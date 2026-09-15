@@ -627,8 +627,6 @@
                     <div class="mudon_cardfoot d-flex align-items-center justify-content-between mt-1 px-2 pb-1">
                         <div class="d-flex align-items-center gap-1">
                             <field name="user_id" widget="many2one_avatar_user"/>
-                            <span t-if="!record.mudon_first_contact_logged.raw_value and ['new_lead','qualified'].includes(record.mudon_stage_kind_current.raw_value)"
-                                  class="badge text-bg-danger">Not contacted</span>
                         </div>
                         <a t-if="record.mudon_wa_phone.raw_value"
                            t-attf-href="https://wa.me/#{record.mudon_wa_phone.raw_value}"
