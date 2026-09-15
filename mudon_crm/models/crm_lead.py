@@ -1037,9 +1037,9 @@ class CrmLead(models.Model):
             if email:
                 partner = Partner.search([("email", "=ilike", email)], limit=1)
             if not partner and phone:
-                partner = Partner.search(
-                    ["|", ("phone", "=", phone), ("mobile", "=", phone)],
-                    limit=1)
+                # res.partner has no `mobile` field in Odoo 19 — it folded
+                # into `phone`. Match on phone alone.
+                partner = Partner.search([("phone", "=", phone)], limit=1)
             if not partner:
                 partner = Partner.create({
                     "name": name,
