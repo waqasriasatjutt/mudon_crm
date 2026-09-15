@@ -22,7 +22,7 @@
                                     menu must not appear for them.
     -->
     <menuitem id="menu_mudon_management_dashboard"
-              name="Management Dashboard"
+              name="Sales Dashboard"
               parent="mudon_crm.mudon_menu_app_root"
               action="action_mudon_management_dashboard"
               groups="mudon_crm.group_mudon_team_leader,mudon_crm.group_mudon_marketing,mudon_crm.group_mudon_viewer"

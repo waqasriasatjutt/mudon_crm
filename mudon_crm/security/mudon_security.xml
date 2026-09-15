@@ -250,27 +250,47 @@
 
     <!-- O — Sales Agent: own assigned records only. -->
     <!--
-        An agent who enters a lead must still be able to see it.
+        ═══ STRICT AGENT ISOLATION (client 09-16) ════════════════════════
+        "The sales Agent is able to see other sales agents cards ... Sales
+        agent can only see his card." Two things widened an agent's view:
 
-        Routing runs on create and hands the card to whoever is next in the
-        branch, which is usually somebody else. With "own leads only" as the
-        single rule, the agent lost the record the instant they saved it and
-        the form threw an Access Error at them. Hashem could not enter a
-        lead at all.
+        1. Odoo's stock "Personal Leads" rule shows a salesman every
+           UNASSIGNED lead (user_id = False), so any lead the round-robin
+           had not yet placed sat in a pool every agent could see. Since
+           Mudon agents get their own rule below, the stock rule is turned
+           off (see the ir.rule override lower in this file).
 
-        READ ONLY on purpose. Write and delete stay with the rule below, so
-        the card genuinely belongs to the agent it was routed to; the person
-        who typed it in can watch it, not work it.
+        2. Our own "leads I entered" rule let an agent keep watching a card
+           after it was routed to somebody else — which reads as "seeing
+           another agent's card". An agent now keeps the leads they enter
+           (the create() logic no longer distributes an agent's own walk-in,
+           so the original Hashem problem is already solved), so this rule
+           is retired: it is left in place but inactive.
+
+        The single remaining rule for an agent is "own leads only" below:
+        user_id = self, nothing more.
     -->
     <record id="rule_mudon_lead_created_by_me" model="ir.rule">
-        <field name="name">Mudon: Sales Agent — leads I entered</field>
+        <field name="name">Mudon: Sales Agent — leads I entered (retired)</field>
         <field name="model_id" ref="crm.model_crm_lead"/>
         <field name="domain_force">[('create_uid', '=', user.id)]</field>
         <field name="groups" eval="[(4, ref('group_mudon_sales_agent'))]"/>
+        <field name="active" eval="False"/>
         <field name="perm_read" eval="True"/>
         <field name="perm_write" eval="False"/>
         <field name="perm_create" eval="False"/>
         <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <!--
+        Turn OFF Odoo's stock "Personal Leads" rule. It grants a salesman
+        `user_id = self OR user_id = False`; the False half is what leaked
+        every unassigned lead to every agent. In this database every user
+        is a Mudon user with the own-leads rule below, so nothing that
+        should see leads loses access. Reversible: set active True again.
+    -->
+    <record id="crm.crm_rule_personal_lead" model="ir.rule">
+        <field name="active" eval="False"/>
     </record>
 
     <record id="rule_mudon_lead_own" model="ir.rule">

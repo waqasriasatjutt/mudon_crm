@@ -92,7 +92,7 @@
               sequence="10"/>
 
     <menuitem id="mudon_menu_pipeline_uae"
-              name="UAE Dubai Pipeline"
+              name="UAE Pipeline"
               parent="mudon_menu_app_root"
               action="mudon_pipeline_uae_action"
               sequence="20"/>
