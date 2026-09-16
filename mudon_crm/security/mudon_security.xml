@@ -138,7 +138,17 @@
     -->
     <record id="group_mudon_reference_data" model="res.groups">
         <field name="name">Mudon: read reference data</field>
-        <field name="comment">Technical group. Read-only access to tags, stages, teams and the Mudon master lists that lead views display. Granted automatically by every Mudon role; not meant to be assigned by hand.</field>
+        <!--
+            Also carries Excel export (client comment 13: "Excel Export is not
+            showing in all pipeline or All Mudon Leads"). Only admins held
+            base.group_allow_export, so agents and managers saw no Export
+            button. Every Mudon role implies this technical group, so hanging
+            export here turns it on for all of them at once. An agent can only
+            export the leads they can already see (own only), so nothing new
+            is exposed.
+        -->
+        <field name="implied_ids" eval="[(4, ref('base.group_allow_export'))]"/>
+        <field name="comment">Technical group. Read-only access to tags, stages, teams and the Mudon master lists that lead views display, plus Excel export. Granted automatically by every Mudon role; not meant to be assigned by hand.</field>
     </record>
 
     <!--

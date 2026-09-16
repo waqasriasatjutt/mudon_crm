@@ -2022,14 +2022,21 @@ class CrmLead(models.Model):
         1. City maps to a branch  → round-robin INSIDE that branch only;
            an empty branch falls to the Sales Manager, never to other cities.
         2. City set but unmapped ("Other") → Sales Manager.
-        3. No city yet (a raw stage-1 enquiry) → phone country-code mapping,
-           then team round-robin, then Sales Manager.
+        3. No city yet (a raw stage-1 enquiry): Dubai sends it to the manager
+           (client 09-16: "if no property city assigned, then assign to
+           manager"); every other pipeline falls to phone country-code
+           mapping, then team round-robin, then Sales Manager.
         """
         self.ensure_one()
         if self.mudon_branch_id:
             return (self._mudon_pick_by_branch()
                     or self._mudon_pick_sales_manager())
         if self.mudon_city_id:
+            return self._mudon_pick_sales_manager()
+        # No property city.
+        if self.mudon_pipeline_kind == "uae":
+            # Dubai routes strictly on the property city; a city-less lead
+            # goes to the manager to triage, not into round-robin.
             return self._mudon_pick_sales_manager()
         return (
             self._mudon_pick_by_country_code()
