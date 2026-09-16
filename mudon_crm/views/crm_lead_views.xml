@@ -704,6 +704,22 @@
             </xpath>
 
             <!--
+                ══ Comment 20 — one Enter searches every field ═════════════
+                The client types a word, presses Enter, and expects it to
+                search across all the fields, not just the Opportunity name.
+                Odoo runs the FIRST search field on Enter, so widen that
+                field's filter_domain to OR across the things a person
+                actually searches a lead by: its name, the customer, email,
+                phone, city, agent, source, nationality, developer, project
+                and the free-text notes. Every other field is still offered
+                individually in the dropdown for a narrower search.
+            -->
+            <xpath expr="//field[@name='name']" position="attributes">
+                <attribute name="string">Search (all fields)</attribute>
+                <attribute name="filter_domain">['|','|','|','|','|','|','|','|','|','|','|','|',('name','ilike',self),('contact_name','ilike',self),('partner_name','ilike',self),('email_from','ilike',self),('phone','ilike',self),('mudon_city_id','ilike',self),('user_id','ilike',self),('mudon_source_id','ilike',self),('mudon_nationality_id','ilike',self),('mudon_developer_id','ilike',self),('mudon_project_id','ilike',self),('mudon_notes','ilike',self),('mudon_other_specs','ilike',self)]</attribute>
+            </xpath>
+
+            <!--
                 ══ Comment 22 — "Make search bar possible by default to all
                 criteria of the fields" ═══════════════════════════════════
                 Every field the client listed is registered here, so the
