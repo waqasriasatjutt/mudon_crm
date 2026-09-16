@@ -21,11 +21,17 @@
                                     Marketing is "N" on financial data, so the
                                     menu must not appear for them.
     -->
+    <!--
+        Client 09-17: each person gets their own Sales Dashboard. A Sales
+        Agent now sees it too, scoped by the record rules to their own leads
+        (get_management_data runs _mudon_scope_to_user); a Team Leader sees
+        their team, a Director the whole company.
+    -->
     <menuitem id="menu_mudon_management_dashboard"
               name="Sales Dashboard"
               parent="mudon_crm.mudon_menu_app_root"
               action="action_mudon_management_dashboard"
-              groups="mudon_crm.group_mudon_team_leader,mudon_crm.group_mudon_marketing,mudon_crm.group_mudon_viewer"
+              groups="mudon_crm.group_mudon_sales_agent,mudon_crm.group_mudon_team_leader,mudon_crm.group_mudon_marketing,mudon_crm.group_mudon_viewer"
               sequence="1"/>
 
     <menuitem id="menu_mudon_financial_dashboard"

@@ -1,6 +1,6 @@
 {
     "name": "Mudon CRM — Dashboards",
-    "version": "19.0.1.7.6",
+    "version": "19.0.1.7.7",
     "summary": "Management & Financial reporting dashboards for Mudon CRM "
                "(OWL + Chart.js) — funnel, agent performance, revenue & "
                "commission, per client spec.",

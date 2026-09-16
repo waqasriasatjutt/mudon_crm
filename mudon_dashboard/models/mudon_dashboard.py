@@ -348,6 +348,25 @@ class MudonDashboard(models.TransientModel):
 
     # ── main entry point ────────────────────────────────────────────────
     @api.model
+    @api.model
+    def _mudon_scope_to_user(self, domain):
+        """Limit a dashboard's figures to the leads the CURRENT user may see.
+
+        The boards aggregate with sudo() so the gated money fields can be
+        summed, which would otherwise show everyone the whole company. The
+        record rules already say who sees what (agent = own, team leader =
+        team, branch manager = branch, director and the read-only roles =
+        all), so resolve the visible ids AS THE USER and hand back a domain
+        scoped to them. Each person then gets a board of their own records
+        with totals to match (client 09-17). Skipped for anyone who already
+        sees everything, to save the extra query.
+        """
+        if self.env.su or self.env.user.has_group(
+                "mudon_crm.group_mudon_sales_director"):
+            return domain
+        ids = self.env["crm.lead"].search(domain).ids
+        return [("id", "in", ids)]
+
     def get_management_data(self, pipeline="all", period="this_month",
                             basis="pipeline", filters=None):
         Lead = self.env["crm.lead"].sudo()
@@ -362,6 +381,7 @@ class MudonDashboard(models.TransientModel):
         if pipeline in ("turkey", "uae"):
             base_domain.append(("mudon_pipeline_kind", "=", pipeline))
         base_domain, country_prefix = self._apply_filters(base_domain, filters)
+        base_domain = self._mudon_scope_to_user(base_domain)
 
         data = {
             "meta": dict({
@@ -654,6 +674,11 @@ class MudonDashboard(models.TransientModel):
         fin_filters = dict(filters or {})
         fin_filters.pop("stage_kind", None)
         base_domain, country_prefix = self._apply_filters(base_domain, fin_filters)
+        # Same scoping as the sales board: a viewer who is not a director sees
+        # only their own records here too (client 09-17). In practice this
+        # board is opened by accountants and directors, who see everything,
+        # so this only bites if a narrower role is ever granted financial access.
+        base_domain = self._mudon_scope_to_user(base_domain)
 
         basis_labels = {"won": "Won Date", "invoice": "Invoice Date",
                         "payment": "Payment Received"}
