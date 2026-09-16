@@ -373,8 +373,17 @@ class MudonDashboard(models.TransientModel):
                 "generated": fields.Datetime.now().strftime("%Y-%m-%d %H:%M"),
             }, **dict(self._currency_meta(pipeline),
                       **self._range_meta(period, filters))),
-            "kpis": {}, "tables": {}, "charts": {}, "_errors": [],
+            "kpis": {}, "tables": {}, "charts": {}, "notes": [], "_errors": [],
         }
+        # Same as the financial board: the combined view adds UAE (AED) to
+        # Turkey (USD), so AED is shown in USD at the peg. Say so, or a reader
+        # sees "$" on an AED figure and thinks the AED was ignored (comment 1).
+        if data["meta"].get("mixed_currency"):
+            data["notes"].append(
+                "Combined view: UAE amounts (AED) are shown in USD at the fixed "
+                "%.2f AED/USD rate so Turkey and UAE can be added in one "
+                "currency. Choose the \"UAE Dubai\" pipeline above to see the "
+                "figures in AED." % self.AED_PER_USD)
 
         def idx(lead):
             return STAGE_INDEX.get(lead.mudon_stage_kind_current, -1)

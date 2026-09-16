@@ -20,14 +20,20 @@
                         on UAE Dubai, USD on Turkey); USD converts at the
                         fixed peg the client specified.
                     -->
-                    <div class="btn-group btn-group-sm mudon_ccy_toggle" role="group" aria-label="Currency mode">
+                    <!-- On the combined board everything is already USD, so the
+                         toggle does nothing there: disable it and point to the
+                         single-pipeline views, matching the financial board. -->
+                    <div class="btn-group btn-group-sm mudon_ccy_toggle" role="group" aria-label="Currency mode"
+                         t-att-title="state.data and state.data.meta.mixed_currency ? 'The combined board is always USD. Pick the UAE Dubai or Turkey pipeline to switch currency.' : ''">
                         <button class="btn btn-outline-light"
                                 t-att-class="state.currencyMode === 'native' ? 'active' : ''"
+                                t-att-disabled="state.data and state.data.meta.mixed_currency"
                                 t-on-click="() => this.setCurrencyMode('native')">
                             Native
                         </button>
                         <button class="btn btn-outline-light"
                                 t-att-class="state.currencyMode === 'usd' ? 'active' : ''"
+                                t-att-disabled="state.data and state.data.meta.mixed_currency"
                                 t-on-click="() => this.setCurrencyMode('usd')"
                                 title="Show all amounts in USD at a fixed 3.67 AED/USD rate">
                             USD @ 3.67
@@ -110,6 +116,11 @@
             <div t-if="state.error" class="mudon_dash_msg mudon_err"><t t-esc="state.error"/></div>
 
             <t t-if="state.data">
+                <div class="mudon_note" t-if="state.data.notes and state.data.notes.length">
+                    <t t-foreach="state.data.notes" t-as="n" t-key="n_index">
+                        <div><i class="fa fa-info-circle me-1"/><t t-esc="n"/></div>
+                    </t>
+                </div>
                 <!--
                     Leads by current stage. These numbers match the kanban
                     columns one for one (comment 31). The KPI strip below is
