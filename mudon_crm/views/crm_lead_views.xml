@@ -284,7 +284,7 @@
             <xpath expr="//label[@for='expected_revenue']" position="attributes">
                 <attribute name="invisible">1</attribute>
             </xpath>
-            <xpath expr="//field[@name='expected_revenue'][@class='o_input_13ch']" position="attributes">
+            <xpath expr="//field[@name='expected_revenue'][hasclass('o_input_13ch')]" position="attributes">
                 <attribute name="invisible">1</attribute>
             </xpath>
 
@@ -495,7 +495,7 @@
                 All are hidden for Mudon leads only; other pipelines keep the
                 stock card exactly as it is.
             -->
-            <xpath expr="//div[@class='o_kanban_card_crm_lead_revenue']" position="attributes">
+            <xpath expr="//div[hasclass('o_kanban_card_crm_lead_revenue')]" position="attributes">
                 <attribute name="invisible">mudon_pipeline_kind</attribute>
             </xpath>
             <xpath expr="//field[@name='partner_id'][@widget='many2one_avatar']/.." position="attributes">
