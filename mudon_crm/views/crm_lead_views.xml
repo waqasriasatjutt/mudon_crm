@@ -716,7 +716,7 @@
             -->
             <xpath expr="//field[@name='name']" position="attributes">
                 <attribute name="string">Search (all fields)</attribute>
-                <attribute name="filter_domain">['|','|','|','|','|','|','|','|','|','|','|','|',('name','ilike',self),('contact_name','ilike',self),('partner_name','ilike',self),('email_from','ilike',self),('phone','ilike',self),('mudon_city_id','ilike',self),('user_id','ilike',self),('mudon_source_id','ilike',self),('mudon_nationality_id','ilike',self),('mudon_developer_id','ilike',self),('mudon_project_id','ilike',self),('mudon_notes','ilike',self),('mudon_other_specs','ilike',self)]</attribute>
+                <attribute name="filter_domain">['|','|','|','|','|','|','|','|','|','|','|','|','|',('name','ilike',self),('contact_name','ilike',self),('partner_name','ilike',self),('email_from','ilike',self),('phone','ilike',self),('mudon_city_id','ilike',self),('user_id','ilike',self),('mudon_source_id','ilike',self),('mudon_nationality_id','ilike',self),('mudon_developer_id','ilike',self),('mudon_project_id','ilike',self),('mudon_notes','ilike',self),('mudon_other_specs','ilike',self),('description','ilike',self)]</attribute>
             </xpath>
 
             <!--
